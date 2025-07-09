@@ -15,31 +15,61 @@
         <div class="grid gap-4">
             {% for vaga in vagas %}
                 <div class="bg-white p-6 rounded-lg shadow-md">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <div class="flex justify-between items-center mb-2">
-                        <h3 class="text-lg font-semibold">{{ vaga[2] }}</h3>
-                        <div class="flex gap-2">
-                            <a href="{{ url_for('editar_vaga', vaga_id=vaga[0]) }}" 
-                               class="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex-1">
+                            <h3 class="text-lg font-semibold mb-2">{{ vaga.titulo }}</h3>
+                            <p class="text-gray-600 mb-2">{{ vaga.descricao }}</p>
+                            <p class="text-sm text-gray-500 mb-2">
+                                <strong>Requisitos:</strong> {{ vaga.requisitos }}
+                            </p>
+                            <p class="text-sm text-gray-500 mb-3">
+                                <strong>Salário:</strong> R$ {{ "%.2f"|format(vaga.salario_oferecido) }}
+                            </p>
+                            
+                            <!-- Estatísticas de candidatos -->
+                            <div class="bg-gray-50 p-3 rounded-lg mb-3">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm font-medium text-gray-700">
+                                        📊 Total de Candidatos: {{ vaga.total_candidatos }}
+                                    </span>
+                                </div>
+                                
+                                {% if vaga.total_candidatos > 0 %}
+                                <div class="grid grid-cols-3 gap-2 text-xs mb-2">
+                                    <div class="text-center">
+                                        <div class="font-semibold text-green-600">{{ vaga.candidatos_80_plus }}</div>
+                                        <div class="text-gray-500">Excelente (80%+)</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="font-semibold text-yellow-600">{{ vaga.candidatos_60_79 }}</div>
+                                        <div class="text-gray-500">Bom (60-79%)</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="font-semibold text-orange-500">{{ vaga.candidatos_abaixo_60 }}</div>
+                                        <div class="text-gray-500">Baixo (&lt;60%)</div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                <!-- Feedback da IA -->
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-lg">{{ vaga.feedback_ia.icone }}</span>
+                                    <span class="text-sm font-medium {{ vaga.feedback_ia.cor }}">
+                                        {{ vaga.feedback_ia.texto }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-col gap-2 ml-4">
+                            <a href="{{ url_for('editar_vaga', vaga_id=vaga.id) }}" 
+                               class="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700 text-center">
                                 Editar
                             </a>
-                            <a href="{{ url_for('candidatos_vaga', vaga_id=vaga[0]) }}" 
-                               class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
-                                Ver Candidatos
+                            <a href="{{ url_for('candidatos_vaga', vaga_id=vaga.id) }}" 
+                               class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 text-center">
+                                Ver Candidatos ({{ vaga.total_candidatos }})
                             </a>
-                        </div>
-                    </div>
-                            <p class="text-gray-600 mb-2">{{ vaga[3] }}</p>
-                            <p class="text-sm text-gray-500 mb-2">
-                                <strong>Requisitos:</strong> {{ vaga[4] }}
-                            </p>
-                            <p class="text-sm text-gray-500">
-                                <strong>Salário:</strong> R$ {{ "%.2f"|format(vaga[5]) }}
-                            </p>
-                        </div>
-                        <div class="text-right">
-                            
                         </div>
                     </div>
                 </div>

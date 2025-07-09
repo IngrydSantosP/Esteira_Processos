@@ -6,6 +6,8 @@ from utils.resume_extractor import processar_upload_curriculo, finalizar_process
 from avaliador import criar_avaliador
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask import send_file
+import io
 
 app = Flask(__name__)
 app.secret_key = 'chave-secreta-mvp-recrutamento'
@@ -13,6 +15,43 @@ app.secret_key = 'chave-secreta-mvp-recrutamento'
 # Configurações do ambiente
 MODO_IA = os.getenv('MODO_IA', 'local')
 TOP_JOBS = int(os.getenv('TOP_JOBS', '3'))
+
+def gerar_feedback_ia_vaga(total, alta_compatibilidade, media_compatibilidade, baixa_compatibilidade):
+    """Gera feedback inteligente sobre os candidatos da vaga"""
+    if total == 0:
+        return {
+            'texto': 'Nenhum candidato ainda',
+            'cor': 'text-gray-500',
+            'icone': '📋'
+        }
+    
+    if alta_compatibilidade > 0:
+        percentual_alto = (alta_compatibilidade / total) * 100
+        if percentual_alto >= 50:
+            return {
+                'texto': f'{alta_compatibilidade} candidato(s) com perfil excelente (80%+)',
+                'cor': 'text-green-600',
+                'icone': '🎯'
+            }
+        else:
+            return {
+                'texto': f'{alta_compatibilidade} candidato(s) muito compatível(eis)',
+                'cor': 'text-green-500',
+                'icone': '✅'
+            }
+    
+    if media_compatibilidade > 0:
+        return {
+            'texto': f'{media_compatibilidade} candidato(s) com bom potencial (60-79%)',
+            'cor': 'text-yellow-600',
+            'icone': '⚡'
+        }
+    
+    return {
+        'texto': f'{total} candidato(s) - revisar requisitos da vaga',
+        'cor': 'text-orange-500',
+        'icone': '⚠️'
+    }
 
 @app.route('/')
 def index():
@@ -124,11 +163,43 @@ def dashboard_empresa():
     conn = sqlite3.connect('recrutamento.db')
     cursor = conn.cursor()
     
-    cursor.execute('SELECT * FROM vagas WHERE empresa_id = ?', (session['empresa_id'],))
-    vagas = cursor.fetchall()
+    # Buscar vagas com estatísticas de candidatos
+    cursor.execute('''
+        SELECT v.*, 
+               COUNT(ca.id) as total_candidatos,
+               COUNT(CASE WHEN ca.score >= 80 THEN 1 END) as candidatos_80_plus,
+               COUNT(CASE WHEN ca.score >= 60 AND ca.score < 80 THEN 1 END) as candidatos_60_79,
+               COUNT(CASE WHEN ca.score < 60 THEN 1 END) as candidatos_abaixo_60
+        FROM vagas v
+        LEFT JOIN candidaturas ca ON v.id = ca.vaga_id
+        WHERE v.empresa_id = ?
+        GROUP BY v.id, v.empresa_id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido, v.data_criacao
+        ORDER BY v.data_criacao DESC
+    ''', (session['empresa_id'],))
+    
+    vagas_com_stats = cursor.fetchall()
     conn.close()
     
-    return render_template('dashboard_empresa.html', vagas=vagas)
+    # Gerar feedback de IA para cada vaga
+    vagas_processadas = []
+    for vaga in vagas_com_stats:
+        vaga_dict = {
+            'id': vaga[0],
+            'empresa_id': vaga[1], 
+            'titulo': vaga[2],
+            'descricao': vaga[3],
+            'requisitos': vaga[4],
+            'salario_oferecido': vaga[5],
+            'data_criacao': vaga[6],
+            'total_candidatos': vaga[7],
+            'candidatos_80_plus': vaga[8],
+            'candidatos_60_79': vaga[9],
+            'candidatos_abaixo_60': vaga[10],
+            'feedback_ia': gerar_feedback_ia_vaga(vaga[7], vaga[8], vaga[9], vaga[10])
+        }
+        vagas_processadas.append(vaga_dict)
+    
+    return render_template('dashboard_empresa.html', vagas=vagas_processadas)
 
 @app.route('/criar_vaga', methods=['GET', 'POST'])
 def criar_vaga():
@@ -165,7 +236,7 @@ def candidatos_vaga(vaga_id):
     cursor = conn.cursor()
     
     cursor.execute('''
-        SELECT c.nome, c.email, c.telefone, c.linkedin, ca.score, ca.posicao
+        SELECT c.nome, c.email, c.telefone, c.linkedin, ca.score, ca.posicao, c.id
         FROM candidaturas ca
         JOIN candidatos c ON ca.candidato_id = c.id
         WHERE ca.vaga_id = ?
@@ -254,13 +325,15 @@ def upload_curriculo():
     if request.method == 'POST':
         resultado = processar_upload_curriculo(request, session['candidato_id'])
         
+        # Exibir todas as mensagens como flash
+        for mensagem in resultado['mensagens']:
+            flash(mensagem['texto'], mensagem['tipo'])
+        
         if resultado['sucesso']:
             return render_template('processar_curriculo.html', 
-                                 dados_extraidos=resultado['dados_extraidos'],
-                                 mensagens=resultado['mensagens'])
+                                 dados_extraidos=resultado['dados_extraidos'])
         else:
-            for mensagem in resultado['mensagens']:
-                flash(mensagem['texto'], mensagem['tipo'])
+            return redirect(request.url)
     
     return render_template('upload_curriculo.html')
 
@@ -394,6 +467,75 @@ def minhas_candidaturas():
     conn.close()
     
     return render_template('minhas_candidaturas.html', candidaturas=candidaturas)
+
+@app.route('/baixar_curriculo/<int:candidato_id>')
+def baixar_curriculo(candidato_id):
+    if 'empresa_id' not in session:
+        return redirect(url_for('login_empresa'))
+    
+    conn = sqlite3.connect('recrutamento.db')
+    cursor = conn.cursor()
+    
+    # Verificar se a empresa tem acesso ao candidato (através de candidatura)
+    cursor.execute('''
+        SELECT COUNT(*) FROM candidaturas ca
+        JOIN vagas v ON ca.vaga_id = v.id
+        WHERE ca.candidato_id = ? AND v.empresa_id = ?
+    ''', (candidato_id, session['empresa_id']))
+    
+    if cursor.fetchone()[0] == 0:
+        flash('Acesso negado ao currículo', 'error')
+        return redirect(url_for('dashboard_empresa'))
+    
+    # Buscar dados do candidato
+    cursor.execute('''
+        SELECT nome, email, telefone, linkedin, texto_curriculo, 
+               experiencia, competencias, resumo_profissional, pretensao_salarial
+        FROM candidatos WHERE id = ?
+    ''', (candidato_id,))
+    
+    candidato = cursor.fetchone()
+    conn.close()
+    
+    if not candidato:
+        flash('Candidato não encontrado', 'error')
+        return redirect(url_for('dashboard_empresa'))
+    
+    # Gerar conteúdo do currículo em texto
+    conteudo_curriculo = f"""=== CURRÍCULO ===
+
+Nome: {candidato[0]}
+Email: {candidato[1]}
+Telefone: {candidato[2] or 'Não informado'}
+LinkedIn: {candidato[3] or 'Não informado'}
+Pretensão Salarial: R$ {candidato[8]:.2f if candidato[8] else 'Não informado'}
+
+=== RESUMO PROFISSIONAL ===
+{candidato[7] or 'Não informado'}
+
+=== EXPERIÊNCIA PROFISSIONAL ===
+{candidato[5] or 'Não informado'}
+
+=== COMPETÊNCIAS E HABILIDADES ===
+{candidato[6] or 'Não informado'}
+
+=== TEXTO COMPLETO DO CURRÍCULO ===
+{candidato[4] or 'Texto não disponível'}
+"""
+    
+    # Criar arquivo em memória
+    arquivo_memoria = io.BytesIO()
+    arquivo_memoria.write(conteudo_curriculo.encode('utf-8'))
+    arquivo_memoria.seek(0)
+    
+    nome_arquivo = f"curriculo_{candidato[0].replace(' ', '_')}.txt"
+    
+    return send_file(
+        arquivo_memoria,
+        as_attachment=True,
+        download_name=nome_arquivo,
+        mimetype='text/plain'
+    )
 
 @app.route('/logout')
 def logout():
