@@ -1,0 +1,84 @@
+Crie um MVP web simples e leve de recrutamento, usando Flask e SQLite, projetado para rodar no plano gratuito do Replit, com consumo mínimo de recursos externos.
+
+Funcionalidades principais:
+Autenticação:
+
+Empresa: cadastro/login com CNPJ (único), nome, email e senha (hash).
+
+Candidato: cadastro/login com nome, email, telefone, LinkedIn, pretensão salarial e senha (hash).
+
+Cadastro de vagas:
+
+Empresa pode criar vagas informando título, descrição, requisitos (palavras-chave separadas por vírgula) e salário oferecido.
+
+Upload de currículo:
+
+Candidato faz upload de PDF (máx. 3 MB).
+
+Extraia texto do PDF usando PyPDF2 e identifique: experiência, competências e resumo profissional.
+
+Exiba ao candidato quais dados foram encontrados e permita completar manualmente ou enviar outro PDF.
+
+Matching com IA híbrida:
+
+O sistema deve ter dois modos configuráveis via variável de ambiente MODO_IA:
+
+local: matching simples contando quantos requisitos da vaga aparecem no texto do currículo e comparando pretensão x salário oferecido.
+
+huggingface: usa sentence-transformers do Hugging Face para calcular similaridade semântica entre o texto do currículo e os requisitos da vaga, ajustando o score.
+
+O número de vagas recomendadas deve ser configurável por TOP_JOBS (default: 3).
+
+Fluxo do candidato:
+
+Preenche o perfil e faz upload do currículo.
+
+Sistema mostra as top vagas mais compatíveis (baseado no MODO_IA escolhido).
+
+Escolhe uma vaga para se candidatar e já vê sua posição no ranking.
+
+Fluxo da empresa:
+
+Visualiza todas as vagas cadastradas.
+
+Vê o ranking dos candidatos para cada vaga, com nome, LinkedIn, telefone e email, além do score calculado.
+
+Banco de dados:
+
+Use SQLite, com as tabelas:
+
+bash
+Copiar
+Editar
+empresas (id, cnpj, nome, email, senha_hash)
+candidatos (id, nome, email, senha_hash, telefone, linkedin, pretensao_salarial)
+vagas (id, empresa_id, titulo, descricao, requisitos, salario_oferecido)
+candidaturas (id, candidato_id, vaga_id, score, posicao)
+Infraestrutura no Replit:
+
+Utilize o painel de Secrets do Replit para definir:
+
+MODO_IA (padrão: "local" para funcionar sem dependências pesadas).
+
+TOP_JOBS (padrão: 3).
+
+Armazene os uploads na pasta /uploads/.
+
+Evite usar SMTP ou envio de emails para manter o projeto leve.
+
+Interface:
+
+HTML simples e responsivo, usando Tailwind CSS.
+
+Mensagens claras de sucesso e erro para o usuário, sem JavaScript pesado ou gráficos.
+
+Exigência do prompt:
+Todo o código deve estar em português, incluindo:
+
+nomes de variáveis,
+
+nomes de funções,
+
+comentários,
+
+mensagens exibidas na interface.
