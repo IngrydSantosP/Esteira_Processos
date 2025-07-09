@@ -5,18 +5,61 @@
 
 {% block content %}
 <div class="max-w-6xl mx-auto">
-    <div class="mb-6">
-        <h2 class="text-2xl font-bold">Vagas Recomendadas Para Você</h2>
-        <p class="text-gray-600">Top {{ vagas|length }} vagas baseadas no seu perfil</p>
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold">Dashboard do Candidato</h2>
+        <div class="flex gap-2">
+            <a href="{{ url_for('editar_perfil_candidato') }}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                Editar Perfil
+            </a>
+            <a href="{{ url_for('minhas_candidaturas') }}" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
+                Minhas Candidaturas
+            </a>
+        </div>
     </div>
     
-    {% if vagas %}
+    <!-- Vagas Candidatadas -->
+    {% if vagas_candidatadas %}
+    <div class="mb-8">
+        <h3 class="text-xl font-bold mb-4">Suas Candidaturas</h3>
+        <div class="grid gap-4">
+            {% for vaga in vagas_candidatadas %}
+                <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="text-lg font-semibold mb-1">{{ vaga[1] }}</h4>
+                            <p class="text-gray-600 mb-1">{{ vaga[2] }}</p>
+                            <p class="text-sm text-gray-500">
+                                <strong>Salário:</strong> R$ {{ "%.2f"|format(vaga[3]) }}
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium mb-1">
+                                Posição: {{ vaga[5] }}º
+                            </div>
+                            <div class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                                {{ "%.1f"|format(vaga[4]) }}% match
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Vagas Recomendadas -->
+    <div class="mb-6">
+        <h3 class="text-xl font-bold mb-4">Vagas Recomendadas Para Você</h3>
+        <p class="text-gray-600 mb-4">Top {{ vagas_recomendadas|length }} vagas compatíveis com seu perfil</p>
+    </div>
+    
+    {% if vagas_recomendadas %}
         <div class="grid gap-6">
-            {% for vaga in vagas %}
+            {% for vaga in vagas_recomendadas %}
                 <div class="bg-white p-6 rounded-lg shadow-md">
                     <div class="flex justify-between items-start mb-4">
                         <div>
-                            <h3 class="text-xl font-semibold mb-2">{{ vaga[1] }}</h3>
+                            <h4 class="text-xl font-semibold mb-2">{{ vaga[1] }}</h4>
                             <p class="text-gray-600 mb-2">{{ vaga[5] }}</p>
                         </div>
                         <div class="text-right">
@@ -44,7 +87,7 @@
         </div>
     {% else %}
         <div class="text-center py-8">
-            <p class="text-gray-600">Nenhuma vaga encontrada. Complete seu perfil para receber recomendações.</p>
+            <p class="text-gray-600">Nenhuma vaga disponível no momento. Complete seu perfil para receber melhores recomendações.</p>
         </div>
     {% endif %}
 </div>

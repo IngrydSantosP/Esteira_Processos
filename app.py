@@ -196,23 +196,40 @@ def dashboard_candidato():
         conn.close()
         return redirect(url_for('upload_curriculo'))
     
-    # Buscar vagas recomendadas
+    # Buscar vagas onde já se candidatou
+    cursor.execute('''
+        SELECT v.id, v.titulo, e.nome as empresa_nome, v.salario_oferecido,
+               ca.score, ca.posicao
+        FROM candidaturas ca
+        JOIN vagas v ON ca.vaga_id = v.id
+        JOIN empresas e ON v.empresa_id = e.id
+        WHERE ca.candidato_id = ?
+        ORDER BY ca.posicao ASC
+    ''', (session['candidato_id'],))
+    
+    vagas_candidatadas = cursor.fetchall()
+    
+    # Buscar vagas onde NÃO se candidatou
     cursor.execute('''
         SELECT v.id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido, e.nome as empresa_nome
         FROM vagas v
         JOIN empresas e ON v.empresa_id = e.id
-    ''')
-    vagas = cursor.fetchall()
+        WHERE v.id NOT IN (
+            SELECT vaga_id FROM candidaturas WHERE candidato_id = ?
+        )
+    ''', (session['candidato_id'],))
+    
+    vagas_disponiveis = cursor.fetchall()
     
     cursor.execute('SELECT pretensao_salarial, texto_curriculo FROM candidatos WHERE id = ?', (session['candidato_id'],))
     candidato_info = cursor.fetchone()
     
     conn.close()
     
-    # Calcular scores para todas as vagas
+    # Calcular scores para vagas disponíveis
     avaliador = criar_avaliador(MODO_IA)
     vagas_com_score = []
-    for vaga in vagas:
+    for vaga in vagas_disponiveis:
         score = avaliador.calcular_score(
             candidato_info[1], 
             vaga[3], 
@@ -225,7 +242,9 @@ def dashboard_candidato():
     vagas_com_score.sort(key=lambda x: x[6], reverse=True)
     top_vagas = vagas_com_score[:TOP_JOBS]
     
-    return render_template('dashboard_candidato.html', vagas=top_vagas)
+    return render_template('dashboard_candidato.html', 
+                         vagas_recomendadas=top_vagas,
+                         vagas_candidatadas=vagas_candidatadas)
 
 @app.route('/upload_curriculo', methods=['GET', 'POST'])
 def upload_curriculo():
@@ -272,6 +291,109 @@ def candidatar(vaga_id):
         flash(mensagem['texto'], mensagem['tipo'])
     
     return redirect(url_for('dashboard_candidato'))
+
+@app.route('/editar_perfil_candidato', methods=['GET', 'POST'])
+def editar_perfil_candidato():
+    if 'candidato_id' not in session:
+        return redirect(url_for('login_candidato'))
+    
+    conn = sqlite3.connect('recrutamento.db')
+    cursor = conn.cursor()
+    
+    if request.method == 'POST':
+        nome = request.form['nome']
+        telefone = request.form['telefone'] 
+        linkedin = request.form['linkedin']
+        pretensao_salarial = float(request.form['pretensao_salarial'])
+        experiencia = request.form['experiencia']
+        competencias = request.form['competencias']
+        resumo_profissional = request.form['resumo_profissional']
+        
+        cursor.execute('''
+            UPDATE candidatos 
+            SET nome = ?, telefone = ?, linkedin = ?, pretensao_salarial = ?,
+                experiencia = ?, competencias = ?, resumo_profissional = ?
+            WHERE id = ?
+        ''', (nome, telefone, linkedin, pretensao_salarial, experiencia, 
+              competencias, resumo_profissional, session['candidato_id']))
+        
+        conn.commit()
+        conn.close()
+        
+        flash('Perfil atualizado com sucesso!', 'success')
+        return redirect(url_for('dashboard_candidato'))
+    
+    cursor.execute('''
+        SELECT nome, telefone, linkedin, pretensao_salarial, 
+               experiencia, competencias, resumo_profissional
+        FROM candidatos WHERE id = ?
+    ''', (session['candidato_id'],))
+    
+    candidato = cursor.fetchone()
+    conn.close()
+    
+    return render_template('editar_perfil_candidato.html', candidato=candidato)
+
+@app.route('/editar_vaga/<int:vaga_id>', methods=['GET', 'POST'])
+def editar_vaga(vaga_id):
+    if 'empresa_id' not in session:
+        return redirect(url_for('login_empresa'))
+    
+    conn = sqlite3.connect('recrutamento.db')
+    cursor = conn.cursor()
+    
+    # Verificar se a vaga pertence à empresa
+    cursor.execute('SELECT * FROM vagas WHERE id = ? AND empresa_id = ?', 
+                   (vaga_id, session['empresa_id']))
+    vaga = cursor.fetchone()
+    
+    if not vaga:
+        flash('Vaga não encontrada', 'error')
+        return redirect(url_for('dashboard_empresa'))
+    
+    if request.method == 'POST':
+        titulo = request.form['titulo']
+        descricao = request.form['descricao']
+        requisitos = request.form['requisitos']
+        salario_oferecido = float(request.form['salario_oferecido'])
+        
+        cursor.execute('''
+            UPDATE vagas 
+            SET titulo = ?, descricao = ?, requisitos = ?, salario_oferecido = ?
+            WHERE id = ?
+        ''', (titulo, descricao, requisitos, salario_oferecido, vaga_id))
+        
+        conn.commit()
+        conn.close()
+        
+        flash('Vaga atualizada com sucesso!', 'success')
+        return redirect(url_for('dashboard_empresa'))
+    
+    conn.close()
+    return render_template('editar_vaga.html', vaga=vaga)
+
+@app.route('/minhas_candidaturas')
+def minhas_candidaturas():
+    if 'candidato_id' not in session:
+        return redirect(url_for('login_candidato'))
+    
+    conn = sqlite3.connect('recrutamento.db')
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT v.id, v.titulo, e.nome as empresa_nome, v.salario_oferecido,
+               ca.score, ca.posicao, ca.data_candidatura
+        FROM candidaturas ca
+        JOIN vagas v ON ca.vaga_id = v.id
+        JOIN empresas e ON v.empresa_id = e.id
+        WHERE ca.candidato_id = ?
+        ORDER BY ca.data_candidatura DESC
+    ''', (session['candidato_id'],))
+    
+    candidaturas = cursor.fetchall()
+    conn.close()
+    
+    return render_template('minhas_candidaturas.html', candidaturas=candidaturas)
 
 @app.route('/logout')
 def logout():
