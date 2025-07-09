@@ -489,8 +489,7 @@ def baixar_curriculo(candidato_id):
     
     # Buscar dados do candidato
     cursor.execute('''
-        SELECT nome, email, telefone, linkedin, texto_curriculo, 
-               experiencia, competencias, resumo_profissional, pretensao_salarial
+        SELECT nome, caminho_curriculo
         FROM candidatos WHERE id = ?
     ''', (candidato_id,))
     
@@ -501,40 +500,24 @@ def baixar_curriculo(candidato_id):
         flash('Candidato não encontrado', 'error')
         return redirect(url_for('dashboard_empresa'))
     
-    # Gerar conteúdo do currículo em texto
-    conteudo_curriculo = f"""=== CURRÍCULO ===
-
-Nome: {candidato[0]}
-Email: {candidato[1]}
-Telefone: {candidato[2] or 'Não informado'}
-LinkedIn: {candidato[3] or 'Não informado'}
-Pretensão Salarial: R$ {candidato[8]:.2f if candidato[8] else 'Não informado'}
-
-=== RESUMO PROFISSIONAL ===
-{candidato[7] or 'Não informado'}
-
-=== EXPERIÊNCIA PROFISSIONAL ===
-{candidato[5] or 'Não informado'}
-
-=== COMPETÊNCIAS E HABILIDADES ===
-{candidato[6] or 'Não informado'}
-
-=== TEXTO COMPLETO DO CURRÍCULO ===
-{candidato[4] or 'Texto não disponível'}
-"""
+    # Verificar se o arquivo do currículo existe
+    if not candidato[1]:
+        flash('Currículo não disponível para download', 'error')
+        return redirect(url_for('dashboard_empresa'))
     
-    # Criar arquivo em memória
-    arquivo_memoria = io.BytesIO()
-    arquivo_memoria.write(conteudo_curriculo.encode('utf-8'))
-    arquivo_memoria.seek(0)
+    caminho_curriculo = os.path.join('uploads', candidato[1])
     
-    nome_arquivo = f"curriculo_{candidato[0].replace(' ', '_')}.txt"
+    if not os.path.exists(caminho_curriculo):
+        flash('Arquivo do currículo não encontrado', 'error')
+        return redirect(url_for('dashboard_empresa'))
+    
+    nome_download = f"curriculo_{candidato[0].replace(' ', '_')}.pdf"
     
     return send_file(
-        arquivo_memoria,
+        caminho_curriculo,
         as_attachment=True,
-        download_name=nome_arquivo,
-        mimetype='text/plain'
+        download_name=nome_download,
+        mimetype='application/pdf'
     )
 
 @app.route('/logout')

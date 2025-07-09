@@ -31,9 +31,16 @@ def inicializar_banco():
             texto_curriculo TEXT,
             experiencia TEXT,
             competencias TEXT,
-            resumo_profissional TEXT
+            resumo_profissional TEXT,
+            caminho_curriculo TEXT
         )
     ''')
+    
+    # Adicionar coluna se não existir (para bancos existentes)
+    try:
+        cursor.execute('ALTER TABLE candidatos ADD COLUMN caminho_curriculo TEXT')
+    except sqlite3.OperationalError:
+        pass  # Coluna já existe
     
     # Tabela vagas
     cursor.execute('''
