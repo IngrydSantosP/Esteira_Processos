@@ -1,0 +1,36 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="text-center">
+    <h2 class="text-3xl font-bold mb-8">Sistema de Recrutamento</h2>
+    
+    <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h3 class="text-xl font-semibold mb-4">Para Empresas</h3>
+            <p class="text-gray-600 mb-4">Publique vagas e encontre os melhores candidatos</p>
+            <div class="space-y-2">
+                <a href="{{ url_for('login_empresa') }}" class="block w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">
+                    Login Empresa
+                </a>
+                <a href="{{ url_for('cadastro_empresa') }}" class="block w-full bg-gray-600 text-white py-2 px-4 rounded hover:bg-gray-700">
+                    Cadastrar Empresa
+                </a>
+            </div>
+        </div>
+        
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h3 class="text-xl font-semibold mb-4">Para Candidatos</h3>
+            <p class="text-gray-600 mb-4">Encontre as vagas mais adequadas ao seu perfil</p>
+            <div class="space-y-2">
+                <a href="{{ url_for('login_candidato') }}" class="block w-full bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700">
+                    Login Candidato
+                </a>
+                <a href="{{ url_for('cadastro_candidato') }}" class="block w-full bg-gray-600 text-white py-2 px-4 rounded hover:bg-gray-700">
+                    Cadastrar Candidato
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

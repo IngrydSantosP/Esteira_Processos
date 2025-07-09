@@ -1,0 +1,49 @@
+
+{% extends "base.html" %}
+
+{% block title %}Dashboard Empresa{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold">Minhas Vagas</h2>
+        <a href="{{ url_for('criar_vaga') }}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+            Nova Vaga
+        </a>
+    </div>
+    
+    {% if vagas %}
+        <div class="grid gap-4">
+            {% for vaga in vagas %}
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="text-xl font-semibold mb-2">{{ vaga[2] }}</h3>
+                            <p class="text-gray-600 mb-2">{{ vaga[3] }}</p>
+                            <p class="text-sm text-gray-500 mb-2">
+                                <strong>Requisitos:</strong> {{ vaga[4] }}
+                            </p>
+                            <p class="text-sm text-gray-500">
+                                <strong>Salário:</strong> R$ {{ "%.2f"|format(vaga[5]) }}
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <a href="{{ url_for('candidatos_vaga', vaga_id=vaga[0]) }}" 
+                               class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                                Ver Candidatos
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-8">
+            <p class="text-gray-600">Nenhuma vaga cadastrada ainda.</p>
+            <a href="{{ url_for('criar_vaga') }}" class="text-blue-600 hover:text-blue-800">
+                Criar sua primeira vaga
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
