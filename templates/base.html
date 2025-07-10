@@ -1,21 +1,20 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}MVP Recrutamento{% endblock %}</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Recrutamento{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <nav class="bg-blue-600 text-white p-4">
+<body class="bg-purple-50 min-h-screen">
+    <nav class="bg-purple-600 text-white p-4">
         <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold">MVP Recrutamento</h1>
+            <h1 class="text-xl font-bold">Recrutamento</h1>
             <div class="space-x-4">
                 {% if session.tipo_usuario %}
-                    <a href="{{ url_for('logout') }}" class="hover:text-blue-200">Sair</a>
+                    <a href="{{ url_for('logout') }}" class="hover:text-purple-300">Sair</a>
                 {% else %}
-                    <a href="{{ url_for('index') }}" class="hover:text-blue-200">Início</a>
+                    <a href="{{ url_for('index') }}" class="hover:text-purple-300">Início</a>
                 {% endif %}
             </div>
         </div>
@@ -25,7 +24,14 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="mb-4 p-4 rounded-lg {% if category == 'error' %}bg-red-100 text-red-700{% elif category == 'success' %}bg-green-100 text-green-700{% else %}bg-blue-100 text-blue-700{% endif %}">
+                    <div class="mb-4 p-4 rounded-lg 
+                        {% if category == 'error' %}
+                            bg-red-100 text-red-700
+                        {% elif category == 'success' %}
+                            bg-green-100 text-green-700
+                        {% else %}
+                            bg-purple-100 text-purple-700
+                        {% endif %}">
                         {{ message }}
                     </div>
                 {% endfor %}
