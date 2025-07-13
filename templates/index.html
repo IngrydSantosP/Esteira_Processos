@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="text-center">
+    <h2 class="text-3xl font-bold mb-8">Sistema de Recrutamento</h2>
+
+    <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <!-- Bloco Empresas -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h3 class="text-xl font-semibold mb-4">Para Empresas</h3>
+            <p class="text-gray-600 mb-4">Publique vagas e encontre os melhores candidatos</p>
+            <div class="space-y-2">
+                <a href="{{ url_for('login_empresa') }}" 
+                   class="block w-full bg-purple-200 text-purple-800 font-semibold py-2 px-4 rounded 
+                          hover:bg-purple-300 transition-colors duration-200">
+                    Login Empresa
+                </a>
+                <a href="{{ url_for('cadastro_empresa') }}" 
+                   class="block w-full bg-gray-700 text-gray-100 font-semibold py-2 px-4 rounded 
+                          hover:bg-gray-800 transition-colors duration-200">
+                    Cadastrar Empresa
+                </a>
+            </div>
+        </div>
+
+        <!-- Bloco Candidatos -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h3 class="text-xl font-semibold mb-4">Para Candidatos</h3>
+            <p class="text-gray-600 mb-4">Encontre as vagas mais adequadas ao seu perfil</p>
+            <div class="space-y-2">
+                <a href="{{ url_for('login_candidato') }}" 
+                   class="block w-full bg-yellow-100 text-yellow-900 font-semibold py-2 px-4 rounded 
+                          hover:bg-yellow-200 transition-colors duration-200">
+                    Login Candidato
+                </a>
+                <a href="{{ url_for('cadastro_candidato') }}" 
+                   class="block w-full bg-gray-700 text-gray-100 font-semibold py-2 px-4 rounded 
+                          hover:bg-gray-800 transition-colors duration-200">
+                    Cadastrar Candidato
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

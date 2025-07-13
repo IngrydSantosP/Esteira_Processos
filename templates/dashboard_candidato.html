@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Candidato{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold">Dashboard do Candidato</h2>
+        <div class="flex gap-2">
+            <a href="{{ url_for('editar_perfil_candidato') }}" 
+               class="bg-yellow-100 text-yellow-900 font-semibold px-4 py-2 rounded hover:bg-yellow-200 transition-colors duration-200">
+                Editar Perfil
+            </a>
+        </div>
+    </div>
+
+    {% if vagas_candidatadas %}
+    <div class="mb-8">
+        <h3 class="text-xl font-bold mb-4">Suas Candidaturas</h3>
+        <div class="grid gap-4">
+            {% for vaga in vagas_candidatadas %}
+                <div class="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="text-lg font-semibold mb-1">{{ vaga[1] }}</h4>
+                            <p class="text-gray-600 mb-1">{{ vaga[2] }}</p>
+                            <p class="text-sm text-gray-500">
+                                <strong>Salário:</strong> R$ {{ "%.2f"|format(vaga[3]) }}
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <div class="bg-yellow-100 text-yellow-900 px-3 py-1 rounded-full text-sm font-medium mb-1">
+                                Posição: {{ vaga[5] }}º
+                            </div>
+                            <div class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                                {{ "%.1f"|format(vaga[4]) }}% match
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="mb-6">
+        <h3 class="text-xl font-bold mb-4">Vagas Recomendadas Para Você</h3>
+        <p class="text-gray-600 mb-4">Top {{ vagas_recomendadas|length }} vagas compatíveis com seu perfil</p>
+    </div>
+
+    {% if vagas_recomendadas %}
+        <div class="grid gap-6">
+            {% for vaga in vagas_recomendadas %}
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h4 class="text-xl font-semibold mb-2">{{ vaga[1] }}</h4>
+                            <p class="text-gray-600 mb-2">{{ vaga[5] }}</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium mb-2">
+                                {{ "%.1f"|format(vaga[6]) }}% compatível
+                            </div>
+                            <a href="{{ url_for('candidatar', vaga_id=vaga[0]) }}" 
+                               class="bg-yellow-100 text-yellow-900 font-semibold px-4 py-2 rounded hover:bg-yellow-200 transition-colors duration-200">
+                                Candidatar-se
+                            </a>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <p class="text-gray-700 mb-2">{{ vaga[2] }}</p>
+                        <p class="text-sm text-gray-500 mb-2">
+                            <strong>Requisitos:</strong> {{ vaga[3] }}
+                        </p>
+                        <p class="text-sm text-gray-500">
+                            <strong>Salário:</strong> R$ {{ "%.2f"|format(vaga[4]) }}
+                        </p>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-8">
+            <p class="text-gray-600">Nenhuma vaga disponível no momento. Complete seu perfil para receber melhores recomendações.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
