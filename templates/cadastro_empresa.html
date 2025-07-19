@@ -9,11 +9,11 @@
 {% block content %}
 <div class="flex items-center justify-center px-4 py-10">
   <div class="flex w-full max-w-4xl bg-white rounded-xl shadow-lg overflow-hidden">
-    
+
     <!-- Lado esquerdo: Criar conta -->
     <div class="w-1/2 p-8 bg-white">
       <h2 class="text-3xl font-bold text-[#7C71B2] text-center mb-4">Criar Conta</h2>
-      
+
       <!-- Redes sociais -->
       <div class="flex justify-center gap-4 mb-4">
         <button class="w-10 h-10 rounded-full shadow text-lg bg-white hover:bg-gray-100">f</button>
@@ -23,7 +23,8 @@
 
       <p class="text-center text-sm text-gray-400 mb-6">ou</p>
 
-      <form method="POST" class="space-y-4">
+      <!-- Formulário de cadastro -->
+      <form id="registerForm" class="space-y-4">
         <div>
           <label for="cnpj" class="sr-only">CNPJ</label>
           <input type="text" id="cnpj" name="cnpj" placeholder="CNPJ" required
@@ -68,4 +69,37 @@
 
   </div>
 </div>
+
+<!-- Script de envio com fetch -->
+<script>
+  const form = document.getElementById("registerForm");
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    try {
+      const response = await fetch("http://localhost:3000/empresa/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+      if (response.status === 201) {
+        alert("Cadastro realizado com sucesso!");
+        form.reset();
+      } else {
+        alert(result.alerta || "Erro ao cadastrar!");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao se conectar com o servidor!");
+    }
+  });
+</script>
 {% endblock %}
