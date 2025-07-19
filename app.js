@@ -7,7 +7,7 @@ const cors = require('cors');
 
 const app = express();
 
-// Middlewares
+// Requisições
 app.use(express.json()); // Para JSON via fetch
 app.use(express.urlencoded({ extended: true })); // Para formulários HTML
 app.use(cors());
@@ -16,7 +16,7 @@ app.use(cors());
 const User = require('./models/User');
 const Empresa = require('./models/Empresa');
 
-// Middleware JWT
+// Requisição JWT
 function checkToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(" ")[1];
@@ -139,6 +139,7 @@ app.post('/auth/login', async (req, res) => {
 
 // ---------------- ROTAS EMPRESA ----------------
 
+// Rota de registrar empresa
 app.post('/empresa/register', async (req, res) => {
   const { cnpj, nome, email, senha } = req.body;
 
@@ -169,6 +170,38 @@ app.post('/empresa/register', async (req, res) => {
   } catch (error) {
     console.log(error);
     res.status(500).json({ alerta: 'Erro interno no servidor.' });
+  }
+});
+
+// Rota login empresa 
+app.post('/auth/login-empresa', async (req, res) => {
+  const { cnpj, senha } = req.body;
+
+  if (!cnpj) return res.status(422).json({ msg: 'O CNPJ é obrigatório!' });
+  if (!senha) return res.status(422).json({ msg: 'A senha é obrigatória!' });
+
+  try {
+    const empresa = await Empresa.findOne({ cnpj });
+    if (!empresa) return res.status(404).json({ msg: 'Empresa não encontrada!' });
+
+    const checkPassword = await bcrypt.compare(senha, empresa.senha);
+    if (!checkPassword) return res.status(422).json({ msg: 'Senha inválida!' });
+
+    const secret = process.env.SECRET;
+    const token = jwt.sign({ id: empresa._id }, secret);
+
+    res.status(200).json({
+      msg: 'Autenticação realizada com sucesso!',
+      token,
+      empresa: {
+        nome: empresa.nome,
+        email: empresa.email,
+        cnpj: empresa.cnpj,
+      }
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ msg: 'Erro no servidor, tente novamente mais tarde' });
   }
 });
 
