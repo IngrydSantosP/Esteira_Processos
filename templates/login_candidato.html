@@ -1,8 +1,3 @@
-{% extends "base.html" %}
-
-{% block title %}Login Candidato{% endblock %}
-
-{% block content %}
 <div class="flex items-center justify-center py-10">
   <div class="flex w-full max-w-4xl bg-white rounded-xl shadow-lg overflow-hidden">
     
@@ -10,7 +5,7 @@
     <div class="w-1/2 p-8">
       <h2 class="text-3xl font-bold text-[#7C71B2] text-center mb-4">Login Candidato</h2>
       
-      <form method="POST" class="space-y-4">
+      <form id="loginForm" class="space-y-4">
         <div>
           <label for="email" class="sr-only">Email</label>
           <input type="email" id="email" name="email" placeholder="E-mail" required
@@ -37,15 +32,48 @@
 
     <!-- Lado direito: Boas-vindas -->
     <div class="w-1/2 bg-[#7C71B2] text-white p-8 flex flex-col justify-center items-center rounded-l-[4rem]">
-      <h1 class="text-4xl font-bold mb-4">Olá,candidato!</h1>
+      <h1 class="text-4xl font-bold mb-4">Olá, candidato!</h1>
       <p class="mb-6 text-sm">Já possui uma conta? </p>
-      <a href="{{ url_for('cadastro_candidato') }}"}
+      <a href="{{ url_for('cadastro_candidato') }}"
          class="bg-white text-[#7C71B2] px-6 py-2 rounded-full font-bold hover:bg-gray-100 transition">
         Cadastre-se
       </a>
-
     </div>
 
   </div>
 </div>
-{% endblock %}
+
+<script>
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const email = document.getElementById('email').value;
+  const senha = document.getElementById('senha').value;
+
+  try {
+    const res = await fetch('http://localhost:3000/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, senha })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.msg || 'Erro no login');
+      return;
+    }
+
+    alert(data.msg);
+
+    // Salvar token no localStorage (ou onde preferir)
+    localStorage.setItem('token', data.token);
+
+    // Redirecionar para página após login
+    window.location.href = '/dashboard';  // ajuste para sua rota protegida
+
+  } catch (error) {
+    alert('Erro na requisição');
+  }
+});
+</script>

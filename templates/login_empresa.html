@@ -1,8 +1,3 @@
-{% extends "base.html" %}
-
-{% block title %}Login Empresa{% endblock %}
-
-{% block content %}
 <div class="flex items-center justify-center py-10">
   <div class="flex w-full max-w-4xl bg-white rounded-xl shadow-lg overflow-hidden">
     
@@ -10,7 +5,7 @@
     <div class="w-1/2 p-8">
       <h2 class="text-3xl font-bold text-[#7C71B2] text-center mb-4">Login Empresa</h2>
       
-      <form method="POST" class="space-y-4">
+      <form id="loginEmpresaForm" class="space-y-4">
         <div>
           <label for="cnpj" class="sr-only">CNPJ</label>
           <input type="text" id="cnpj" name="cnpj" placeholder="CNPJ" required
@@ -47,4 +42,38 @@
 
   </div>
 </div>
-{% endblock %}
+
+<script>
+document.getElementById('loginEmpresaForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const cnpj = document.getElementById('cnpj').value;
+  const senha = document.getElementById('senha').value;
+
+  try {
+    const res = await fetch('http://localhost:3000/auth/login-empresa', { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cnpj, senha })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.msg || 'Erro no login');
+      return;
+    }
+
+    alert(data.msg);
+
+    // Salvar token no localStorage
+    localStorage.setItem('token', data.token);
+
+    // Redirecionar para página após login
+    window.location.href = '/dashboard_empresa';  // ajuste para sua rota protegida
+
+  } catch (error) {
+    alert('Erro na requisição');
+  }
+});
+</script>
