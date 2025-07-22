@@ -66,14 +66,20 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 
     alert(data.msg);
 
-    // Salvar token no localStorage (ou onde preferir)
+    // Salvar token e nome no localStorage para persistir login
+    if (data.nome && data.nome !== 'undefined') {
+      localStorage.setItem('nome_usuario', data.nome);
+    } else {
+      localStorage.setItem('nome_usuario', 'Usuário');
+    }
     localStorage.setItem('token', data.token);
 
-    // Redirecionar para página após login
-    window.location.href = '/dashboard';  // ajuste para sua rota protegida
+    // Redirecionar para a página principal ou dashboard após login
+    window.location.href = '/'; // Ajuste conforme rota do seu app
 
   } catch (error) {
-    alert('Erro na requisição');
+    alert('Erro ao conectar ao servidor.');
+    console.error(error);
   }
 });
 </script>

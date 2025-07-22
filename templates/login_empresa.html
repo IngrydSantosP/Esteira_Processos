@@ -1,14 +1,14 @@
 <div class="flex items-center justify-center py-10">
   <div class="flex w-full max-w-4xl bg-white rounded-xl shadow-lg overflow-hidden">
-    
-    <!-- Lado esquerdo: Login Empresa -->
+
+    <!-- Lado esquerdo: Login Candidato -->
     <div class="w-1/2 p-8">
-      <h2 class="text-3xl font-bold text-[#7C71B2] text-center mb-4">Login Empresa</h2>
-      
-      <form id="loginEmpresaForm" class="space-y-4">
+      <h2 class="text-3xl font-bold text-[#7C71B2] text-center mb-4">Login Candidato</h2>
+
+      <form id="loginCandidatoForm" class="space-y-4">
         <div>
-          <label for="cnpj" class="sr-only">CNPJ</label>
-          <input type="text" id="cnpj" name="cnpj" placeholder="CNPJ" required
+          <label for="email" class="sr-only">E-mail</label>
+          <input type="email" id="email" name="email" placeholder="E-mail" required
                  class="w-full px-4 py-2 rounded-full bg-[#E1D8EB] placeholder-[#7C71B2] text-sm focus:outline-none">
         </div>
         <div>
@@ -23,7 +23,7 @@
       </form>
 
       <div class="mt-4 text-center">
-        <a href="{{ url_for('cadastro_empresa') }}" 
+        <a href="{{ url_for('cadastro_candidato') }}" 
            class="text-[#7C71B2] hover:text-purple-600 transition-colors duration-200">
           Não tem conta? Cadastre-se
         </a>
@@ -32,9 +32,9 @@
 
     <!-- Lado direito: Boas-vindas -->
     <div class="w-1/2 bg-[#7C71B2] text-white p-8 flex flex-col justify-center items-center rounded-l-[4rem]">
-      <h1 class="text-4xl font-bold mb-4">Olá, empresa!</h1>
+      <h1 class="text-4xl font-bold mb-4">Olá, candidato!</h1>
       <p class="mb-6 text-sm">Ainda não tem uma conta? </p>
-      <a href="{{ url_for('cadastro_empresa') }}"
+      <a href="{{ url_for('cadastro_candidato') }}"
          class="bg-white text-[#7C71B2] px-6 py-2 rounded-full font-bold hover:bg-gray-100 transition">
         Cadastre-se
       </a>
@@ -44,17 +44,17 @@
 </div>
 
 <script>
-document.getElementById('loginEmpresaForm').addEventListener('submit', async (e) => {
+document.getElementById('loginCandidatoForm').addEventListener('submit', async (e) => {
   e.preventDefault();
 
-  const cnpj = document.getElementById('cnpj').value;
+  const email = document.getElementById('email').value;
   const senha = document.getElementById('senha').value;
 
   try {
-    const res = await fetch('http://localhost:3000/auth/login-empresa', { 
+    const res = await fetch('http://localhost:3000/auth/login-candidato', { 
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cnpj, senha })
+      body: JSON.stringify({ email, senha })
     });
 
     const data = await res.json();
@@ -69,11 +69,11 @@ document.getElementById('loginEmpresaForm').addEventListener('submit', async (e)
     // Salvar token no localStorage
     localStorage.setItem('token', data.token);
 
-    // Redirecionar para página após login
-    window.location.href = '/dashboard_empresa';  // ajuste para sua rota protegida
-
+    // Redirecionar para a página inicial do candidato
+    window.location.href = '/candidato/dashboard';  // ajuste conforme sua rota
   } catch (error) {
     alert('Erro na requisição');
+    console.error(error);
   }
 });
 </script>
