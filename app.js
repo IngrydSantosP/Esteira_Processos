@@ -44,7 +44,7 @@ app.get('/user/:id', checkToken, async (req, res) => {
   const id = req.params.id;
 
   try {
-    const user = await User.findById(id, '-senha -experiencias -competencias');
+    const user = await User.findById(id).select('-senha');
     if (!user) return res.status(404).json({ msg: 'Usuário não encontrado' });
 
     res.status(200).json({ user });
@@ -62,7 +62,7 @@ app.put('/user/:id', checkToken, async (req, res) => {
       id,
       { telefone, linkedin, pretensao_salarial },
       { new: true, runValidators: true }
-    ).select('-senha -experiencias -competencias');
+    ).select('-senha');
 
     if (!updatedUser) return res.status(404).json({ msg: 'Usuário não encontrado para atualização' });
 
@@ -122,13 +122,15 @@ app.post('/auth/login', async (req, res) => {
 
   try {
     const secret = process.env.SECRET;
-    const token = jwt.sign({ id: user._id }, secret);
+
+    const token = jwt.sign({ id: user._id, nome: user.nome }, secret, { expiresIn: '1h' });
 
     const { nome, telefone, linkedin, pretensao_salarial } = user;
 
     res.status(200).json({
       msg: 'Autenticação realizada com sucesso!',
       token,
+      nome,
       user: { nome, email, telefone, linkedin, pretensao_salarial }
     });
   } catch (error) {
@@ -188,7 +190,7 @@ app.post('/auth/login-empresa', async (req, res) => {
     if (!checkPassword) return res.status(422).json({ msg: 'Senha inválida!' });
 
     const secret = process.env.SECRET;
-    const token = jwt.sign({ id: empresa._id }, secret);
+    const token = jwt.sign({ id: empresa._id, nome: empresa.nome }, secret, { expiresIn: '1h' });
 
     res.status(200).json({
       msg: 'Autenticação realizada com sucesso!',
