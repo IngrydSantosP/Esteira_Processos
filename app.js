@@ -7,6 +7,9 @@ const cors = require('cors');
 
 const app = express();
 
+// Servir arquivos estáticos da pasta 'templates' (ex: cadastro_empresa.html)
+app.use(express.static('templates'));
+
 // Requisições
 app.use(express.json()); // Para JSON via fetch
 app.use(express.urlencoded({ extended: true })); // Para formulários HTML
