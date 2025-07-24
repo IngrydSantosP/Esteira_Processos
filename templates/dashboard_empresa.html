@@ -3,82 +3,221 @@
 {% block title %}Dashboard Empresa{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto">
-    <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold">Minhas Vagas</h2>
-        <a href="{{ url_for('criar_vaga') }}" 
-           class="bg-purple-200 text-purple-800 font-semibold px-4 py-2 rounded hover:bg-purple-300 transition-colors duration-200">
-            Nova Vaga
-        </a>
-    </div>
-
-    {% if vagas %}
-        <div class="grid gap-4">
-            {% for vaga in vagas %}
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="flex-1">
-                            <h3 class="text-lg font-semibold mb-2">{{ vaga.titulo }}</h3>
-                            <p class="text-gray-600 mb-2">{{ vaga.descricao }}</p>
-                            <p class="text-sm text-gray-500 mb-2">
-                                <strong>Requisitos:</strong> {{ vaga.requisitos }}
-                            </p>
-                            <p class="text-sm text-gray-500 mb-3">
-                                <strong>Salário:</strong> R$ {{ "%.2f"|format(vaga.salario_oferecido) }}
-                            </p>
-                            
-                            <div class="bg-purple-50 p-3 rounded-lg mb-3">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-sm font-medium text-purple-800">
-                                        📊 Total de Candidatos: {{ vaga.total_candidatos }}
-                                    </span>
-                                </div>
-                                {% if vaga.total_candidatos > 0 %}
-                                <div class="grid grid-cols-3 gap-2 text-xs mb-2">
-                                    <div class="text-center">
-                                        <div class="font-semibold text-green-600">{{ vaga.candidatos_80_plus }}</div>
-                                        <div class="text-gray-500">Excelente (80%+)</div>
-                                    </div>
-                                    <div class="text-center">
-                                        <div class="font-semibold text-yellow-700">{{ vaga.candidatos_60_79 }}</div>
-                                        <div class="text-gray-500">Bom (60-79%)</div>
-                                    </div>
-                                    <div class="text-center">
-                                        <div class="font-semibold text-orange-500">{{ vaga.candidatos_abaixo_60 }}</div>
-                                        <div class="text-gray-500">Baixo (&lt;60%)</div>
-                                    </div>
-                                </div>
-                                {% endif %}
-                                <div class="flex items-center space-x-2">
-                                    <span class="text-lg">{{ vaga.feedback_ia.icone }}</span>
-                                    <span class="text-sm font-medium {{ vaga.feedback_ia.cor }}">
-                                        {{ vaga.feedback_ia.texto }}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex flex-col gap-2 ml-4">
-                            <a href="{{ url_for('editar_vaga', vaga_id=vaga.id) }}" 
-                               class="bg-gray-700 text-gray-100 px-3 py-1 rounded text-sm hover:bg-gray-800 text-center">
-                                Editar
-                            </a>
-                            <a href="{{ url_for('candidatos_vaga', vaga_id=vaga.id) }}" 
-                               class="bg-purple-200 text-purple-800 font-semibold px-3 py-1 rounded text-sm hover:bg-purple-300 text-center transition-colors duration-200">
-                                Ver Candidatos ({{ vaga.total_candidatos }})
-                            </a>
-                        </div>
+<div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
+    <!-- Header moderno -->
+    <div class="bg-white shadow-sm border-b sticky top-0 z-10 backdrop-blur-md bg-white/95">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
+                        <span class="text-white font-bold text-lg">🏢</span>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                            Painel de Controle
+                        </h1>
+                        <p class="text-gray-500 text-sm">Gerencie suas vagas e candidatos</p>
                     </div>
                 </div>
-            {% endfor %}
+                <div class="flex gap-3">
+                    <a href="{{ url_for('criar_vaga') }}"
+                       class="group bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center gap-2">
+                        <span class="transition-transform group-hover:rotate-12">➕</span>
+                        Nova Vaga
+                    </a>
+                    <a href="{{ url_for('relatorio_empresa') }}"
+                       class="group bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center gap-2">
+                        <span class="transition-transform group-hover:scale-110">📊</span>
+                        Relatórios
+                    </a>
+                </div>
+            </div>
         </div>
-    {% else %}
-        <div class="text-center py-8">
-            <p class="text-gray-600">Nenhuma vaga cadastrada ainda.</p>
-            <a href="{{ url_for('criar_vaga') }}" 
-               class="text-purple-800 hover:text-purple-600 transition-colors duration-200">
-                Criar sua primeira vaga
-            </a>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 hover:border-purple-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Total de Vagas</p>
+                        <p class="text-3xl font-bold text-purple-600">{{ vagas|length if vagas else 0 }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                        <span class="text-2xl">💼</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 hover:border-green-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Vagas Ativas</p>
+                        <p class="text-3xl font-bold text-green-600">
+                            {{ vagas|selectattr('status', 'equalto', 'Ativa')|list|length if vagas else 0 }}
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                        <span class="text-2xl">✅</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 hover:border-blue-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Total Candidatos</p>
+                        <p class="text-3xl font-bold text-blue-600">
+                            {{ vagas|sum(attribute='total_candidatos') if vagas else 0 }}
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                        <span class="text-2xl">👥</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 hover:border-orange-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Alta Qualidade</p>
+                        <p class="text-3xl font-bold text-orange-600">
+                            {{ vagas|sum(attribute='candidatos_80_plus') if vagas else 0 }}
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                        <span class="text-2xl">⭐</span>
+                    </div>
+                </div>
+            </div>
         </div>
-    {% endif %}
+
+        <!-- Lista de Vagas -->
+        {% include 'partials/lista_vagas.html' %}
+    </div>
 </div>
+
+
+
+<script>
+  function filtrarVagas(status) {
+    const cards = document.querySelectorAll('.vaga-card');
+    let visibleCount = 0;
+    
+    cards.forEach(card => {
+      const cardStatus = card.getAttribute('data-status');
+      if (status === 'todas' || cardStatus === status) {
+        card.style.display = 'block';
+        visibleCount++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+
+    // Atualiza o botão ativo com acessibilidade
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.classList.remove('active', 'bg-gradient-to-r', 'from-purple-500', 'to-blue-500', 'text-white', 'font-semibold');
+      btn.classList.add('bg-gray-100', 'text-gray-700', 'font-medium');
+      btn.setAttribute('aria-selected', 'false');
+      btn.setAttribute('tabindex', '-1');
+    });
+    
+    const activeBtn = document.querySelector(`.filter-btn[onclick="filtrarVagas('${status}')"]`);
+    if (activeBtn) {
+      activeBtn.classList.remove('bg-gray-100', 'text-gray-700', 'font-medium');
+      activeBtn.classList.add('active', 'bg-gradient-to-r', 'from-purple-500', 'to-blue-500', 'text-white', 'font-semibold');
+      activeBtn.setAttribute('aria-selected', 'true');
+      activeBtn.setAttribute('tabindex', '0');
+    }
+
+    // Anunciar resultado para leitores de tela
+    const announcement = `${visibleCount} vaga(s) encontrada(s) para o filtro ${status}`;
+    const announcer = document.getElementById('filter-announcer') || createAnnouncer();
+    announcer.textContent = announcement;
+  }
+
+  function createAnnouncer() {
+    const announcer = document.createElement('div');
+    announcer.id = 'filter-announcer';
+    announcer.setAttribute('aria-live', 'polite');
+    announcer.setAttribute('aria-atomic', 'true');
+    announcer.style.position = 'absolute';
+    announcer.style.left = '-10000px';
+    announcer.style.width = '1px';
+    announcer.style.height = '1px';
+    announcer.style.overflow = 'hidden';
+    document.body.appendChild(announcer);
+    return announcer;
+  }
+
+  // Suporte a navegação por teclado nos filtros
+  document.addEventListener('DOMContentLoaded', function() {
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    
+    filterButtons.forEach((btn, index) => {
+      btn.addEventListener('keydown', function(e) {
+        switch(e.key) {
+          case 'ArrowLeft':
+          case 'ArrowUp':
+            e.preventDefault();
+            const prevIndex = index > 0 ? index - 1 : filterButtons.length - 1;
+            filterButtons[prevIndex].focus();
+            break;
+          case 'ArrowRight':
+          case 'ArrowDown':
+            e.preventDefault();
+            const nextIndex = index < filterButtons.length - 1 ? index + 1 : 0;
+            filterButtons[nextIndex].focus();
+            break;
+          case 'Enter':
+          case ' ':
+            e.preventDefault();
+            btn.click();
+            break;
+        }
+      });
+    });
+  });
+
+  // Função para reativar vaga (específica do dashboard)
+  async function reativarVaga(vagaId) {
+    const confirmar = confirm('Tem certeza que deseja reativar esta vaga?');
+    if (!confirmar) return;
+
+    try {
+      const response = await fetch('/encerrar_vaga', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          vaga_id: vagaId,
+          acao: 'reativar'
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        alert('Vaga reativada com sucesso!');
+        location.reload();
+      } else {
+        alert('Erro ao reativar vaga: ' + (result.error || 'Erro desconhecido'));
+      }
+    } catch (error) {
+      console.error('Erro ao reativar vaga:', error);
+      alert('Erro ao reativar vaga. Tente novamente.');
+    }
+  }
+</script>
+
+
+
+<!-- Inclui o modal e JS separado -->
+{% include 'partials/modal_encerramento.html' %}
 {% endblock %}
+
+
+
+

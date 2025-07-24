@@ -433,9 +433,8 @@ nav a:hover::after {
   gap: 6px;
   color: #4A4A4A;
 }
-#auth input[type="text"],
-#auth input[type="email"],
-#auth input[type="password"] {
+
+#auth input{
   background-color: #D7CDF7;
   border: none;
   border-radius: 15px;
@@ -447,13 +446,12 @@ nav a:hover::after {
   outline-color: transparent;
   transition: outline-color 0.3s ease;
 }
-#auth input[type="text"]:focus,
-#auth input[type="email"]:focus,
-#auth input[type="password"]:focus {
+
+#auth input:focus {
   outline-color: #7C6FC0;
 }
 #auth button[type="submit"] {
-  background-color: #7C6FC0;
+  background-color: #614fba;
   color: white;
   font-weight: 800;
   font-size: 1.05rem;
@@ -512,20 +510,8 @@ input[icon] {
   padding-left: 2.4rem !important;
   font-weight: 600;
 }
-input.icon-nome {
+input.icon {
   background-image: url("data:image/svg+xml;utf8,<svg fill='gray' height='16' viewBox='0 0 24 24' width='16' xmlns='http://www.w3.org/2000/svg'><path d='M12 12c2.7 0 4.9-2.2 4.9-4.9S14.7 2.2 12 2.2 7.1 4.4 7.1 7.1 9.3 12 12 12zm0 2.2c-3.1 0-9.3 1.5-9.3 4.6V22h18.6v-3.2c0-3-6.2-4.6-9.3-4.6z'/></svg>");
-  background-repeat: no-repeat;
-  background-position: 8px center;
-  background-size: 18px 18px;
-}
-input.icon-email {
-  background-image: url("data:image/svg+xml;utf8,<svg fill='gray' height='16' viewBox='0 0 24 24' width='16' xmlns='http://www.w3.org/2000/svg'><path d='M4 4h16v16H4z' fill='none'/><path d='M20 8l-8 5-8-5V6l8 5 8-5v2z'/></svg>");
-  background-repeat: no-repeat;
-  background-position: 8px center;
-  background-size: 18px 18px;
-}
-input.icon-senha {
-  background-image: url("data:image/svg+xml;utf8,<svg fill='gray' height='16' viewBox='0 0 24 24' width='16' xmlns='http://www.w3.org/2000/svg'><path d='M6 10v6h12v-6H6zm3-2V7a3 3 0 016 0v1H9z' opacity='.3'/><path d='M18 10v6H6v-6h12m-6-4a3 3 0 00-3 3v1H8v6h8v-6h-2v-1a3 3 0 00-3-3z'/></svg>");
   background-repeat: no-repeat;
   background-position: 8px center;
   background-size: 18px 18px;
