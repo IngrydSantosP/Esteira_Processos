@@ -217,6 +217,7 @@ const dbPassword = process.env.DB_PASS;
 
 mongoose.connect(
   `mongodb+srv://${dbUser}:${dbPassword}@oh14g0.khedpdf.mongodb.net/?retryWrites=true&w=majority&appName=oh14g0`
+  
 )
   .then(() => {
     console.log('Conectou ao banco!');
