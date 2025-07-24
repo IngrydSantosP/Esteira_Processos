@@ -17,26 +17,6 @@
         Criar Conta
       </h2>
 
-      <div class="flex justify-center gap-4 mb-4">
-        <button
-          class="w-10 h-10 rounded-full shadow text-lg bg-white hover:bg-gray-100"
-        >
-          f
-        </button>
-        <button
-          class="w-10 h-10 rounded-full shadow text-lg bg-white hover:bg-gray-100"
-        >
-          G
-        </button>
-        <button
-          class="w-10 h-10 rounded-full shadow text-lg bg-white hover:bg-gray-100"
-        >
-          in
-        </button>
-      </div>
-
-      <p class="text-center text-sm text-gray-400 mb-6">ou</p>
-
       <form id="registerForm" class="space-y-4">
         <input
           type="text"
@@ -117,14 +97,12 @@
     >
       <h1 class="text-4xl font-bold mb-4">Bem-Vindo de Volta!</h1>
       <p class="mb-6 text-sm">Já possui uma conta? Faça seu login abaixo</p>
-      <a
-        href="{{ url_for('login_candidato') }}"
+      <a href="/templates/login_candidato.html" 
         class="bg-white text-[#7C71B2] px-6 py-2 rounded-full font-bold hover:bg-gray-100 transition"
       >
         Login
       </a>
-      <a
-        href="{{ url_for('cadastro_empresa') }}"
+      <a href="/templates/cadastro_empresa.html" 
         class="mt-4 text-sm text-white underline hover:text-[#E1D8EB] transition-colors duration-200"
       >
         Sou empresa

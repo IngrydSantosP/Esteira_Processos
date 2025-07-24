@@ -14,12 +14,7 @@
     <div class="w-1/2 p-8 bg-white">
       <h2 class="text-3xl font-bold text-[#7C71B2] text-center mb-4">Criar Conta</h2>
 
-      <!-- Redes sociais -->
-      <div class="flex justify-center gap-4 mb-4">
-        <button class="w-10 h-10 rounded-full shadow text-lg bg-white hover:bg-gray-100">f</button>
-        <button class="w-10 h-10 rounded-full shadow text-lg bg-white hover:bg-gray-100">G</button>
-        <button class="w-10 h-10 rounded-full shadow text-lg bg-white hover:bg-gray-100">in</button>
-      </div>
+      <!-- Redes sociais removidas -->
 
       <p class="text-center text-sm text-gray-400 mb-6">ou</p>
 
@@ -56,12 +51,12 @@
     <div class="w-1/2 bg-[#7C71B2] text-white p-8 flex flex-col justify-center items-center rounded-l-[4rem]">
       <h1 class="text-4xl font-bold mb-4">Bem-Vindo de Volta!</h1>
       <p class="mb-6 text-sm">Já possui uma conta? Faça seu login abaixo</p>
-      <a href="{{ url_for('login_empresa') }}"
+      <a href="/templates/login_empresa.html" 
          class="bg-white text-[#7C71B2] px-6 py-2 rounded-full font-bold hover:bg-gray-100 transition">
         Login
       </a>
 
-      <a href="{{ url_for('cadastro_candidato') }}"
+      <a href="/templates/cadastro_candidato.html" 
          class="mt-4 text-sm text-white underline hover:text-[#E1D8EB] transition-colors duration-200">
         Sou candidato
       </a>

@@ -22,10 +22,8 @@
         <li><a href="#about" class="nav-link">Sobre</a></li>
       </ul>
     </nav>
-    <!-- Aqui vamos trocar o botão Cadastrar pelo nome do usuário quando logado -->
     <div id="userArea">
-      <a href="{{ url_for('cadastro_empresa') }}" class="btn-primary" id="btnCadastrar">Cadastrar-se</a>
-      <!-- O nome do usuário será inserido aqui após login -->
+      <a href="/templates/cadastro_empresa.html" class="btn-primary" id="btnCadastrar">Cadastrar-se</a>
     </div>
   </div>
 </header>
@@ -34,11 +32,7 @@
 <section id="auth" aria-label="Área de login e cadastro">
   <div class="side-left" id="create-account-side">
     <h2>Criar Conta</h2>
-    <div class="social-auth" aria-label="Login com redes sociais">
-      <button class="social-btn" aria-label="Facebook login" title="Facebook">f</button>
-      <button class="social-btn" aria-label="Google login" title="Google">G+</button>
-      <button class="social-btn" aria-label="LinkedIn login" title="LinkedIn">in</button>
-    </div>
+    
     <p class="separator-text">ou</p>
     <form id="registerForm" aria-describedby="create-account-desc" novalidate>
       <label for="reg-nome" aria-required="true"><span>Nome</span></label>
@@ -75,12 +69,7 @@
       <p>Já possui uma conta? Faça seu login abaixo</p>
     </div>
     <form id="loginForm" novalidate>
-      <div class="social-auth" aria-label="Login com redes sociais">
-        <button class="social-btn" aria-label="Facebook login" title="Facebook">f</button>
-        <button class="social-btn" aria-label="Google login" title="Google">G+</button>
-        <button class="social-btn" aria-label="LinkedIn login" title="LinkedIn">in</button>
-      </div>
-      <p class="separator-text">ou</p>
+      
       <label for="login-email" aria-required="true">E-mail</label>
       <input type="email" id="login-email" name="email" placeholder="E-mail" required />
 
@@ -93,47 +82,36 @@
 </section>
 
 <script>
-  // Função que atualiza UI após login/logout
   function updateUI() {
     const nomeUsuario = localStorage.getItem('nome_usuario');
     const authSection = document.getElementById('auth');
     const userArea = document.getElementById('userArea');
 
     if (nomeUsuario && nomeUsuario !== 'undefined') {
-      // Usuário logado:
-      // Exibir nome no topo, ocultar botão cadastrar
       userArea.innerHTML = `
         <span class="text-gray-800 font-semibold mr-4">Olá, ${nomeUsuario}!</span>
         <button id="logoutBtn" class="btn-primary bg-red-600 hover:bg-red-700">Sair</button>
       `;
 
-      // Ocultar o formulário inteiro de login/cadastro
       authSection.style.display = 'none';
 
-      // Adicionar evento de logout
       document.getElementById('logoutBtn').addEventListener('click', () => {
         localStorage.removeItem('token');
         localStorage.removeItem('nome_usuario');
         updateUI();
       });
     } else {
-      // Usuário não logado:
-      // Mostrar botão cadastrar, esconder nome e logout
       userArea.innerHTML = `
         <a href="{{ url_for('cadastro_empresa') }}" class="btn-primary" id="btnCadastrar">Cadastrar-se</a>
       `;
-
-      // Mostrar o formulário
       authSection.style.display = '';
     }
   }
 
-  // Inicializa a UI após o DOM estar carregado
   document.addEventListener('DOMContentLoaded', () => {
     updateUI();
   });
 
-  // Formulário de cadastro
   document.getElementById('registerForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -173,7 +151,6 @@
     }
   });
 
-  // Formulário de login
   document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -189,8 +166,6 @@
 
       const data = await res.json();
 
-      console.log('Nome recebido do backend:', data.nome);
-
       if (!res.ok) {
         alert(data.msg || 'Erro no login');
         return;
@@ -198,20 +173,11 @@
 
       alert(data.msg);
 
-      // Salvar token e nome no localStorage só se nome válido
-      if (data.nome && data.nome !== 'undefined') {
-        localStorage.setItem('nome_usuario', data.nome);
-      } else {
-        localStorage.setItem('nome_usuario', 'Usuário');
-      }
       localStorage.setItem('token', data.token);
+      localStorage.setItem('nome_usuario', data.nome || 'Usuário');
 
-      // Atualizar UI para mostrar nome e esconder formulário
       updateUI();
-
-      
       document.getElementById('loginForm').reset();
-
     } catch (error) {
       alert('Erro na requisição');
       console.error(error);
