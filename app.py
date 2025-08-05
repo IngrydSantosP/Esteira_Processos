@@ -1528,6 +1528,38 @@ def api_vagas_empresa():
         conn.close()
 
 
+@app.route('/api/favoritar-vaga', methods=['POST'])
+def favoritar_vaga():
+    """API para candidato favoritar/desfavoritar vaga"""
+    if 'candidato_id' not in session:
+        return jsonify({'success': False, 'message': 'Não autorizado'}), 401
+
+    data = request.get_json()
+    vaga_id = data.get('vaga_id')
+    acao = data.get('acao', 'toggle')  # toggle, add, remove
+
+    if not vaga_id:
+        return jsonify({
+            'success': False,
+            'message': 'Vaga ID obrigatório'
+        }), 400
+
+    conn = sqlite3.connect('recrutamento.db')
+    cursor = conn.cursor()
+
+    try:
+        candidato_id = session['candidato_id']
+
+        # Verificar se já está favoritada
+        cursor.execute(
+            '''
+            SELECT id FROM candidato_vaga_favorita 
+            WHERE candidato_id = ? AND vaga_id = ?
+        ''', (candidato_id, vaga_id))
+
+        ja_favoritada = cursor.fetchone() is not None
+
+        if acao == 'toggle' or (acao == 'add' and not ja_favoritada):
             if ja_favoritada:
                 # Remover dos favoritos
                 cursor.execute(
