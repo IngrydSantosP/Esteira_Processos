@@ -25,6 +25,11 @@
                         <span class="transition-transform group-hover:rotate-12">➕</span>
                         Nova Vaga
                     </a>
+                    <a href="{{ url_for('candidatos_favoritos') }}"
+                       class="group bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center gap-2">
+                        <span class="transition-transform group-hover:scale-110">❤️</span>
+                        Favoritos
+                    </a>
                     <a href="{{ url_for('relatorio_empresa') }}"
                        class="group bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center gap-2">
                         <span class="transition-transform group-hover:scale-110">📊</span>
@@ -69,7 +74,7 @@
                     <div>
                         <p class="text-gray-500 text-sm font-medium">Total Candidatos</p>
                         <p class="text-3xl font-bold text-blue-600">
-                            {{ vagas|sum(attribute='total_candidatos') if vagas else 0 }}
+                            {{ (vagas|map(attribute='total_candidatos')|map('int')|sum) if vagas else 0 }}
                         </p>
                     </div>
                     <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
@@ -83,7 +88,7 @@
                     <div>
                         <p class="text-gray-500 text-sm font-medium">Alta Qualidade</p>
                         <p class="text-3xl font-bold text-orange-600">
-                            {{ vagas|sum(attribute='candidatos_80_plus') if vagas else 0 }}
+                            {{ (vagas|map(attribute='candidatos_80_plus')|map('int')|sum) if vagas else 0 }}
                         </p>
                     </div>
                     <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
@@ -98,13 +103,14 @@
     </div>
 </div>
 
-
+<!-- Inclui o modal e JS separado -->
+{% include 'partials/modal_encerramento.html' %}
 
 <script>
   function filtrarVagas(status) {
     const cards = document.querySelectorAll('.vaga-card');
     let visibleCount = 0;
-    
+
     cards.forEach(card => {
       const cardStatus = card.getAttribute('data-status');
       if (status === 'todas' || cardStatus === status) {
@@ -122,7 +128,7 @@
       btn.setAttribute('aria-selected', 'false');
       btn.setAttribute('tabindex', '-1');
     });
-    
+
     const activeBtn = document.querySelector(`.filter-btn[onclick="filtrarVagas('${status}')"]`);
     if (activeBtn) {
       activeBtn.classList.remove('bg-gray-100', 'text-gray-700', 'font-medium');
@@ -154,7 +160,7 @@
   // Suporte a navegação por teclado nos filtros
   document.addEventListener('DOMContentLoaded', function() {
     const filterButtons = document.querySelectorAll('.filter-btn');
-    
+
     filterButtons.forEach((btn, index) => {
       btn.addEventListener('keydown', function(e) {
         switch(e.key) {
@@ -210,14 +216,79 @@
       alert('Erro ao reativar vaga. Tente novamente.');
     }
   }
+
+  // Função para encerrar vaga
+  function encerrarVaga(vagaId) {
+    // Abre o modal de encerramento
+    document.getElementById('vagaId').value = vagaId;
+    document.getElementById('modalEncerramento').classList.remove('hidden');
+  }
+
+  // Sistema de favoritos com auto-reload
+  async function toggleFavoriteCandidate(candidatoId, vagaId, button) {
+    const isFavorited = button.dataset.favorited === 'true';
+
+    try {
+      button.classList.add('animate-pulse');
+
+      const response = await fetch('/api/favoritar-candidato', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          candidato_id: candidatoId,
+          vaga_id: vagaId,
+          acao: 'toggle'
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        button.dataset.favorited = result.favorited;
+        button.textContent = result.favorited ? '❤️' : '🤍';
+        button.className = `favorite-btn text-xl transition-all duration-300 hover:scale-125 ${result.favorited ? 'text-red-500' : 'text-gray-300'}`;
+
+        showToast(result.message, 'success');
+
+        // Auto-reload para refletir mudanças
+        setTimeout(() => {
+          location.reload();
+        }, 1000);
+      } else {
+        showToast(result.message || 'Erro ao favoritar candidato', 'error');
+      }
+    } catch (error) {
+      console.error('Erro ao favoritar:', error);
+      showToast('Erro ao favoritar candidato', 'error');
+    } finally {
+      button.classList.remove('animate-pulse');
+    }
+  }
+
+  // Toast notifications
+  function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-4 right-4 z-50 px-6 py-4 rounded-xl shadow-lg transform translate-y-full transition-all duration-300 ${
+      type === 'success' ? 'bg-green-500 text-white' :
+      type === 'error' ? 'bg-red-500 text-white' :
+      'bg-blue-500 text-white'
+    }`;
+    toast.textContent = message;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.classList.remove('translate-y-full');
+    }, 100);
+
+    setTimeout(() => {
+      toast.classList.add('translate-y-full');
+      setTimeout(() => {
+        document.body.removeChild(toast);
+      }, 300);
+    }, 3000);
+  }
 </script>
-
-
-
-<!-- Inclui o modal e JS separado -->
-{% include 'partials/modal_encerramento.html' %}
 {% endblock %}
-
-
-
-

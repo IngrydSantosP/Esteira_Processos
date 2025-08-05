@@ -1,0 +1,74 @@
+
+{% extends "base.html" %}
+
+{% block title %}Política de Privacidade - JobMatch{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 py-12">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-2xl shadow-xl p-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-8">Política de Privacidade</h1>
+            
+            <div class="prose prose-lg max-w-none">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">1. Coleta de Dados</h2>
+                <p class="mb-6">
+                    Coletamos as seguintes informações para melhorar sua experiência na plataforma:
+                </p>
+                <ul class="mb-6 space-y-2">
+                    <li><strong>Candidatos:</strong> Nome, email, telefone, endereço, currículo, experiências profissionais, formação acadêmica e habilidades.</li>
+                    <li><strong>Empresas:</strong> Nome da empresa, email corporativo, telefone, endereço completo, área de atuação e informações sobre vagas.</li>
+                </ul>
+
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">2. Uso dos Dados</h2>
+                <p class="mb-6">
+                    Utilizamos seus dados para:
+                </p>
+                <ul class="mb-6 space-y-2">
+                    <li>Conectar candidatos com oportunidades relevantes</li>
+                    <li>Calcular scores de compatibilidade usando inteligência artificial</li>
+                    <li>Enviar notificações sobre vagas e atualizações</li>
+                    <li>Melhorar nossos algoritmos de recomendação</li>
+                    <li>Gerar relatórios e estatísticas agregadas</li>
+                </ul>
+
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">3. Compartilhamento de Dados</h2>
+                <p class="mb-6">
+                    Seus dados pessoais são compartilhados apenas:
+                </p>
+                <ul class="mb-6 space-y-2">
+                    <li>Com empresas quando você se candidata a uma vaga</li>
+                    <li>Com candidatos quando empresas demonstram interesse</li>
+                    <li>Nunca vendemos ou compartilhamos dados com terceiros para fins comerciais</li>
+                </ul>
+
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">4. Segurança</h2>
+                <p class="mb-6">
+                    Implementamos medidas de segurança para proteger seus dados, incluindo criptografia de senhas e acesso restrito às informações pessoais.
+                </p>
+
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">5. Seus Direitos</h2>
+                <p class="mb-6">
+                    Você tem o direito de:
+                </p>
+                <ul class="mb-6 space-y-2">
+                    <li>Acessar seus dados pessoais</li>
+                    <li>Corrigir informações incorretas</li>
+                    <li>Solicitar a exclusão de sua conta</li>
+                    <li>Retirar seu consentimento a qualquer momento</li>
+                </ul>
+
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">6. Contato</h2>
+                <p class="mb-6">
+                    Para dúvidas sobre esta política, entre em contato conosco através do email: <strong>privacidade@jobmatch.com</strong>
+                </p>
+
+                <div class="bg-purple-50 p-4 rounded-lg mt-8">
+                    <p class="text-sm text-purple-800">
+                        <strong>Última atualização:</strong> {{ data_atual or 'Janeiro 2024' }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -3,6 +3,7 @@
 {% block title %}Criar Vaga{% endblock %}
 
 {% block content %}
+
 <div class="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 py-8">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="bg-white rounded-2xl shadow-lg p-8">
@@ -45,14 +46,137 @@
                         </select>
                     </div>
 
-                    <div id="endereco_container" class="md:col-span-2 hidden">
-                        <label for="endereco_vaga" class="block text-sm font-medium text-gray-700 mb-2">
-                            Endereço da Vaga *
+                    <div>
+                        <label for="categoria_id" class="block text-sm font-medium text-gray-700 mb-2">
+                            Categoria da Vaga
                         </label>
-                        <input type="text" id="endereco_vaga" name="endereco_vaga"
+                        <select id="categoria_id" name="categoria_id"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                                onchange="toggleNovaCategoria()">
+                            <option value="">Selecione uma categoria</option>
+                            {% for categoria in categorias %}
+                            <option value="{{ categoria.id }}">{{ categoria.nome }}</option>
+                            {% endfor %}
+                            <option value="nova">+ Adicionar nova categoria</option>
+                        </select>
+                    </div>
+
+                    <div id="nova_categoria_container" class="hidden">
+                        <label for="nova_categoria" class="block text-sm font-medium text-gray-700 mb-2">
+                            Nova Categoria
+                        </label>
+                        <input type="text" id="nova_categoria" name="nova_categoria"
                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                               placeholder="Ex: São Paulo, SP - Centro">
+                               placeholder="Ex: Marketing Digital">
+                    </div>
+
+                    <div>
+                        <label for="urgencia_contratacao" class="block text-sm font-medium text-gray-700 mb-2">
+                            Urgência da Contratação
+                        </label>
+                        <select id="urgencia_contratacao" name="urgencia_contratacao"
+                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">
+                            <option value="">Selecione a urgência</option>
+                            <option value="Imediata">🚨 Imediata</option>
+                            <option value="Em até 30 dias">⏰ Em até 30 dias</option>
+                            <option value="Em até 60 dias">📅 Em até 60 dias</option>
+                            <option value="Sem urgência">🕐 Sem urgência</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="data_congelamento_agendado" class="block text-sm font-medium text-gray-700 mb-2">
+                            Congelamento Agendado
+                        </label>
+                        <input type="date" id="data_congelamento_agendado" name="data_congelamento_agendado"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                               min="{{ hoje }}">
+
                         <p class="text-xs text-gray-500 mt-1">
+                            Opcional: A vaga será automaticamente congelada nesta data
+                        </p>
+                    </div>
+
+                    <div id="endereco_container" class="md:col-span-2 hidden">
+                        <div class="mb-4">
+                            <label class="flex items-center space-x-2">
+                                <input type="checkbox" id="usar_endereco_empresa" name="usar_endereco_empresa" 
+                                       class="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                       onchange="toggleEnderecoEmpresa()">
+                                <span class="text-sm text-gray-700">Usar endereço da empresa</span>
+                            </label>
+                        </div>
+
+                        <div id="campos_endereco_vaga">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="md:col-span-2">
+                                    <label for="localizacao_endereco" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Endereço *
+                                    </label>
+                                    <input type="text" id="localizacao_endereco" name="localizacao_endereco"
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                                           placeholder="Ex: Rua das Flores, 123">
+                                </div>
+
+                                <div>
+                                    <label for="localizacao_cidade" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Cidade *
+                                    </label>
+                                    <input type="text" id="localizacao_cidade" name="localizacao_cidade"
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                                           placeholder="Ex: São Paulo">
+                                </div>
+
+                                <div>
+                                    <label for="localizacao_estado" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Estado *
+                                    </label>
+                                    <select id="localizacao_estado" name="localizacao_estado"
+                                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">
+                                        <option value="">Selecione o estado</option>
+                                        <option value="AC">Acre</option>
+                                        <option value="AL">Alagoas</option>
+                                        <option value="AP">Amapá</option>
+                                        <option value="AM">Amazonas</option>
+                                        <option value="BA">Bahia</option>
+                                        <option value="CE">Ceará</option>
+                                        <option value="DF">Distrito Federal</option>
+                                        <option value="ES">Espírito Santo</option>
+                                        <option value="GO">Goiás</option>
+                                        <option value="MA">Maranhão</option>
+                                        <option value="MT">Mato Grosso</option>
+                                        <option value="MS">Mato Grosso do Sul</option>
+                                        <option value="MG">Minas Gerais</option>
+                                        <option value="PA">Pará</option>
+                                        <option value="PB">Paraíba</option>
+                                        <option value="PR">Paraná</option>
+                                        <option value="PE">Pernambuco</option>
+                                        <option value="PI">Piauí</option>
+                                        <option value="RJ">Rio de Janeiro</option>
+                                        <option value="RN">Rio Grande do Norte</option>
+                                        <option value="RS">Rio Grande do Sul</option>
+                                        <option value="RO">Rondônia</option>
+                                        <option value="RR">Roraima</option>
+                                        <option value="SC">Santa Catarina</option>
+                                        <option value="SP">São Paulo</option>
+                                        <option value="SE">Sergipe</option>
+                                        <option value="TO">Tocantins</option>
+                                    </select>
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label for="localizacao_cep" class="block text-sm font-medium text-gray-700 mb-2">
+                                        CEP
+                                    </label>
+                                    <input type="text" id="localizacao_cep" name="localizacao_cep"
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                                           placeholder="Ex: 01234-567"
+                                           pattern="[0-9]{5}-?[0-9]{3}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="text-xs text-gray-500 mt-2">
                             Obrigatório para vagas presenciais e híbridas
                         </p>
                     </div>
@@ -105,28 +229,130 @@
 function toggleEnderecoField() {
     const tipoVaga = document.getElementById('tipo_vaga').value;
     const enderecoContainer = document.getElementById('endereco_container');
-    const enderecoInput = document.getElementById('endereco_vaga');
+    const camposEndereco = document.querySelectorAll('#campos_endereco_vaga input, #campos_endereco_vaga select');
 
     if (tipoVaga === 'Presencial' || tipoVaga === 'Híbrida') {
         enderecoContainer.classList.remove('hidden');
-        enderecoInput.required = true;
+        camposEndereco.forEach(campo => {
+            if (campo.id !== 'localizacao_cep') {
+                campo.required = true;
+            }
+        });
     } else {
         enderecoContainer.classList.add('hidden');
-        enderecoInput.required = false;
-        enderecoInput.value = '';
+        camposEndereco.forEach(campo => {
+            campo.required = false;
+            campo.value = '';
+        });
+    }
+}
+
+function toggleNovaCategoria() {
+    const categoriaSelect = document.getElementById('categoria_id');
+    const novaContainer = document.getElementById('nova_categoria_container');
+    const novaInput = document.getElementById('nova_categoria');
+
+    if (categoriaSelect.value === 'nova') {
+        novaContainer.classList.remove('hidden');
+        novaInput.required = true;
+        novaInput.focus();
+    } else {
+        novaContainer.classList.add('hidden');
+        novaInput.required = false;
+        novaInput.value = '';
+    }
+}
+
+function toggleEnderecoEmpresa() {
+    const checkbox = document.getElementById('usar_endereco_empresa');
+    const camposEndereco = document.getElementById('campos_endereco_vaga');
+
+    if (checkbox.checked) {
+        // Buscar dados da empresa via AJAX
+        fetch('/empresa/endereco')
+            .then(response => response.json())
+            .then(data => {
+                if (data.endereco) {
+                    document.getElementById('localizacao_endereco').value = data.endereco || '';
+                    document.getElementById('localizacao_cidade').value = data.cidade || '';
+                    document.getElementById('localizacao_estado').value = data.estado || '';
+                    document.getElementById('localizacao_cep').value = data.cep || '';
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao buscar endereço da empresa:', error);
+            });
+        
+        camposEndereco.style.opacity = '0.6';
+        camposEndereco.style.pointerEvents = 'none';
+    } else {
+        camposEndereco.style.opacity = '1';
+        camposEndereco.style.pointerEvents = 'auto';
+        // Limpar campos
+        document.getElementById('localizacao_endereco').value = '';
+        document.getElementById('localizacao_cidade').value = '';
+        document.getElementById('localizacao_estado').value = '';
+        document.getElementById('localizacao_cep').value = '';
     }
 }
 
 // Validação no envio do formulário
 document.querySelector('form').addEventListener('submit', function(e) {
     const tipoVaga = document.getElementById('tipo_vaga').value;
-    const endereco = document.getElementById('endereco_vaga').value.trim();
+    const endereco = document.getElementById('localizacao_endereco').value.trim();
+    const cidade = document.getElementById('localizacao_cidade').value.trim();
+    const estado = document.getElementById('localizacao_estado').value.trim();
 
-    if ((tipoVaga === 'Presencial' || tipoVaga === 'Híbrida') && !endereco) {
+    // Validar se categoria foi selecionada ou nova categoria foi preenchida
+    const categoriaId = document.getElementById('categoria_id').value;
+    const novaCategoria = document.getElementById('nova_categoria').value.trim();
+
+    if (categoriaId === 'nova' && !novaCategoria) {
         e.preventDefault();
-        alert('Endereço é obrigatório para vagas presenciais ou híbridas');
-        document.getElementById('endereco_vaga').focus();
+        alert('Por favor, digite o nome da nova categoria');
+        document.getElementById('nova_categoria').focus();
+        return;
+    }
+
+    // Validar endereço para vagas presenciais/híbridas
+    if ((tipoVaga === 'Presencial' || tipoVaga === 'Híbrida')) {
+        if (!endereco || !cidade || !estado) {
+            e.preventDefault();
+            alert('Endereço, cidade e estado são obrigatórios para vagas presenciais ou híbridas');
+            if (!endereco) document.getElementById('localizacao_endereco').focus();
+            else if (!cidade) document.getElementById('localizacao_cidade').focus();
+            else if (!estado) document.getElementById('localizacao_estado').focus();
+            return;
+        }
+    }
+
+    // Validar data de congelamento agendado (não pode ser no passado)
+    const dataCongelamento = document.getElementById('data_congelamento_agendado').value;
+    if (dataCongelamento) {
+        const hoje = new Date();
+        const dataEscolhida = new Date(dataCongelamento);
+        
+        if (dataEscolhida <= hoje) {
+            e.preventDefault();
+            alert('A data de congelamento deve ser futura');
+            document.getElementById('data_congelamento_agendado').focus();
+            return;
+        }
+    }
+});
+
+// Máscara para CEP
+document.getElementById('localizacao_cep').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 8) {
+        value = value.replace(/(\d{5})(\d)/, '$1-$2');
+        e.target.value = value;
     }
 });
 </script>
 {% endblock %}
+```
+
+```
+The requested changes involve adding new fields related to category, urgency, scheduled freezing, and location to the job creation form. The original code will be modified to incorporate these new input fields and functionalities.
+</replit_final_file>

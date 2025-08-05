@@ -14,15 +14,11 @@
     <div class="w-1/2 p-8 bg-white">
       <h2 class="text-3xl font-bold text-[#7C71B2] text-center mb-4">Criar Conta</h2>
 
-      <!-- Redes sociais removidas -->
-
-      <p class="text-center text-sm text-gray-400 mb-6">ou</p>
-
-      <!-- Formulário de cadastro -->
-      <form id="registerForm" class="space-y-4">
+      <form method="POST" class="space-y-4">
         <div>
           <label for="cnpj" class="sr-only">CNPJ</label>
-          <input type="text" id="cnpj" name="cnpj" placeholder="CNPJ" required
+          <input type="text" id="cnpj" name="cnpj" placeholder="CNPJ (apenas números, 14 dígitos)" required
+                 maxlength="18" pattern="[0-9]{14}"
                  class="w-full px-4 py-2 rounded-full bg-[#E1D8EB] placeholder-[#7C71B2] text-sm focus:outline-none">
         </div>
         <div>
@@ -41,7 +37,46 @@
                  class="w-full px-4 py-2 rounded-full bg-[#E1D8EB] placeholder-[#7C71B2] text-sm focus:outline-none">
         </div>
 
-        <button type="submit" class="w-full bg-[#7C71B2] hover:bg-purple-600 text-white font-bold py-2 rounded-full transition">
+        <h3 class="text-xl font-semibold text-[#7C71B2] mt-6 mb-2">Localização da Empresa</h3>
+        <div>
+          <label for="endereco" class="sr-only">Endereço</label>
+          <input type="text" id="endereco" name="endereco" placeholder="Rua, número"
+                 class="w-full px-4 py-2 rounded-full bg-[#E1D8EB] placeholder-[#7C71B2] text-sm focus:outline-none">
+        </div>
+
+        <div>
+          <label for="cidade" class="sr-only">Cidade</label>
+          <input type="text" id="cidade" name="cidade" placeholder="Cidade"
+                 class="w-full px-4 py-2 rounded-full bg-[#E1D8EB] placeholder-[#7C71B2] text-sm focus:outline-none">
+        </div>
+
+        <div>
+          <label for="estado" class="sr-only">Estado</label>
+          <input type="text" id="estado" name="estado" placeholder="Ex: SP, RJ, MG"
+                 class="w-full px-4 py-2 rounded-full bg-[#E1D8EB] placeholder-[#7C71B2] text-sm focus:outline-none">
+        </div>
+
+        <div>
+          <label for="cep" class="sr-only">CEP</label>
+          <input type="text" id="cep" name="cep" placeholder="00000-000"
+                 class="w-full px-4 py-2 rounded-full bg-[#E1D8EB] placeholder-[#7C71B2] text-sm focus:outline-none">
+        </div>
+
+        <div>
+          <small class="text-gray-500">ℹ️ Os dados de localização serão utilizados para melhorar o matching de vagas e podem ser reutilizados na criação de vagas.</small>
+        </div>
+
+        <div class="mb-6">
+                    <label class="flex items-start space-x-3">
+                        <input type="checkbox" name="aceita_termos" required class="mt-1 h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                        <span class="text-sm text-gray-600">
+                            Eu concordo com os <a href="{{ url_for('politica_privacidade') }}" target="_blank" class="text-purple-600 hover:underline">termos de uso e política de privacidade</a>. 
+                            Entendo que os dados dos candidatos serão utilizados exclusivamente para processos seletivos e que seguimos as melhores práticas de proteção de dados.
+                        </span>
+                    </label>
+                </div>
+
+                <button type="submit" class="w-full bg-[#7C71B2] hover:bg-purple-600 text-white font-bold py-2 rounded-full transition">
           Cadastrar
         </button>
       </form>
@@ -51,12 +86,12 @@
     <div class="w-1/2 bg-[#7C71B2] text-white p-8 flex flex-col justify-center items-center rounded-l-[4rem]">
       <h1 class="text-4xl font-bold mb-4">Bem-Vindo de Volta!</h1>
       <p class="mb-6 text-sm">Já possui uma conta? Faça seu login abaixo</p>
-      <a href="/templates/login_empresa.html" 
+      <a href="{{ url_for('login_empresa') }}"
          class="bg-white text-[#7C71B2] px-6 py-2 rounded-full font-bold hover:bg-gray-100 transition">
         Login
       </a>
 
-      <a href="/templates/cadastro_candidato.html" 
+      <a href="{{ url_for('cadastro_candidato') }}"
          class="mt-4 text-sm text-white underline hover:text-[#E1D8EB] transition-colors duration-200">
         Sou candidato
       </a>
@@ -64,37 +99,49 @@
 
   </div>
 </div>
-
-<!-- Script de envio com fetch -->
-<script>
-  const form = document.getElementById("registerForm");
-
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
-
-    try {
-      const response = await fetch("http://localhost:3000/empresa/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-      if (response.status === 201) {
-        alert("Cadastro realizado com sucesso!");
-        form.reset();
-      } else {
-        alert(result.alerta || "Erro ao cadastrar!");
-      }
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao se conectar com o servidor!");
-    }
-  });
-</script>
 {% endblock %}
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const cnpjInput = document.getElementById('cnpj');
+
+    // Máscara para CNPJ
+    cnpjInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, ''); // Remove caracteres não numéricos
+
+        // Limita a 14 dígitos
+        if (value.length > 14) {
+            value = value.slice(0, 14);
+        }
+
+        // Aplica a máscara XX.XXX.XXX/XXXX-XX
+        if (value.length >= 2) {
+            value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+        }
+        if (value.length >= 6) {
+            value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+        }
+        if (value.length >= 10) {
+            value = value.replace(/^(\d{2})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3/$4');
+        }
+        if (value.length >= 15) {
+            value = value.replace(/^(\d{2})\.(\d{3})\.(\d{3})\/(\d{4})(\d)/, '$1.$2.$3/$4-$5');
+        }
+
+        e.target.value = value;
+    });
+
+    // Validação no envio do formulário
+    const form = cnpjInput.closest('form');
+    form.addEventListener('submit', function(e) {
+        const cnpjLimpo = cnpjInput.value.replace(/\D/g, '');
+
+        if (cnpjLimpo.length !== 14) {
+            e.preventDefault();
+            alert('CNPJ deve ter exatamente 14 dígitos');
+            cnpjInput.focus();
+        }
+    });
+});
+</script>

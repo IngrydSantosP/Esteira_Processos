@@ -374,40 +374,6 @@ def gerar_html_relatorio(dados):
             </div>
         """
 
-    # Distribuição geográfica
-    if dados['distribuicao_geografica']:
-        html += """
-            <div class="section">
-                <h2>🔍 Visão Geral da Distribuição Geográfica</h2>
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Estado (Estimado)</th>
-                            <th>Número de Candidatos</th>
-                            <th>Percentual</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        """
-
-        total_geo = sum(item[1] for item in dados['distribuicao_geografica'])
-        for estado, qtd in dados['distribuicao_geografica'][:10]:
-            percentual = (qtd / total_geo * 100) if total_geo > 0 else 0
-            html += f"""
-                        <tr>
-                            <td>{estado or 'Não identificado'}</td>
-                            <td>{qtd}</td>
-                            <td>{percentual:.1f}%</td>
-                        </tr>
-            """
-
-        html += """
-                    </tbody>
-                </table>
-                <p><em>Nota: Distribuição baseada na análise parcial dos endereços dos candidatos.</em></p>
-            </div>
-        """
-
     # Conclusão estratégica e recomendações
     html += f"""
             <div class="section">

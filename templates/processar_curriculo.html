@@ -1,48 +1,100 @@
 
 {% extends "base.html" %}
 
-{% block title %}Upload de Currículo{% endblock %}
+{% block title %}Revisar Informações do Currículo{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md">
-    <h2 class="text-2xl font-bold mb-6">Upload do Currículo</h2>
-    
-    <div class="mb-6">
-        <p class="text-gray-600 mb-4">
-            Faça upload do seu currículo em PDF para que possamos analisar sua experiência e encontrar as melhores vagas para você.
-        </p>
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-            <h3 class="font-semibold text-blue-800 mb-2">Dicas para melhor resultado:</h3>
-            <ul class="text-sm text-blue-700 space-y-1">
-                <li>• Use um PDF com texto selecionável (não apenas imagem escaneada)</li>
-                <li>• Organize seu currículo com seções claras: Experiência, Competências, Resumo</li>
-                <li>• Inclua palavras-chave relevantes para sua área de atuação</li>
-                <li>• Mantenha o arquivo dentro do limite de 3MB</li>
-                <li>• Seu arquivo será salvo e disponibilizado para empresas interessadas</li>
-            </ul>
-        </div>
-        <p class="text-sm text-gray-500">
-            Tamanho máximo: 3MB | Formato: PDF apenas
+<div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
+    <h2 class="text-2xl font-bold mb-6 text-green-600">✅ Currículo Processado com Sucesso!</h2>
+
+    <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+        <p class="text-green-800">
+            <strong>🎉 Ótimo!</strong> Seu currículo foi analisado e as informações foram extraídas automaticamente. 
+            Revise e edite as informações abaixo antes de finalizar.
         </p>
     </div>
-    
-    <form method="POST" enctype="multipart/form-data">
+
+    <form method="POST" action="{{ url_for('finalizar_curriculo') }}">
+
+        <!-- Experiência Profissional -->
         <div class="mb-6">
-            <label for="arquivo" class="block text-sm font-medium text-gray-700 mb-2">
-                Selecione seu currículo (PDF)
+            <label for="experiencia" class="block text-sm font-medium text-gray-700 mb-2">
+                💼 Experiência Profissional
             </label>
-            <input type="file" id="arquivo" name="arquivo" accept=".pdf" required
-                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+            <textarea 
+                id="experiencia" 
+                name="experiencia" 
+                rows="6" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Descreva sua experiência profissional relevante..."
+            >{{ dados_extraidos.experiencia if dados_extraidos.experiencia else '' }}</textarea>
+            <p class="text-xs text-gray-500 mt-1">Inclua cargos, empresas, período e principais responsabilidades</p>
         </div>
-        
-        <div class="flex gap-4">
-            <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
-                Enviar Currículo
+
+        <!-- Competências -->
+        <div class="mb-6">
+            <label for="competencias" class="block text-sm font-medium text-gray-700 mb-2">
+                🛠️ Competências e Habilidades
+            </label>
+            <textarea 
+                id="competencias" 
+                name="competencias" 
+                rows="4" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Liste suas principais competências técnicas e habilidades..."
+            >{{ dados_extraidos.competencias if dados_extraidos.competencias else '' }}</textarea>
+            <p class="text-xs text-gray-500 mt-1">Tecnologias, linguagens, ferramentas, soft skills, etc.</p>
+        </div>
+
+        <!-- Resumo Profissional -->
+        <div class="mb-6">
+            <label for="resumo_profissional" class="block text-sm font-medium text-gray-700 mb-2">
+                📝 Resumo Profissional
+            </label>
+            <textarea 
+                id="resumo_profissional" 
+                name="resumo_profissional" 
+                rows="3" 
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder="Um breve resumo do seu perfil profissional..."
+            >{{ dados_extraidos.resumo_profissional if dados_extraidos.resumo_profissional else '' }}</textarea>
+            <p class="text-xs text-gray-500 mt-1">2-3 linhas descrevendo seu perfil e objetivos</p>
+        </div>
+
+        <!-- Botões -->
+        <div class="flex gap-4 pt-4 border-t">
+            <button type="submit" class="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 font-medium flex items-center gap-2">
+                <span>💾</span> Salvar e Finalizar
             </button>
-            <a href="{{ url_for('dashboard_candidato') }}" class="bg-gray-600 text-white px-6 py-2 rounded hover:bg-gray-700">
-                Cancelar
+            <a href="{{ url_for('upload_curriculo') }}" class="bg-gray-600 text-white px-8 py-3 rounded-lg hover:bg-gray-700 font-medium flex items-center gap-2">
+                <span>↩️</span> Enviar Novo Currículo
             </a>
+        </div>
+
+        <div class="mt-4 p-4 bg-blue-50 rounded-lg">
+            <p class="text-sm text-blue-700">
+                <strong>💡 Dica:</strong> Quanto mais detalhadas e precisas forem essas informações, 
+                melhor será a compatibilidade calculada com as vagas disponíveis!
+            </p>
         </div>
     </form>
 </div>
+
+<script>
+// Auto-resize textareas
+document.querySelectorAll('textarea').forEach(textarea => {
+    textarea.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+
+    // Trigger initial resize
+    textarea.dispatchEvent(new Event('input'));
+});
+</script>
+
 {% endblock %}
+
+
+
+

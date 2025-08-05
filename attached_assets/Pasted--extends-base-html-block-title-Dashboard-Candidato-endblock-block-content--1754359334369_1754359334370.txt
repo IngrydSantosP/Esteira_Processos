@@ -1,0 +1,436 @@
+
+
+{% extends "base.html" %}
+
+{% block title %}Dashboard Candidato{% endblock %}
+
+{% block content %}
+
+<style> 
+    .icone-contratado { color: #16a34a; font-size: 1.2em; margin-right: 8px; }
+    .icone-nao-lida { color: red; font-size: 1em; margin-right: 8px; }
+    .icone-congelada { color: #3b82f6; font-size: 1.2em; margin-right: 8px; }
+    .icone-excluida { color: #ef4444; font-size: 1.2em; margin-right: 8px; }
+
+</style>
+
+<div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
+    <!-- Header da página -->
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
+                    <span class="text-white font-bold text-lg">👋</span>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                        Meu Dashboard
+                    </h1>
+                    <p class="text-gray-500 text-sm">Gerencie suas candidaturas e explore oportunidades</p>
+                </div>
+            </div>
+              <div class="flex gap-3 items-center">
+                  <!-- Botão: Editar perfil -->
+                  <a href="{{ url_for('editar_perfil_candidato') }}"
+                     class="bg-white hover:bg-gray-50 text-gray-700 w-12 h-12 rounded-xl flex items-center justify-center border border-gray-200 shadow transition-all duration-300"
+                     aria-label="Editar informações do perfil">
+                    <span class="text-xl">⚙️</span>
+                  </a>
+
+                  <!-- Botão de Notificações -->
+                  <div class="relative">
+                    <button id="btnNotificacoes" onclick="toggleNotificacoes()"
+                            class="bg-white hover:bg-gray-50 text-gray-700 w-12 h-12 rounded-xl flex items-center justify-center border border-gray-200 shadow transition-all duration-300"
+                            aria-label="Ver notificações">
+                      <span class="text-xl">🔔</span>
+                      <span id="badgeNotificacoes"
+                            class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                      </span>
+                    </button>
+
+                  <div id="painelNotificacoes"
+                       class="hidden absolute right-0 mt-3 w-96 max-h-[28rem] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 overflow-y-auto animate-fade-in-down">
+                    <!-- Cabeçalho -->
+                    <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
+                      <h3 class="text-lg font-semibold text-gray-800">🔔 Notificações</h3>
+                      <button onclick="marcarTodasComoLidas()"
+                              class="text-sm text-purple-600 hover:text-purple-700 font-medium">
+                        Marcar todas como lidas
+                      </button>
+                    </div>
+
+                    <!-- Lista de notificações -->
+                    <ul id="notificacoes" class="divide-y divide-gray-100 font-[Inter,sans-serif] text-[15px]"></ul>
+                  </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 hover:border-purple-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Candidaturas</p>
+                        <p class="text-3xl font-bold text-purple-600">{{ vagas_candidatadas|length if vagas_candidatadas else 0 }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                        <span class="text-2xl">🎯</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 hover:border-green-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Vagas Disponíveis</p>
+                        <p class="text-3xl font-bold text-green-600">{{ vagas_recomendadas|length if vagas_recomendadas else 0 }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                        <span class="text-2xl">💼</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 hover:border-blue-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Match Médio</p>
+                        <p class="text-3xl font-bold text-blue-600">
+                            {% if vagas_candidatadas %}
+                                {{ "%.0f"|format(vagas_candidatadas|map(attribute=4)|sum / vagas_candidatadas|length) }}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                        <span class="text-2xl">⭐</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Candidaturas Ativas -->
+        {% if vagas_candidatadas %}
+        <div class="mb-10">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-3">
+                    <span class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">🎯</span>
+                    Suas Candidaturas
+                </h2>
+                <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-medium">
+                    {{ vagas_candidatadas|length }} ativa{{ 's' if vagas_candidaturas|length != 1 else '' }}
+                </span>
+            </div>
+
+            <div class="grid gap-6">
+                {% for vaga in vagas_candidatadas %}
+                <div class="group bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-xl hover:border-purple-200 transition-all duration-300 transform hover:-translate-y-1">
+                    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                        <div class="flex-1">
+                            <div class="flex items-start gap-4">
+                                <div class="w-16 h-16 bg-gradient-to-br from-purple-100 to-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <span class="text-2xl">🏢</span>
+                                </div>
+                                <div class="flex-1">
+                                    <a href="{{ url_for('detalhes_vaga', vaga_id=vaga[0]) }}" class="block">
+                                        <h3 class="text-xl font-bold text-gray-800 mb-2 group-hover:text-purple-600 transition-colors">
+                                            {{ vaga[1] }}
+                                        </h3>
+                                    </a>
+                                    <p class="text-purple-600 font-semibold mb-2 flex items-center gap-2">
+                                        <span class="w-4 h-4 bg-purple-100 rounded-full flex items-center justify-center text-xs">🏢</span>
+                                        {{ vaga[2] }}
+                                    </p>
+                                    <p class="text-lg font-bold text-green-600 mb-3 flex items-center gap-2">
+                                        <span class="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center text-xs">💰</span>
+                                        R$ {{ "%.2f"|format(vaga[3]) }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col lg:flex-row items-start lg:items-center gap-4">
+                            <div class="flex gap-3">
+                                <div class="text-center bg-gradient-to-r from-purple-500 to-blue-500 text-white px-4 py-3 rounded-xl shadow-md">
+                                    <div class="text-lg font-bold">{{ vaga[5] }}º</div>
+                                    <div class="text-xs opacity-90">posição</div>
+                                </div>
+                                <div class="text-center bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-3 rounded-xl shadow-md">
+                                    <div class="text-lg font-bold">{{ "%.0f"|format(vaga[4]) }}%</div>
+                                    <div class="text-xs opacity-90">match</div>
+                                </div>
+                            </div>
+
+                            <button 
+                                onclick="cancelarCandidatura({{ vaga[0] }})"
+                                class="group/btn bg-red-50 hover:bg-red-500 text-red-600 hover:text-white px-4 py-2 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                                <span class="transition-transform group-hover/btn:rotate-90">❌</span>
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="mb-10 text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
+            <div class="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+                <span class="text-4xl">📋</span>
+            </div>
+            <h3 class="text-xl font-bold text-gray-600 mb-3">Nenhuma candidatura ainda</h3>
+            <p class="text-gray-500 mb-6">Explore as vagas recomendadas abaixo e candidate-se!</p>
+            <div class="w-20 h-1 bg-gradient-to-r from-purple-500 to-blue-500 mx-auto rounded-full"></div>
+        </div>
+        {% endif %}
+
+        <!-- Vagas Recomendadas -->
+        {% if vagas_recomendadas %}
+        <div>
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-3">
+                    Vagas Recomendadas Para Você
+                </h2>
+                <p class="text-gray-600 bg-white px-6 py-3 rounded-full inline-block shadow-sm border border-gray-100">
+                    ⭐ Top {{ vagas_recomendadas|length }} vagas compatíveis com seu perfil
+                </p>
+            </div>
+
+            <div class="grid gap-8">
+                {% for vaga in vagas_recomendadas %}
+                <div class="group bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-2xl hover:border-purple-200 transition-all duration-500 transform hover:-translate-y-2">
+                    <div class="flex flex-col lg:flex-row gap-6">
+                        <div class="flex-1">
+                            <div class="flex items-start gap-4 mb-6">
+                                <div class="w-20 h-20 bg-gradient-to-br from-purple-100 to-blue-100 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                                    <span class="text-3xl">💼</span>
+                                </div>
+                                <div class="flex-1">
+                                    <a href="{{ url_for('detalhes_vaga', vaga_id=vaga[0]) }}" class="block">
+                                        <h3 class="text-2xl font-bold text-gray-800 mb-3 group-hover:text-purple-600 transition-colors">
+                                            {{ vaga[1] }}
+                                        </h3>
+                                    </a>
+                                    <p class="text-purple-600 font-semibold mb-2 flex items-center gap-2">
+                                        <span class="w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center text-sm">🏢</span>
+                                        {{ vaga[5] }}
+                                    </p>
+                                    <p class="text-xl font-bold text-green-600 mb-4 flex items-center gap-2">
+                                        <span class="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center text-sm">💰</span>
+                                        R$ {{ "%.2f"|format(vaga[4]) }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="space-y-4">
+                                <div class="bg-gray-50 p-4 rounded-xl border-l-4 border-gray-300">
+                                    <p class="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                        <span>📝</span> Descrição
+                                    </p>
+                                    <p class="text-sm text-gray-600 leading-relaxed">{{ vaga[2][:180] }}{% if vaga[2]|length > 180 %}...{% endif %}</p>
+                                </div>
+                                <div class="bg-blue-50 p-4 rounded-xl border-l-4 border-blue-300">
+                                    <p class="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                        <span>⚡</span> Requisitos
+                                    </p>
+                                    <p class="text-sm text-gray-600 leading-relaxed">{{ vaga[3][:180] }}{% if vaga[3]|length > 180 %}...{% endif %}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col items-center justify-center lg:w-64 gap-6">
+                            <div class="text-center bg-gradient-to-br from-green-400 via-emerald-500 to-teal-500 text-white p-6 rounded-2xl shadow-xl transform group-hover:scale-110 transition-all duration-300">
+                                <div class="text-4xl font-bold mb-2">{{ "%.0f"|format(vaga[9]) }}%</div>
+                                <p class="text-sm font-semibold opacity-90">COMPATIBILIDADE</p>
+                                <div class="w-full bg-white bg-opacity-30 rounded-full h-2 mt-3">
+                                    <div class="bg-white h-2 rounded-full transition-all duration-1000" style="width: {{ vaga[9] }}%"></div>
+                                </div>
+                            </div>
+
+                            <a href="{{ url_for('candidatar', vaga_id=vaga[0]) }}" 
+                               class="group/btn bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold px-8 py-4 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl flex items-center gap-3">
+                                <span class="transition-transform group-hover/btn:translate-x-1">🚀</span>
+                                Candidatar-se
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>        {% else %}
+        <div class="text-center py-16 bg-white rounded-2xl shadow-sm border border-gray-100">
+            <div class="w-32 h-32 bg-gradient-to-br from-gray-100 to-blue-100 rounded-full mx-auto mb-8 flex items-center justify-center">
+                <span class="text-5xl">🔍</span>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-600 mb-4">Nenhuma vaga disponível no momento</h3>
+            <p class="text-gray-500 mb-8 max-w-md mx-auto">Complete seu perfil para receber melhores recomendações e aumentar suas chances!</p>
+            <a href="{{ url_for('editar_perfil_candidato') }}" 
+               class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 inline-flex items-center gap-3">
+                <span>⚙️</span>
+                Completar Perfil
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    let notificacoesCache = [];
+
+    async function carregarNotificacoes() {
+      try {
+        const response = await fetch('/api/notificacoes');
+        if (response.ok) {
+          notificacoesCache = await response.json();
+          atualizarNotificacoes();
+        }
+      } catch (error) {
+        console.error('Erro ao carregar notificações:', error);
+      }
+    }
+
+    function atualizarNotificacoes() {
+      const lista = document.getElementById('notificacoes');
+      const badge = document.getElementById('badgeNotificacoes');
+      const agora = new Date();
+
+      const naoLidas = notificacoesCache.filter(n => !n.lida).length;
+      badge.textContent = naoLidas > 99 ? '99+' : naoLidas;
+      badge.classList.toggle('hidden', naoLidas === 0);
+
+      lista.innerHTML = '';
+
+      notificacoesCache
+        .sort((a, b) => new Date(b.data_envio) - new Date(a.data_envio))
+        .forEach(n => {
+          const dataEnvio = new Date(n.data_envio);
+          const dias = Math.floor((agora - dataEnvio) / (1000 * 60 * 60 * 24));
+          let icone = '';
+
+          if (n.mensagem.toLowerCase().includes('selecionado')) {
+            icone = dias < 30 ? '<span class="icone-contratado">✅</span>' : '';
+          } else if (n.mensagem.toLowerCase().includes('vaga foi congelada')) {
+            icone = '<span class="icone-congelada">🧊</span>';
+          } else if (n.mensagem.toLowerCase().includes('foi removida')) {
+            icone = '<span class="icone-excluida">🗑️</span>';
+          } else if (!n.lida) {
+            icone = '<span class="icone-nao-lida">🔴</span>';
+          }
+
+            lista.innerHTML += `
+              <li class="px-5 py-4 hover:bg-gray-50 transition-all cursor-pointer font-sans">
+                <div class="flex items-start gap-2">
+                  ${icone}
+                  <div class="flex-1">
+                    <p class="text-[15px] font-semibold text-gray-800 leading-snug mb-0.5">
+                      ${n.vaga_titulo || 'Vaga'}
+                    </p>
+                    <p class="text-[14px] text-gray-600 leading-normal">
+                      ${n.mensagem}
+                    </p>
+                    <span class="text-xs text-gray-400 block mt-1">${dataEnvio.toLocaleString('pt-BR')}</span>
+                  </div>
+                </div>
+              </li>
+            `;
+        });
+    }
+
+    function toggleNotificacoes() {
+      const painel = document.getElementById('painelNotificacoes');
+      painel.classList.toggle('hidden');
+      if (!painel.classList.contains('hidden')) carregarNotificacoes();
+    }
+
+    async function marcarTodasComoLidas() {
+      try {
+        const response = await fetch('/api/notificacoes/marcar-todas-lidas', { method: 'POST' });
+        if (response.ok) carregarNotificacoes();
+      } catch (error) {
+        console.error('Erro ao marcar como lidas:', error);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => carregarNotificacoes());
+
+
+// Fechar painel ao clicar fora
+document.addEventListener('click', function(e) {
+    const painel = document.getElementById('painelNotificacoes');
+    const btn = document.getElementById('btnNotificacoes');
+
+    if (!painel.contains(e.target) && !btn.contains(e.target)) {
+        painel.classList.add('hidden');
+        btn.setAttribute('aria-expanded', 'false');
+    }
+});
+
+async function cancelarCandidatura(vagaId) {
+    // Mostrar confirmação moderna
+    if (confirm('🤔 Tem certeza que deseja cancelar sua candidatura para esta vaga?')) {
+        try {
+            // Adicionar loader visual
+            const btn = event.target.closest('button');
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '<span class="animate-spin">⏳</span> Cancelando...';
+            btn.disabled = true;
+
+            const response = await fetch('/cancelar_candidatura', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    vaga_id: vagaId
+                })
+            });
+
+            if (response.ok) {
+                // Animação de sucesso
+                btn.innerHTML = '<span class="text-green-500">✅</span> Cancelada!';
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+                alert('❌ Erro ao cancelar candidatura');
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('❌ Erro ao cancelar candidatura');
+        }
+    }
+}
+
+// Animações ao carregar a página
+document.addEventListener('DOMContentLoaded', function() {
+    // Carregar notificações ao iniciar
+    carregarNotificacoes();
+
+    // Animar cards ao aparecer na tela
+    const cards = document.querySelectorAll('.group');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry, index) => {
+            if (entry.isIntersecting) {
+                setTimeout(() => {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }, index * 100);
+            }
+        });
+    });
+
+    cards.forEach(card => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        observer.observe(card);
+    });
+});
+</script>
+{% endblock %}
