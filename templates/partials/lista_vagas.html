@@ -1,340 +1,181 @@
 <!-- Filtros de Vagas -->
-<div class="mb-6">
-    <div class="flex flex-wrap gap-2" role="tablist" aria-label="Filtros de status das vagas">
-        <button onclick="filtrarVagas('todas')" 
-                class="filter-btn active bg-gradient-to-r from-purple-500 to-blue-500 text-white px-4 py-2 rounded-xl font-semibold transition-all duration-300 hover:shadow-lg focus:outline-none focus:ring-4 focus:ring-purple-300"
-                role="tab" 
-                aria-selected="true" 
-                aria-controls="lista-vagas"
-                tabindex="0">
-            Todas (<span id="count-todas">{{ vagas|length if vagas else 0 }}</span>)
-        </button>
-        <button onclick="filtrarVagas('Ativa')" 
-                class="filter-btn bg-gray-100 hover:bg-green-100 text-gray-700 hover:text-green-700 px-4 py-2 rounded-xl font-medium transition-all duration-300 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-green-300"
-                role="tab" 
-                aria-selected="false" 
-                aria-controls="lista-vagas"
-                tabindex="-1">
-            ✅ Ativas (<span id="count-ativa">{{ vagas|selectattr('status', 'equalto', 'Ativa')|list|length if vagas else 0 }}</span>)
-        </button>
-        <button onclick="filtrarVagas('Congelada')" 
-                class="filter-btn bg-gray-100 hover:bg-blue-100 text-gray-700 hover:text-blue-700 px-4 py-2 rounded-xl font-medium transition-all duration-300 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-blue-300"
-                role="tab" 
-                aria-selected="false" 
-                aria-controls="lista-vagas"
-                tabindex="-1">
-            ❄️ Congeladas (<span id="count-congelada">{{ vagas|selectattr('status', 'equalto', 'Congelada')|list|length if vagas else 0 }}</span>)
-        </button>
-        <button onclick="filtrarVagas('Concluída')" 
-                class="filter-btn bg-gray-100 hover:bg-purple-100 text-gray-700 hover:text-purple-700 px-4 py-2 rounded-xl font-medium transition-all duration-300 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-purple-300"
-                role="tab" 
-                aria-selected="false" 
-                aria-controls="lista-vagas"
-                tabindex="-1">
-            🎯 Concluídas (<span id="count-concluida">{{ vagas|selectattr('status', 'equalto', 'Concluída')|list|length if vagas else 0 }}</span>)
-        </button>
-    </div>
-</div>
-
-<!-- Lista de Vagas -->
-<div class="space-y-6" id="lista-vagas" role="tabpanel">
-    <h2 class="text-2xl font-bold text-gray-800 mb-4">Suas Vagas</h2>
-
-    {% if vagas %}
-        <div class="grid gap-6">
-            {% for vaga in vagas %}
-            <div class="vaga-card bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 overflow-hidden"
-                 data-status="{{ vaga.status }}">
-                <div class="p-6">
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="flex-1">
-                            <div class="flex items-center gap-3 mb-2">
-                                <h3 class="text-xl font-bold text-gray-900">{{ vaga.titulo }}</h3>
-                                <span class="px-3 py-1 rounded-full text-sm font-medium
-                                    {% if vaga.status == 'Ativa' %}bg-green-100 text-green-800{% endif %}
-                                    {% if vaga.status == 'Congelada' %}bg-blue-100 text-blue-800{% endif %}
-                                    {% if vaga.status == 'Concluída' %}bg-purple-100 text-purple-800{% endif %}
-                                    {% if not vaga.status %}bg-green-100 text-green-800{% endif %}">
-                                    {{ vaga.status if vaga.status else 'Ativa' }}
-                                </span>
-                            </div>
-                            <p class="text-gray-600 mb-3 line-clamp-2">{{ vaga.descricao }}</p>
-                            <div class="flex flex-wrap gap-4 text-sm text-gray-500 mb-2">
-                                <span class="flex items-center gap-1">
-                                    <span>💰</span> R$ {{ "{:,.2f}".format(vaga.salario_oferecido) }}
-                                </span>
-                                <span class="flex items-center gap-1">
-                                    <span>📍</span> {{ vaga.tipo_vaga }}
-                                </span>
-                                {% if vaga.endereco_vaga and vaga.tipo_vaga in ['Presencial', 'Híbrida'] %}
-                                <span class="flex items-center gap-1">
-                                    <span>🏢</span> {{ vaga.endereco_vaga[:30] }}{% if vaga.endereco_vaga|length > 30 %}...{% endif %}
-                                </span>
-                                {% endif %}
-                                <span class="flex items-center gap-1">
-                                    <span>📅</span> {{ vaga.data_criacao }}
-                                </span>
-                            </div>
-                        </div>
-                        <div class="flex gap-2 ml-4">
-                            <a href="{{ url_for('candidatos_vaga', vaga_id=vaga.id) }}"
-                               class="bg-blue-100 hover:bg-blue-200 text-blue-600 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-                               aria-label="Ver candidatos da vaga {{ vaga.titulo }}">
-                                Ver Candidatos
-                            </a>
-                            
-                            {% if vaga.status != 'Concluída' %}
-                                <a href="{{ url_for('editar_vaga', vaga_id=vaga.id) }}"
-                                   class="bg-purple-100 hover:bg-purple-200 text-purple-600 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-                                   aria-label="Editar vaga {{ vaga.titulo }}">
-                                    Editar
-                                </a>
-                            {% endif %}
-                            
-                            {% if vaga.status == 'Ativa' or not vaga.status %}
-                                <button onclick="abrirModalEncerramento({{ vaga.id }}, '{{ vaga.titulo }}')"
-                                        class="bg-orange-100 hover:bg-orange-200 text-orange-600 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-                                        aria-label="Encerrar vaga {{ vaga.titulo }}">
-                                    Encerrar
-                                </button>
-                            {% elif vaga.status == 'Congelada' %}
-                                <button onclick="reativarVaga({{ vaga.id }})"
-                                        class="bg-green-100 hover:bg-green-200 text-green-600 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-                                        aria-label="Reativar vaga {{ vaga.titulo }}">
-                                    Reativar
-                                </button>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <!-- Feedback de IA -->
-                    {% if vaga.status == 'Concluída' %}
-                        <!-- Feedback especial para vagas concluídas -->
-                        <div class="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200 mb-4">
-                            <div class="flex items-center gap-3">
-                                <span class="text-2xl">✅</span>
-                                <div class="flex-1">
-                                    <p class="font-medium text-green-800 mb-2">
-                                        Vaga concluída com sucesso!
-                                    </p>
-                                    {% if vaga.candidato_contratado %}
-                                    <div class="space-y-1">
-                                        <p class="text-sm text-gray-700">
-                                            <strong>Candidato:</strong> {{ vaga.candidato_contratado.nome }}
-                                        </p>
-                                        <p class="text-sm text-gray-700">
-                                            <strong>Contratado em:</strong> {{ vaga.data_contratacao }}
-                                        </p>
-                                        <p class="text-sm text-gray-700">
-                                            <strong>Posição no ranking:</strong> {{ vaga.candidato_contratado.posicao }}º lugar
-                                        </p>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    {% else %}
-                        <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-4 border border-purple-100">
-                            <div class="flex items-center gap-3">
-                                <span class="text-2xl">{{ vaga.feedback_ia.icone }}</span>
-                                <div>
-                                    <p class="font-medium {{ vaga.feedback_ia.cor }}">
-                                        {{ vaga.feedback_ia.texto }}
-                                    </p>
-                                    <p class="text-sm text-gray-500">
-                                        {{ vaga.total_candidatos }} candidato(s) total
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <div class="text-center py-12">
-            <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span class="text-4xl">💼</span>
-            </div>
-            <h3 class="text-xl font-medium text-gray-700 mb-2">Nenhuma vaga criada ainda</h3>
-            <p class="text-gray-500 mb-6">Comece criando sua primeira vaga para atrair candidatos qualificados.</p>
-            <a href="{{ url_for('criar_vaga') }}" 
-               class="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105">
-                Criar Primeira Vaga
-            </a>
-        </div>
-    {% endif %}
-</div>
-<!-- Filtros -->
 <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
-    <div class="flex flex-wrap gap-3 items-center">
-        <span class="text-gray-700 font-medium">Filtrar por status:</span>
-        <div class="flex gap-2 flex-wrap" role="tablist" aria-label="Filtros de status de vagas">
-            <button 
-                class="filter-btn px-4 py-2 rounded-xl transition-all duration-300 bg-gradient-to-r from-purple-500 to-blue-500 text-white font-semibold active"
-                onclick="filtrarVagas('todas')"
-                role="tab"
-                aria-selected="true"
-                tabindex="0">
+    <div class="flex items-center justify-between mb-6">
+        <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <span>💼</span>
+            Suas Vagas
+        </h3>
+        <div class="flex gap-2">
+            <button onclick="filtrarVagas('todas')"
+                    class="filter-btn active bg-gradient-to-r from-purple-500 to-blue-500 text-white px-4 py-2 rounded-xl font-semibold transition-all duration-300">
                 Todas
             </button>
-            <button 
-                class="filter-btn px-4 py-2 rounded-xl transition-all duration-300 bg-gray-100 text-gray-700 font-medium hover:bg-gray-200"
-                onclick="filtrarVagas('Ativa')"
-                role="tab"
-                aria-selected="false"
-                tabindex="-1">
+            <button onclick="filtrarVagas('Ativa')"
+                    class="filter-btn bg-gray-100 text-gray-700 px-4 py-2 rounded-xl font-medium transition-all duration-300">
                 Ativas
             </button>
-            <button 
-                class="filter-btn px-4 py-2 rounded-xl transition-all duration-300 bg-gray-100 text-gray-700 font-medium hover:bg-gray-200"
-                onclick="filtrarVagas('Congelada')"
-                role="tab"
-                aria-selected="false"
-                tabindex="-1">
+            <button onclick="filtrarVagas('Congelada')"
+                    class="filter-btn bg-gray-100 text-gray-700 px-4 py-2 rounded-xl font-medium transition-all duration-300">
                 Congeladas
             </button>
-            <button 
-                class="filter-btn px-4 py-2 rounded-xl transition-all duration-300 bg-gray-100 text-gray-700 font-medium hover:bg-gray-200"
-                onclick="filtrarVagas('Concluída')"
-                role="tab"
-                aria-selected="false"
-                tabindex="-1">
+            <button onclick="filtrarVagas('Concluída')"
+                    class="filter-btn bg-gray-100 text-gray-700 px-4 py-2 rounded-xl font-medium transition-all duration-300">
                 Concluídas
             </button>
         </div>
     </div>
-</div>
 
-<!-- Lista de Vagas -->
-{% if vagas %}
-<div class="grid gap-6">
-    {% for vaga in vagas %}
-    <div class="vaga-card bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all duration-300" 
-         data-status="{{ vaga.status }}">
-        
-        <!-- Header da Vaga -->
-        <div class="p-6 border-b border-gray-100">
-            <div class="flex justify-between items-start mb-4">
+    <div class="grid gap-6">
+        {% for vaga in vagas %}
+        <div class="vaga-card group bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-xl hover:border-purple-200 transition-all duration-300 transform hover:-translate-y-1"
+             data-status="{{ vaga.status }}">
+
+            <!-- Header do card -->
+            <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-6">
                 <div class="flex-1">
-                    <div class="flex items-center gap-3 mb-2">
-                        <h3 class="text-xl font-bold text-gray-900">{{ vaga.titulo }}</h3>
-                        <span class="px-3 py-1 rounded-full text-sm font-medium
-                            {% if vaga.status == 'Ativa' %}bg-green-100 text-green-700{% endif %}
-                            {% if vaga.status == 'Congelada' %}bg-blue-100 text-blue-700{% endif %}
-                            {% if vaga.status == 'Concluída' %}bg-purple-100 text-purple-700{% endif %}">
-                            {{ vaga.status }}
+                    <div class="flex items-center gap-3 mb-3">
+                        <h3 class="text-xl font-bold text-gray-800 group-hover:text-purple-600 transition-colors">
+                            {{ vaga.titulo }}
+                        </h3>
+
+                        <!-- Status badges -->
+                        {% if vaga.status == 'Ativa' %}
+                        <span class="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                            ✅ Ativa
                         </span>
+                        {% elif vaga.status == 'Congelada' %}
+                        <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                            ❄️ Congelada
+                        </span>
+                        {% elif vaga.status == 'Concluída' %}
+                        <span class="bg-purple-100 text-purple-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                            🎉 Concluída
+                        </span>
+                        {% endif %}
+
+                        <!-- Urgência -->
+                        {% if vaga.urgencia_contratacao == 'Imediata' %}
+                        <span class="bg-red-100 text-red-800 text-xs font-semibold px-2.5 py-0.5 rounded-full animate-pulse">
+                            🔥 URGENTE
+                        </span>
+                        {% endif %}
                     </div>
-                    <p class="text-gray-600 mb-2">{{ vaga.descricao[:150] }}{% if vaga.descricao|length > 150 %}...{% endif %}</p>
-                    <div class="flex items-center gap-4 text-sm text-gray-500">
-                        <span>💰 R$ {{ "{:,.2f}".format(vaga.salario_oferecido) }}</span>
-                        <span>📅 {{ vaga.data_criacao }}</span>
-                        <span>📍 {{ vaga.tipo_vaga }}</span>
+
+                    <!-- Info básica -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600 mb-4">
+                        <div class="flex items-center gap-2">
+                            <span>💰</span>
+                            <span class="font-semibold text-green-600">R$ {{ "%.2f"|format(vaga.salario_oferecido) }}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span>📅</span>
+                            <span>{{ vaga.data_criacao }}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span>🏢</span>
+                            <span>{{ vaga.tipo_vaga or 'Presencial' }}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span>👥</span>
+                            <span class="font-semibold">{{ vaga.total_candidatos }} candidato{{ 's' if vaga.total_candidatos != 1 else '' }}</span>
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Feedback IA -->
-            {% if vaga.feedback_ia %}
-            <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 mb-4">
-                <div class="flex items-center gap-2">
-                    <span class="text-xl">{{ vaga.feedback_ia.icone }}</span>
-                    <span class="font-medium {{ vaga.feedback_ia.cor }}">{{ vaga.feedback_ia.texto }}</span>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Stats dos Candidatos -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                <div class="text-center p-3 bg-gray-50 rounded-xl">
-                    <div class="text-2xl font-bold text-gray-700">{{ vaga.total_candidatos }}</div>
-                    <div class="text-sm text-gray-500">Total</div>
-                </div>
-                <div class="text-center p-3 bg-green-50 rounded-xl">
-                    <div class="text-2xl font-bold text-green-600">{{ vaga.candidatos_80_plus }}</div>
-                    <div class="text-sm text-gray-500">Alta (80%+)</div>
-                </div>
-                <div class="text-center p-3 bg-yellow-50 rounded-xl">
-                    <div class="text-2xl font-bold text-yellow-600">{{ vaga.candidatos_60_79 }}</div>
-                    <div class="text-sm text-gray-500">Média (60-79%)</div>
-                </div>
-                <div class="text-center p-3 bg-red-50 rounded-xl">
-                    <div class="text-2xl font-bold text-red-600">{{ vaga.candidatos_abaixo_60 }}</div>
-                    <div class="text-sm text-gray-500">Baixa (&lt;60%)</div>
-                </div>
-            </div>
-
-            <!-- Informações de Contratação (se aplicável) -->
-            {% if vaga.status == 'Concluída' and vaga.candidato_contratado %}
-            <div class="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="text-green-600 text-lg">✅</span>
-                    <span class="font-semibold text-green-700">Candidato Contratado</span>
-                </div>
-                <p class="text-green-600">
-                    <strong>{{ vaga.candidato_contratado.nome }}</strong>
-                    {% if vaga.candidato_contratado.posicao %}
-                    - {{ vaga.candidato_contratado.posicao }}º colocado
+                    <!-- Congelamento programado -->
+                    {% if vaga.data_congelamento_agendado and vaga.status == 'Ativa' %}
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="text-blue-600">⏰</span>
+                            <span class="text-sm font-medium text-blue-800">
+                                Congelamento programado para: {{ vaga.data_congelamento_agendado }}
+                            </span>
+                        </div>
+                    </div>
                     {% endif %}
-                </p>
-                {% if vaga.data_contratacao %}
-                <p class="text-sm text-green-500 mt-1">Contratado em: {{ vaga.data_contratacao }}</p>
-                {% endif %}
-            </div>
-            {% endif %}
-        </div>
 
-        <!-- Footer com Ações -->
-        <div class="flex justify-between items-center px-6 py-4 bg-gray-50">
-            <div class="flex items-center gap-4">
-                <span class="text-sm text-gray-500">Vaga ID: {{ vaga.id }}</span>
+                    <!-- Candidato contratado -->
+                    {% if vaga.status == 'Concluída' and vaga.candidato_contratado %}
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="text-green-600">🎉</span>
+                            <span class="text-sm font-medium text-green-800">
+                                Candidato contratado: {{ vaga.candidato_contratado.nome }}
+                                {% if vaga.candidato_contratado.posicao %}
+                                ({{ vaga.candidato_contratado.posicao }}º posição)
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Stats do lado direito -->
+                <div class="flex flex-col items-center gap-4 lg:w-48">
+                    <div class="text-center bg-gradient-to-br {{ vaga.feedback_ia.cor }} p-4 rounded-xl shadow-md min-w-[120px]">
+                        <div class="text-2xl mb-2">{{ vaga.feedback_ia.icone }}</div>
+                        <div class="text-xs font-semibold text-white">{{ vaga.feedback_ia.texto }}</div>
+                    </div>
+
+                    <!-- Candidatos por score -->
+                    {% if vaga.total_candidatos > 0 %}
+                    <div class="flex gap-2 text-xs">
+                        {% if vaga.candidatos_80_plus > 0 %}
+                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">
+                            ⭐ {{ vaga.candidatos_80_plus }}
+                        </span>
+                        {% endif %}
+                        {% if vaga.candidatos_60_79 > 0 %}
+                        <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full font-medium">
+                            ⚡ {{ vaga.candidatos_60_79 }}
+                        </span>
+                        {% endif %}
+                        {% if vaga.candidatos_abaixo_60 > 0 %}
+                        <span class="bg-gray-100 text-gray-800 px-2 py-1 rounded-full font-medium">
+                            📋 {{ vaga.candidatos_abaixo_60 }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Ações -->
+            <div class="flex flex-wrap gap-3 pt-4 border-t border-gray-100">
                 {% if vaga.total_candidatos > 0 %}
-                <a href="{{ url_for('candidatos_vaga', vaga_id=vaga.id) }}" 
-                   class="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                    👥 Ver Candidatos ({{ vaga.total_candidatos }})
+                <a href="{{ url_for('candidatos_vaga', vaga_id=vaga.id) }}"
+                   class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                    <span>👥</span>
+                    Ver Candidatos ({{ vaga.total_candidatos }})
                 </a>
                 {% endif %}
-            </div>
-            
-            <div class="flex items-center gap-3">
-                <a href="{{ url_for('editar_vaga', vaga_id=vaga.id) }}" 
-                   class="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1">
-                    ✏️ Editar
+
+                <a href="{{ url_for('editar_vaga', vaga_id=vaga.id) }}"
+                   class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                    <span>✏️</span>
+                    Editar
                 </a>
-                <a href="{{ url_for('duplicar_vaga', vaga_id=vaga.id) }}" 
-                   class="text-green-600 hover:text-green-800 text-sm font-medium flex items-center gap-1"
-                   onclick="return confirm('Deseja duplicar esta vaga?')">
-                    📋 Duplicar
+
+                <a href="{{ url_for('duplicar_vaga', vaga_id=vaga.id) }}"
+                   class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                    <span>📋</span>
+                    Duplicar
                 </a>
-                
+
                 {% if vaga.status == 'Ativa' %}
-                    <button onclick="encerrarVaga('{{ vaga.id }}')" 
-                            class="text-red-600 hover:text-red-800 text-sm font-medium flex items-center gap-1">
-                        ❌ Encerrar
-                    </button>
+                <button onclick="abrirModalEncerramento({{ vaga.id }}, '{{ vaga.titulo }}')"
+                        class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                    <span>⚠️</span>
+                    Encerrar
+                </button>
                 {% elif vaga.status == 'Congelada' %}
-                    <button onclick="reativarVaga('{{ vaga.id }}')" 
-                            class="text-green-600 hover:text-green-800 text-sm font-medium flex items-center gap-1">
-                        ♻️ Reativar
-                    </button>
+                <button onclick="reativarVaga({{ vaga.id }})"
+                        class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                    <span>🔄</span>
+                    Reativar
+                </button>
                 {% endif %}
             </div>
         </div>
+        {% endfor %}
     </div>
-    {% endfor %}
 </div>
-{% else %}
-<div class="text-center py-16">
-    <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <span class="text-4xl text-gray-400">📋</span>
-    </div>
-    <h3 class="text-xl font-semibold text-gray-600 mb-2">Nenhuma vaga cadastrada</h3>
-    <p class="text-gray-500 mb-6">Comece criando sua primeira vaga para atrair candidatos</p>
-    <a href="{{ url_for('criar_vaga') }}" 
-       class="inline-flex items-center gap-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-purple-600 hover:to-blue-600 transition-all duration-300">
-        ➕ Criar Primeira Vaga
-    </a>
-</div>
-{% endif %}

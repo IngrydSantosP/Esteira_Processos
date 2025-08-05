@@ -41,7 +41,7 @@
                     <input type="text" id="searchName" placeholder="Buscar por nome..."
                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Score Mínimo (%)</label>
                     <input type="number" id="searchScore" placeholder="Ex: 70" min="0" max="100"
@@ -111,7 +111,7 @@
                                             ⭐ Favorito
                                         </span>
                                     </div>
-                                    
+
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600">
                                         <div class="flex items-center gap-2">
                                             <span>📧</span>
@@ -142,7 +142,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="flex flex-col items-center gap-4 lg:w-48">
                             <div class="flex gap-3">
                                 <div class="text-center bg-gradient-to-r from-blue-500 to-purple-500 text-white px-4 py-3 rounded-xl shadow-md">
@@ -154,7 +154,7 @@
                                     <div class="text-xs opacity-90">match</div>
                                 </div>
                             </div>
-                            
+
                             <div class="flex gap-2">
                                 <button onclick="toggleFavoriteCandidato({{ candidato[6] }}, {{ vaga_id }}, this)"
                                         class="favorite-candidato-btn bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2"
@@ -168,6 +168,11 @@
                                     <span>📄</span>
                                     CV
                                 </a>
+                                <button data-vaga-id="{{ vaga_id }}" data-candidato-id="{{ candidato[6] }}"
+                                        class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2 open-encerramento-modal">
+                                    <span>❌</span>
+                                    Encerrar
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -205,7 +210,7 @@ document.addEventListener('DOMContentLoaded', function() {
             favorited: card.dataset.favorited === 'true'
         };
     });
-    
+
     candidatosFiltrados = [...candidatosOriginais];
     loadFavoriteStatus();
 });
@@ -226,10 +231,10 @@ async function loadFavoriteStatus() {
             if (favoritosMap.has(key)) {
                 candidato.favorited = true;
                 candidato.element.dataset.favorited = 'true';
-                
+
                 const button = candidato.element.querySelector('.favorite-candidato-btn');
                 const badge = candidato.element.querySelector('.favorito-badge');
-                
+
                 updateFavoriteButton(button, true);
                 badge.classList.remove('hidden');
             }
@@ -249,7 +254,7 @@ function aplicarFiltros() {
         const matchName = !searchName || candidato.nome.includes(searchName);
         const matchScore = !searchScore || candidato.score >= parseFloat(searchScore);
         const matchFavoritos = !mostrarSoFavoritos || candidato.favorited;
-        
+
         return matchName && matchScore && matchFavoritos;
     });
 
@@ -308,11 +313,11 @@ function limparFiltros() {
     document.getElementById('searchScore').value = '';
     document.getElementById('sortBy').value = 'score';
     mostrarSoFavoritos = false;
-    
+
     const favoritosBtn = document.getElementById('favoritosBtn');
     favoritosBtn.classList.remove('bg-yellow-500', 'text-white');
     favoritosBtn.classList.add('bg-yellow-100', 'text-yellow-700');
-    
+
     candidatosFiltrados = [...candidatosOriginais];
     renderCandidatos();
 }
@@ -321,7 +326,7 @@ function limparFiltros() {
 function toggleFavoritosOnly() {
     mostrarSoFavoritos = !mostrarSoFavoritos;
     const btn = document.getElementById('favoritosBtn');
-    
+
     if (mostrarSoFavoritos) {
         btn.classList.remove('bg-yellow-100', 'text-yellow-700');
         btn.classList.add('bg-yellow-500', 'text-white');
@@ -331,7 +336,7 @@ function toggleFavoritosOnly() {
         btn.classList.add('bg-yellow-100', 'text-yellow-700');
         btn.innerHTML = '<span>⭐</span> Só Favoritos';
     }
-    
+
     aplicarFiltros();
 }
 
@@ -362,7 +367,7 @@ async function toggleFavoriteCandidato(candidatoId, vagaId, button) {
             if (candidato) {
                 candidato.favorited = result.favorited;
                 candidato.element.dataset.favorited = result.favorited;
-                
+
                 const badge = candidato.element.querySelector('.favorito-badge');
                 if (result.favorited) {
                     badge.classList.remove('hidden');
@@ -370,7 +375,7 @@ async function toggleFavoriteCandidato(candidatoId, vagaId, button) {
                     badge.classList.add('hidden');
                 }
             }
-            
+
             updateFavoriteButton(button, result.favorited);
             showToast(result.message, 'success');
         } else {
@@ -413,119 +418,6 @@ function showToast(message, type = 'info') {
 
     document.body.appendChild(toast);
 
-    setTimeout(() => {
-        toast.classList.remove('translate-y-full');
-    }, 100);
-
-    setTimeout(() => {
-        toast.classList.add('translate-y-full');
-        setTimeout(() => {
-            document.body.removeChild(toast);
-        }, 300);
-    }, 3000);
-}
-
-// Busca em tempo real
-document.getElementById('searchName').addEventListener('input', aplicarFiltros);
-document.getElementById('searchScore').addEventListener('input', aplicarFiltros);
-document.getElementById('sortBy').addEventListener('change', aplicarFiltros);
-</script>
-{% endblock %}
-
-<script>
-// Carregar status dos favoritos ao carregar a página
-document.addEventListener('DOMContentLoaded', function() {
-    loadFavoriteStatus();
-});
-
-async function loadFavoriteStatus() {
-    try {
-        const response = await fetch('/api/candidatos-favoritos');
-        const favoritos = await response.json();
-
-        // Mapear favoritos por candidato_id + vaga_id
-        const favoritosMap = new Map();
-        favoritos.forEach(fav => {
-            favoritosMap.set(`${fav.id}_${fav.vaga_id}`, true);
-        });
-
-        // Atualizar botões
-        document.querySelectorAll('.favorite-candidato-btn').forEach(btn => {
-            const candidatoId = btn.dataset.candidatoId;
-            const vagaId = {{ vaga_id }};
-            const key = `${candidatoId}_${vagaId}`;
-
-            if (favoritosMap.has(key)) {
-                updateFavoriteButton(btn, true);
-            }
-        });
-    } catch (error) {
-        console.error('Erro ao carregar favoritos:', error);
-    }
-}
-
-async function toggleFavoriteCandidato(candidatoId, vagaId, button) {
-    const isFavorited = button.dataset.favorited === 'true';
-
-    try {
-        // Animação otimista
-        button.classList.add('opacity-50', 'pointer-events-none');
-
-        const response = await fetch('/api/favoritar-candidato', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                candidato_id: candidatoId,
-                vaga_id: vagaId,
-                acao: 'toggle'
-            })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            updateFavoriteButton(button, result.favorited);
-            showToast(result.message, 'success');
-        } else {
-            showToast(result.message || 'Erro ao favoritar candidato', 'error');
-        }
-    } catch (error) {
-        console.error('Erro ao favoritar candidato:', error);
-        showToast('Erro ao favoritar candidato', 'error');
-    } finally {
-        button.classList.remove('opacity-50', 'pointer-events-none');
-    }
-}
-
-function updateFavoriteButton(button, isFavorited) {
-    button.dataset.favorited = isFavorited;
-    const icon = button.querySelector('.favorite-icon');
-    const text = button.querySelector('.favorite-text');
-
-    if (isFavorited) {
-        button.className = 'favorite-candidato-btn bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-all duration-300 flex items-center gap-2';
-        icon.textContent = '❤️';
-        text.textContent = 'Favoritado';
-    } else {
-        button.className = 'favorite-candidato-btn bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition-all duration-300 flex items-center gap-2';
-        icon.textContent = '⭐';
-        text.textContent = 'Favoritar';
-    }
-}
-
-function showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `fixed bottom-4 right-4 z-50 px-6 py-4 rounded-xl shadow-lg transform translate-y-full transition-all duration-300 ${
-        type === 'success' ? 'bg-green-500 text-white' :
-        type === 'error' ? 'bg-red-500 text-white' :
-        'bg-blue-500 text-white'
-    }`;
-    toast.textContent = message;
-
-    document.body.appendChild(toast);
-
     // Animar entrada
     setTimeout(() => {
         toast.classList.remove('translate-y-full');
@@ -540,3 +432,8 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 </script>
+
+<!-- Incluir o modal de encerramento -->
+{% include 'partials/modal_encerramento.html' %}
+
+{% endblock %}

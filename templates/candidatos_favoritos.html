@@ -1,4 +1,3 @@
-
 {% extends "base.html" %}
 
 {% block title %}Candidatos Favoritos{% endblock %}
@@ -83,14 +82,14 @@ async function loadCandidatosFavoritos() {
     try {
         const response = await fetch('/api/candidatos-favoritos');
         if (!response.ok) throw new Error('Erro na requisição');
-        
+
         candidatosFavoritos = await response.json();
         candidatosFiltrados = [...candidatosFavoritos];
-        
+
         updateStats();
         populateVagaFilter();
         renderCandidatos();
-        
+
     } catch (error) {
         console.error('Erro ao carregar favoritos:', error);
         document.getElementById('candidatosList').innerHTML = `
@@ -114,10 +113,10 @@ function updateStats() {
 function populateVagaFilter() {
     const vagaFilter = document.getElementById('vagaFilter');
     const vagas = [...new Set(candidatosFavoritos.map(c => c.vaga_titulo))];
-    
+
     // Limpar opções existentes (manter "Todas as vagas")
     vagaFilter.innerHTML = '<option value="">Todas as vagas</option>';
-    
+
     // Adicionar opções de vagas
     vagas.forEach(vaga => {
         const option = document.createElement('option');
@@ -131,21 +130,21 @@ function populateVagaFilter() {
 function aplicarFiltros() {
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
     const vagaSelecionada = document.getElementById('vagaFilter').value;
-    
+
     candidatosFiltrados = candidatosFavoritos.filter(candidato => {
         const matchSearch = !searchTerm || candidato.nome.toLowerCase().includes(searchTerm);
         const matchVaga = !vagaSelecionada || candidato.vaga_titulo === vagaSelecionada;
-        
+
         return matchSearch && matchVaga;
     });
-    
+
     renderCandidatos();
 }
 
 // Renderizar candidatos
 function renderCandidatos() {
     const container = document.getElementById('candidatosList');
-    
+
     if (candidatosFiltrados.length === 0) {
         if (candidatosFavoritos.length === 0) {
             container.innerHTML = `
@@ -179,9 +178,9 @@ function renderCandidatos() {
         }
         return;
     }
-    
+
     let html = '<div class="grid gap-6">';
-    
+
     candidatosFiltrados.forEach(candidato => {
         html += `
             <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-lg hover:border-red-200 transition-all duration-300">
@@ -221,7 +220,7 @@ function renderCandidatos() {
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="flex flex-col items-center gap-4 lg:w-48">
                         <div class="flex gap-3">
                             <div class="text-center bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-3 rounded-xl shadow-md">
@@ -233,7 +232,7 @@ function renderCandidatos() {
                                 <div class="text-xs opacity-90">match</div>
                             </div>
                         </div>
-                        
+
                         <div class="flex gap-2">
                             <button onclick="removeFavorite(${candidato.id}, ${candidato.vaga_id}, this)"
                                     class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
@@ -251,7 +250,7 @@ function renderCandidatos() {
             </div>
         `;
     });
-    
+
     html += '</div>';
     container.innerHTML = html;
 }
@@ -261,10 +260,10 @@ async function removeFavorite(candidatoId, vagaId, button) {
     if (!confirm('Tem certeza que deseja remover este candidato dos favoritos?')) {
         return;
     }
-    
+
     try {
         button.classList.add('opacity-50', 'pointer-events-none');
-        
+
         const response = await fetch('/api/favoritar-candidato', {
             method: 'POST',
             headers: {
@@ -276,19 +275,19 @@ async function removeFavorite(candidatoId, vagaId, button) {
                 acao: 'remove'
             })
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             // Remover da lista local
             candidatosFavoritos = candidatosFavoritos.filter(c => 
                 !(c.id === candidatoId && c.vaga_id === vagaId)
             );
-            
+
             // Reaplicar filtros
             aplicarFiltros();
             updateStats();
-            
+
             showToast('Candidato removido dos favoritos', 'success');
         } else {
             showToast(result.message || 'Erro ao remover favorito', 'error');
@@ -318,13 +317,13 @@ function showToast(message, type = 'info') {
         'bg-blue-500 text-white'
     }`;
     toast.textContent = message;
-    
+
     document.body.appendChild(toast);
-    
+
     setTimeout(() => {
         toast.classList.remove('translate-y-full');
     }, 100);
-    
+
     setTimeout(() => {
         toast.classList.add('translate-y-full');
         setTimeout(() => {
@@ -338,9 +337,54 @@ document.getElementById('searchInput').addEventListener('input', function() {
     aplicarFiltros();
 });
 
-// Inicializar página
+// Carregar favoritos quando a página carregar
 document.addEventListener('DOMContentLoaded', function() {
     loadCandidatosFavoritos();
+    carregarVagasParaFiltro();
 });
+
+// Carregar vagas para o filtro
+async function carregarVagasParaFiltro() {
+    try {
+        // Implementar API para buscar vagas da empresa
+        const response = await fetch('/api/vagas-empresa');
+        const vagas = await response.json();
+
+        const select = document.getElementById('filtroVaga');
+        select.innerHTML = '<option value="">Todas as vagas</option>';
+
+        vagas.forEach(vaga => {
+            const option = document.createElement('option');
+            option.value = vaga.id;
+            option.textContent = vaga.titulo;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Erro ao carregar vagas:', error);
+    }
+}
+
+// Aplicar filtro por vaga
+function aplicarFiltroVaga() {
+    const vagaId = document.getElementById('filtroVaga').value;
+    const cards = document.querySelectorAll('.candidato-favorito-card');
+
+    cards.forEach(card => {
+        if (!vagaId || card.dataset.vagaId === vagaId) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+// Limpar filtro
+function limparFiltroVaga() {
+    document.getElementById('filtroVaga').value = '';
+    const cards = document.querySelectorAll('.candidato-favorito-card');
+    cards.forEach(card => {
+        card.style.display = 'block';
+    });
+}
 </script>
 {% endblock %}

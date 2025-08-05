@@ -698,13 +698,18 @@ def encerrar_vaga():
     conn = sqlite3.connect('recrutamento.db')
     cursor = conn.cursor()
 
-    cursor.execute('SELECT id FROM vagas WHERE id = ? AND empresa_id = ?',
+    # Verificar se a vaga pertence à empresa
+    cursor.execute('SELECT titulo FROM vagas WHERE id = ? AND empresa_id = ?',
                    (vaga_id, session['empresa_id']))
-    if not cursor.fetchone():
+    vaga_info = cursor.fetchone()
+    if not vaga_info:
         conn.close()
         return jsonify({'error': 'Vaga não encontrada'}), 404
 
+    vaga_titulo = vaga_info[0]
+
     try:
+        # Buscar candidatos da vaga
         cursor.execute(
             'SELECT candidato_id FROM candidaturas WHERE vaga_id = ?',
             (vaga_id, ))
@@ -721,72 +726,62 @@ def encerrar_vaga():
                 return jsonify(
                     {'error': 'Candidato não se candidatou a esta vaga'}), 400
 
+            # Atualizar vaga como concluída
             cursor.execute(
-                '''
-                UPDATE vagas 
-                SET status = "Concluída", candidato_selecionado_id = ? 
-                WHERE id = ?
-            ''', (candidato_id, vaga_id))
+                '''UPDATE vagas 
+                   SET status = "Concluída", candidato_selecionado_id = ? 
+                   WHERE id = ?''', 
+                (candidato_id, vaga_id))
 
-            if not mensagem_personalizada:
-                mensagem_personalizada = "Parabéns! Você foi selecionado para esta vaga."
-
-            # Usar sistema modularizado de notificações
-            notification_system.notificar_contratacao(candidato_id, vaga_id,
-                                                      session['empresa_id'],
-                                                      mensagem_personalizada)
+            # Notificar candidato contratado
+            notification_system.notificar_contratacao(
+                candidato_id, vaga_id, session['empresa_id'], mensagem_personalizada)
 
             # Notificar outros candidatos
             for cid in todos_candidatos:
                 if cid != candidato_id:
-                    msg = "A vaga foi concluída. Outro candidato foi selecionado."
+                    msg = f"A vaga '{vaga_titulo}' foi concluída. Outro candidato foi selecionado."
                     notification_system.criar_notificacao(
-                        cid, msg, vaga_id, session['empresa_id'],
-                        'vaga_concluida')
+                        cid, msg, vaga_id, session['empresa_id'], 'vaga_concluida')
 
-                    cursor.execute('SELECT email FROM candidatos WHERE id = ?',
-                                   (cid, ))
-                    email = cursor.fetchone()[0]
-                    notification_system.enviar_email(email, "Vaga Concluída",
-                                                     msg)
+                    cursor.execute('SELECT email FROM candidatos WHERE id = ?', (cid,))
+                    email_result = cursor.fetchone()
+                    if email_result:
+                        notification_system.enviar_email(
+                            email_result[0], f"Vaga Concluída - {vaga_titulo}", msg)
 
-            response = {
-                'success': True,
-                'message': 'Candidato contratado com sucesso!'
-            }
+            response = {'success': True, 'message': 'Candidato contratado com sucesso!'}
 
         elif acao == 'congelar':
-            cursor.execute(
-                'UPDATE vagas SET status = "Congelada" WHERE id = ?',
-                (vaga_id, ))
-
-            # Usar sistema modularizado
+            cursor.execute('UPDATE vagas SET status = "Congelada" WHERE id = ?', (vaga_id,))
             notification_system.notificar_vaga_congelada(vaga_id)
-
-            response = {
-                'success': True,
-                'message': 'Vaga congelada com sucesso!'
-            }
+            response = {'success': True, 'message': 'Vaga congelada com sucesso!'}
 
         elif acao == 'excluir':
-            # Usar sistema modularizado
+            # Notificar antes de excluir
             notification_system.notificar_vaga_excluida(vaga_id)
-
-            cursor.execute('DELETE FROM candidaturas WHERE vaga_id = ?',
-                           (vaga_id, ))
-            cursor.execute('DELETE FROM vagas WHERE id = ?', (vaga_id, ))
-            response = {
-                'success': True,
-                'message': 'Vaga excluída com sucesso!'
-            }
+            
+            # Excluir candidaturas e vaga
+            cursor.execute('DELETE FROM candidaturas WHERE vaga_id = ?', (vaga_id,))
+            cursor.execute('DELETE FROM vagas WHERE id = ?', (vaga_id,))
+            response = {'success': True, 'message': 'Vaga excluída com sucesso!'}
 
         elif acao == 'reativar':
-            cursor.execute('UPDATE vagas SET status = "Ativa" WHERE id = ?',
-                           (vaga_id, ))
-            response = {
-                'success': True,
-                'message': 'Vaga reativada com sucesso!'
-            }
+            cursor.execute('UPDATE vagas SET status = "Ativa" WHERE id = ?', (vaga_id,))
+            
+            # Notificar candidatos sobre reativação
+            for cid in todos_candidatos:
+                msg = f"Boa notícia! A vaga '{vaga_titulo}' foi reativada. Sua candidatura continua válida e o processo seletivo foi retomado."
+                notification_system.criar_notificacao(
+                    cid, msg, vaga_id, session['empresa_id'], 'vaga_reativada')
+
+                cursor.execute('SELECT email FROM candidatos WHERE id = ?', (cid,))
+                email_result = cursor.fetchone()
+                if email_result:
+                    notification_system.enviar_email(
+                        email_result[0], f"Vaga Reativada - {vaga_titulo}", msg)
+
+            response = {'success': True, 'message': 'Vaga reativada com sucesso!'}
 
         else:
             return jsonify({'error': 'Ação inválida'}), 400
@@ -796,6 +791,7 @@ def encerrar_vaga():
 
     except Exception as e:
         conn.rollback()
+        print(f"Erro ao encerrar vaga: {e}")
         return jsonify({'error': f'Erro ao processar ação: {str(e)}'}), 500
     finally:
         conn.close()
@@ -1501,6 +1497,37 @@ def favoritar_vaga():
         ja_favoritada = cursor.fetchone() is not None
 
         if acao == 'toggle' or (acao == 'add' and not ja_favoritada):
+
+@app.route('/api/vagas-empresa')
+def api_vagas_empresa():
+    """API para buscar vagas da empresa para filtros"""
+    if 'empresa_id' not in session:
+        return jsonify({'error': 'Não autorizado'}), 401
+
+    conn = sqlite3.connect('recrutamento.db')
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            'SELECT id, titulo, status FROM vagas WHERE empresa_id = ? ORDER BY titulo',
+            (session['empresa_id'],))
+        
+        vagas = []
+        for row in cursor.fetchall():
+            vagas.append({
+                'id': row[0],
+                'titulo': row[1],
+                'status': row[2]
+            })
+
+        return jsonify(vagas)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+
+
             if ja_favoritada:
                 # Remover dos favoritos
                 cursor.execute(

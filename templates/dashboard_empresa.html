@@ -1,4 +1,3 @@
-
 {% extends "base.html" %}
 
 {% block title %}Dashboard Empresa{% endblock %}
@@ -252,7 +251,7 @@
         button.className = `favorite-btn text-xl transition-all duration-300 hover:scale-125 ${result.favorited ? 'text-red-500' : 'text-gray-300'}`;
 
         showToast(result.message, 'success');
-        
+
         // Auto-reload para refletir mudanças
         setTimeout(() => {
           location.reload();
