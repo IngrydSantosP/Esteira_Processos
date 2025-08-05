@@ -1,0 +1,346 @@
+
+{% extends "base.html" %}
+
+{% block title %}Candidatos Favoritos{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
+    <!-- Header -->
+    <div class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-12 h-12 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl flex items-center justify-center">
+                        <span class="text-white font-bold text-lg">❤️</span>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
+                            Candidatos Favoritos
+                        </h1>
+                        <p class="text-gray-500 text-sm">Seus candidatos marcados como favoritos</p>
+                    </div>
+                </div>
+                <a href="{{ url_for('dashboard_empresa') }}" 
+                   class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-xl transition-all duration-300 flex items-center gap-2">
+                    <span>⬅️</span>
+                    Voltar ao Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Stats Card -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
+            <div class="flex items-center gap-4">
+                <div class="w-16 h-16 bg-gradient-to-br from-red-100 to-pink-100 rounded-2xl flex items-center justify-center">
+                    <span class="text-3xl">❤️</span>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800">Total de Favoritos</h2>
+                    <p id="totalFavoritos" class="text-3xl font-bold text-red-600">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros de busca -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="flex-1">
+                    <input type="text" 
+                           id="searchInput" 
+                           placeholder="🔍 Buscar por nome do candidato..."
+                           class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                </div>
+                <div class="flex gap-3">
+                    <select id="vagaFilter" class="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500">
+                        <option value="">Todas as vagas</option>
+                    </select>
+                    <button onclick="aplicarFiltros()" 
+                            class="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105">
+                        Filtrar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de candidatos favoritos -->
+        <div id="candidatosList">
+            <div class="text-center py-8">
+                <div class="animate-spin w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p class="text-gray-500">Carregando candidatos favoritos...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let candidatosFavoritos = [];
+let candidatosFiltrados = [];
+
+// Carregar candidatos favoritos
+async function loadCandidatosFavoritos() {
+    try {
+        const response = await fetch('/api/candidatos-favoritos');
+        if (!response.ok) throw new Error('Erro na requisição');
+        
+        candidatosFavoritos = await response.json();
+        candidatosFiltrados = [...candidatosFavoritos];
+        
+        updateStats();
+        populateVagaFilter();
+        renderCandidatos();
+        
+    } catch (error) {
+        console.error('Erro ao carregar favoritos:', error);
+        document.getElementById('candidatosList').innerHTML = `
+            <div class="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
+                <div class="w-24 h-24 bg-red-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+                    <span class="text-4xl">❌</span>
+                </div>
+                <h3 class="text-xl font-bold text-gray-600 mb-3">Erro ao carregar favoritos</h3>
+                <p class="text-gray-500">Tente recarregar a página.</p>
+            </div>
+        `;
+    }
+}
+
+// Atualizar estatísticas
+function updateStats() {
+    document.getElementById('totalFavoritos').textContent = candidatosFavoritos.length;
+}
+
+// Popular filtro de vagas
+function populateVagaFilter() {
+    const vagaFilter = document.getElementById('vagaFilter');
+    const vagas = [...new Set(candidatosFavoritos.map(c => c.vaga_titulo))];
+    
+    // Limpar opções existentes (manter "Todas as vagas")
+    vagaFilter.innerHTML = '<option value="">Todas as vagas</option>';
+    
+    // Adicionar opções de vagas
+    vagas.forEach(vaga => {
+        const option = document.createElement('option');
+        option.value = vaga;
+        option.textContent = vaga;
+        vagaFilter.appendChild(option);
+    });
+}
+
+// Aplicar filtros
+function aplicarFiltros() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const vagaSelecionada = document.getElementById('vagaFilter').value;
+    
+    candidatosFiltrados = candidatosFavoritos.filter(candidato => {
+        const matchSearch = !searchTerm || candidato.nome.toLowerCase().includes(searchTerm);
+        const matchVaga = !vagaSelecionada || candidato.vaga_titulo === vagaSelecionada;
+        
+        return matchSearch && matchVaga;
+    });
+    
+    renderCandidatos();
+}
+
+// Renderizar candidatos
+function renderCandidatos() {
+    const container = document.getElementById('candidatosList');
+    
+    if (candidatosFiltrados.length === 0) {
+        if (candidatosFavoritos.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
+                    <div class="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+                        <span class="text-4xl">❤️</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-600 mb-3">Nenhum candidato favorito ainda</h3>
+                    <p class="text-gray-500 mb-6">Favorite candidatos nas páginas de vagas para vê-los aqui.</p>
+                    <a href="${url_for('dashboard_empresa')}" 
+                       class="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 inline-flex items-center gap-2">
+                        <span>🏢</span>
+                        Ver Vagas
+                    </a>
+                </div>
+            `;
+        } else {
+            container.innerHTML = `
+                <div class="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
+                    <div class="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+                        <span class="text-4xl">🔍</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-600 mb-3">Nenhum resultado encontrado</h3>
+                    <p class="text-gray-500 mb-6">Tente ajustar os filtros de busca.</p>
+                    <button onclick="limparFiltros()" 
+                            class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300">
+                        Limpar Filtros
+                    </button>
+                </div>
+            `;
+        }
+        return;
+    }
+    
+    let html = '<div class="grid gap-6">';
+    
+    candidatosFiltrados.forEach(candidato => {
+        html += `
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-lg hover:border-red-200 transition-all duration-300">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    <div class="flex-1">
+                        <div class="flex items-start gap-4">
+                            <div class="w-16 h-16 bg-gradient-to-br from-red-100 to-pink-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <span class="text-2xl">👤</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <h3 class="text-xl font-bold text-gray-800">${candidato.nome}</h3>
+                                    <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">❤️ Favorito</span>
+                                </div>
+                                <p class="text-purple-600 font-semibold mb-2 flex items-center gap-2">
+                                    <span class="w-4 h-4 bg-purple-100 rounded-full flex items-center justify-center text-xs">💼</span>
+                                    ${candidato.vaga_titulo}
+                                </p>
+                                <div class="flex flex-wrap gap-4 text-sm text-gray-600">
+                                    <span class="flex items-center gap-1">
+                                        <span>📧</span> ${candidato.email}
+                                    </span>
+                                    ${candidato.telefone ? `
+                                        <span class="flex items-center gap-1">
+                                            <span>📱</span> ${candidato.telefone}
+                                        </span>
+                                    ` : ''}
+                                    ${candidato.linkedin ? `
+                                        <a href="${candidato.linkedin}" target="_blank" class="flex items-center gap-1 text-blue-600 hover:text-blue-800">
+                                            <span>🔗</span> LinkedIn
+                                        </a>
+                                    ` : ''}
+                                </div>
+                                <p class="text-xs text-gray-500 mt-2">
+                                    Favoritado em: ${new Date(candidato.data_favorito).toLocaleDateString('pt-BR')}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col items-center gap-4 lg:w-48">
+                        <div class="flex gap-3">
+                            <div class="text-center bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-3 rounded-xl shadow-md">
+                                <div class="text-lg font-bold">${candidato.posicao}º</div>
+                                <div class="text-xs opacity-90">posição</div>
+                            </div>
+                            <div class="text-center bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-3 rounded-xl shadow-md">
+                                <div class="text-lg font-bold">${candidato.score}%</div>
+                                <div class="text-xs opacity-90">match</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex gap-2">
+                            <button onclick="removeFavorite(${candidato.id}, ${candidato.vaga_id}, this)"
+                                    class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                                <span>💔</span>
+                                Remover
+                            </button>
+                            <a href="/candidatos_vaga/${candidato.vaga_id}" 
+                               class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                                <span>👁️</span>
+                                Ver Vaga
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// Remover favorito
+async function removeFavorite(candidatoId, vagaId, button) {
+    if (!confirm('Tem certeza que deseja remover este candidato dos favoritos?')) {
+        return;
+    }
+    
+    try {
+        button.classList.add('opacity-50', 'pointer-events-none');
+        
+        const response = await fetch('/api/favoritar-candidato', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                candidato_id: candidatoId,
+                vaga_id: vagaId,
+                acao: 'remove'
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Remover da lista local
+            candidatosFavoritos = candidatosFavoritos.filter(c => 
+                !(c.id === candidatoId && c.vaga_id === vagaId)
+            );
+            
+            // Reaplicar filtros
+            aplicarFiltros();
+            updateStats();
+            
+            showToast('Candidato removido dos favoritos', 'success');
+        } else {
+            showToast(result.message || 'Erro ao remover favorito', 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao remover favorito:', error);
+        showToast('Erro ao remover favorito', 'error');
+    } finally {
+        button.classList.remove('opacity-50', 'pointer-events-none');
+    }
+}
+
+// Limpar filtros
+function limparFiltros() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('vagaFilter').value = '';
+    candidatosFiltrados = [...candidatosFavoritos];
+    renderCandidatos();
+}
+
+// Toast notifications
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-4 right-4 z-50 px-6 py-4 rounded-xl shadow-lg transform translate-y-full transition-all duration-300 ${
+        type === 'success' ? 'bg-green-500 text-white' :
+        type === 'error' ? 'bg-red-500 text-white' :
+        'bg-blue-500 text-white'
+    }`;
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.classList.remove('translate-y-full');
+    }, 100);
+    
+    setTimeout(() => {
+        toast.classList.add('translate-y-full');
+        setTimeout(() => {
+            document.body.removeChild(toast);
+        }, 300);
+    }, 3000);
+}
+
+// Eventos de busca em tempo real
+document.getElementById('searchInput').addEventListener('input', function() {
+    aplicarFiltros();
+});
+
+// Inicializar página
+document.addEventListener('DOMContentLoaded', function() {
+    loadCandidatosFavoritos();
+});
+</script>
+{% endblock %}
