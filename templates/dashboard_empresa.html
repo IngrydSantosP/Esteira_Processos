@@ -1,68 +1,102 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard Empresa - Vaboo!{% endblock %}
+{% block title %}Dashboard Empresa{% endblock %}
 
 {% block content %}
-<div class="dashboard-header">
-    <div class="container">
-        <div class="flex justify-between items-center">
-            <div class="flex items-center gap-4">
-                <div class="flex items-center justify-center w-16 h-16 bg-white/20 rounded-xl">
-                    <span class="text-3xl">🏢</span>
+<div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
+    <!-- Header moderno -->
+    <div class="bg-white shadow-sm border-b sticky top-0 z-10 backdrop-blur-md bg-white/95">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
+                        <span class="text-white font-bold text-lg">🏢</span>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                            Painel de Controle
+                        </h1>
+                        <p class="text-gray-500 text-sm">Gerencie suas vagas e candidatos</p>
+                    </div>
                 </div>
-                <div>
-                    <h1 class="text-3xl font-bold mb-2">Painel de Controle</h1>
-                    <p class="text-white/80">Gerencie suas vagas e candidatos de forma inteligente</p>
+                <div class="flex gap-3">
+                    <a href="{{ url_for('criar_vaga') }}"
+                       class="group bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center gap-2">
+                        <span class="transition-transform group-hover:rotate-12">➕</span>
+                        Nova Vaga
+                    </a>
+                    <a href="{{ url_for('candidatos_favoritos') }}"
+                       class="group bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center gap-2">
+                        <span class="transition-transform group-hover:scale-110">❤️</span>
+                        Favoritos
+                    </a>
+                    <a href="{{ url_for('relatorio_empresa') }}"
+                       class="group bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center gap-2">
+                        <span class="transition-transform group-hover:scale-110">📊</span>
+                        Relatórios
+                    </a>
                 </div>
-            </div>
-            <div class="flex gap-3">
-                <a href="{{ url_for('criar_vaga') }}" class="btn-primary bg-white/20 hover:bg-white/30 backdrop-blur-sm">
-                    <span>➕</span> Nova Vaga
-                </a>
-                <a href="{{ url_for('candidatos_favoritos') }}" class="btn-secondary bg-white/10 hover:bg-white/20 text-white border-white/20">
-                    <span>❤️</span> Favoritos
-                </a>
-                <a href="{{ url_for('relatorio_empresa') }}" class="btn-secondary bg-white/10 hover:bg-white/20 text-white border-white/20">
-                    <span>📊</span> Relatórios
-                </a>
             </div>
         </div>
     </div>
-</div>
 
-    <div class="container">
-    <!-- Estatísticas -->
-    <div class="dashboard-stats fade-in">
-        <div class="stat-card">
-            <div class="stat-value">{{ vagas|length if vagas else 0 }}</div>
-            <div class="stat-label">Total de Vagas</div>
-            <div class="text-2xl mb-2">💼</div>
-        </div>
-
-        <div class="stat-card">
-            <div class="stat-value text-green-600">
-                {{ vagas|selectattr('status', 'equalto', 'Ativa')|list|length if vagas else 0 }}
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 hover:border-purple-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Total de Vagas</p>
+                        <p class="text-3xl font-bold text-purple-600">{{ vagas|length if vagas else 0 }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                        <span class="text-2xl">💼</span>
+                    </div>
+                </div>
             </div>
-            <div class="stat-label">Vagas Ativas</div>
-            <div class="text-2xl mb-2">✅</div>
-        </div>
 
-        <div class="stat-card">
-            <div class="stat-value text-blue-600">
-                {{ (vagas|map(attribute='total_candidatos')|map('int')|sum) if vagas else 0 }}
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 hover:border-green-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Vagas Ativas</p>
+                        <p class="text-3xl font-bold text-green-600">
+                            {{ vagas|selectattr('status', 'equalto', 'Ativa')|list|length if vagas else 0 }}
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                        <span class="text-2xl">✅</span>
+                    </div>
+                </div>
             </div>
-            <div class="stat-label">Total Candidatos</div>
-            <div class="text-2xl mb-2">👥</div>
-        </div>
 
-        <div class="stat-card">
-            <div class="stat-value text-orange-500">
-                {{ (vagas|map(attribute='candidatos_80_plus')|map('int')|sum) if vagas else 0 }}
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 hover:border-blue-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Total Candidatos</p>
+                        <p class="text-3xl font-bold text-blue-600">
+                            {{ (vagas|map(attribute='total_candidatos')|map('int')|sum) if vagas else 0 }}
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                        <span class="text-2xl">👥</span>
+                    </div>
+                </div>
             </div>
-            <div class="stat-label">Alta Qualidade</div>
-            <div class="text-2xl mb-2">⭐</div>
+
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 hover:border-orange-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Alta Qualidade</p>
+                        <p class="text-3xl font-bold text-orange-600">
+                            {{ (vagas|map(attribute='candidatos_80_plus')|map('int')|sum) if vagas else 0 }}
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                        <span class="text-2xl">⭐</span>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
 
         <!-- Lista de Vagas -->
         {% include 'partials/lista_vagas.html' %}

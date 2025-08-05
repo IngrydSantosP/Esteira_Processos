@@ -4,51 +4,34 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{% block title %}Vaboo! - Plataforma de Recrutamento{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <meta name="description" content="Plataforma moderna de recrutamento com IA integrada">
+    <title>{% block title %}Recrutamento{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <nav>
-        <div class="container">
-            <a href="{{ url_for('index') }}" class="logo">
-                <span class="vaboo-text">Vaboo</span><span class="exclamation">!</span>
-            </a>
-            
-            <div class="flex items-center gap-4">
-                {% if session.tipo_usuario %}
-                    {% if session.tipo_usuario == 'candidato' %}
-                        <a href="{{ url_for('dashboard_candidato') }}" class="nav-link">Dashboard</a>
-                        <a href="{{ url_for('editar_perfil_candidato') }}" class="nav-link">Perfil</a>
-                    {% elif session.tipo_usuario == 'empresa' %}
-                        <a href="{{ url_for('dashboard_empresa') }}" class="nav-link">Dashboard</a>
-                        <a href="{{ url_for('criar_vaga') }}" class="nav-link">Nova Vaga</a>
-                    {% endif %}
-                    <a href="{{ url_for('logout') }}" class="btn-secondary">Sair</a>
-                {% else %}
-                    <a href="{{ url_for('index') }}" class="nav-link">Home</a>
-                    <a href="{{ url_for('login_candidato') }}" class="nav-link">Candidatos</a>
-                    <a href="{{ url_for('login_empresa') }}" class="nav-link">Empresas</a>
-                {% endif %}
+<body class="bg-purple-50 min-h-screen">
+    <div class="flex justify-between items-center px-6 py-4 bg-white shadow-md">
+        <a href="{{ url_for('index') }}" class="text-2xl font-bold text-[#7C71B2] hover:text-purple-600">
+            Vaboo!
+        </a>
+        {% if session.tipo_usuario %}
+            <a href="{{ url_for('logout') }}" class="text-[#7C71B2] hover:text-purple-600">Sair</a>
+        {% else %}
+            <div class="flex gap-6">
+                <a href="{{ url_for('index') }}" class="text-[#7C71B2] hover:text-purple-600">Home</a>
             </div>
-        </div>
-    </nav>
+        {% endif %}
+    </div>
 
-    <main class="container mt-8">
+    <main class="container mx-auto mt-8 px-4">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert fade-in
+                    <div class="mb-4 p-4 rounded-lg 
                         {% if category == 'error' %}
-                            alert-error
+                            bg-red-100 text-red-700
                         {% elif category == 'success' %}
-                            alert-success
-                        {% elif category == 'warning' %}
-                            alert-warning
+                            bg-green-100 text-green-700
                         {% else %}
-                            alert-primary
+                            bg-purple-100 text-purple-700
                         {% endif %}">
                         {{ message }}
                     </div>
@@ -58,47 +41,5 @@
 
         {% block content %}{% endblock %}
     </main>
-
-    <script>
-        // Utilitários globais para UI
-        window.VabooUI = {
-            showToast: function(message, type = 'info', duration = 3000) {
-                const toast = document.createElement('div');
-                toast.className = `alert alert-${type} fixed top-4 right-4 z-50 max-w-sm fade-in`;
-                toast.textContent = message;
-                toast.style.zIndex = '9999';
-                
-                document.body.appendChild(toast);
-                
-                setTimeout(() => {
-                    toast.style.opacity = '0';
-                    toast.style.transform = 'translateX(100%)';
-                    setTimeout(() => document.body.removeChild(toast), 300);
-                }, duration);
-            },
-            
-            confirmAction: function(message, callback) {
-                if (confirm(message)) {
-                    callback();
-                }
-            },
-            
-            formatDate: function(dateString) {
-                return new Date(dateString).toLocaleDateString('pt-BR');
-            }
-        };
-        
-        // Auto-hide alerts após 5 segundos
-        document.addEventListener('DOMContentLoaded', function() {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(alert => {
-                setTimeout(() => {
-                    alert.style.opacity = '0';
-                    alert.style.transform = 'translateY(-100%)';
-                    setTimeout(() => alert.remove(), 300);
-                }, 5000);
-            });
-        });
-    </script>
 </body>
 </html>
