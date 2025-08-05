@@ -16,16 +16,15 @@
       <div
         class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between"
       >
-        <a href="#home" class="logo select-none">
-          V<span class="text-2xl font-black relative" style="top: -0.15rem"
-            >A</span
-          >B<span class="ring-o">O</span><sup class="exclamation">!</sup>
+        <a href="{{ url_for('index') }}" class="text-2xl font-bold text-[#7C71B2] hover:text-purple-600">
+            Vaboo!
         </a>
+
         <nav>
           <ul class="flex gap-10 text-gray-900 font-semibold select-none">
             <li><a href="#home" class="nav-link active">Home</a></li>
-            <li><a href="#jobs" class="nav-link">Vagas</a></li>
             <li><a href="#about" class="nav-link">Sobre</a></li>
+             <li><a href="#jobs" class="nav-link">Vagas</a></li>
           </ul>
         </nav>
         <a href="{{ url_for('cadastro_empresa') }}" class="btn-primary"
@@ -292,20 +291,14 @@
         aria-atomic="true"
         aria-relevant="text"
       >
-        <div role="region" aria-label="Mensagem de boas-vindas">
-          <div
-            class="logo"
-            aria-hidden="true"
-            style="justify-content: center; margin-bottom: 1.2rem"
-          >
-            V<span style="top: -0.15rem; position: relative">A</span>B<span
-              class="ring-o"
-              >O</span
-            ><sup class="exclamation">!</sup>
+        <div role="region" aria-label="Mensagem de boas-vindas" style="display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center;">
+          <div class="logo" aria-hidden="true" style="margin-bottom: 1.2rem;">
+              Vaboo!
           </div>
-          <h2>Bem-Vindo<br />de Volta!</h2>
-          <p>Já possui uma conta? Faça seu login abaixo</p>
+          <h2>Faça seu Login</h2>
+          <br>
         </div>
+
         <form
           id="login-form"
           method="post"
@@ -424,16 +417,6 @@
       });
     </script>
 
-
-    <div vw class="enabled">
-      <div vw-access-button class="active"></div>
-      <div vw-plugin-wrapper>
-        <div class="vw-plugin-top-wrapper"></div>
-      </div>
-    </div>
-    <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
-    <script>
-      new window.VLibras.Widget('https://vlibras.gov.br/app');
-    </script>
+  
   </body>
 </html>

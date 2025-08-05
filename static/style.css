@@ -10,16 +10,16 @@ body {
 
 /* Logo style */
 .logo {
-  font-weight: 900;
-  font-size: 1.75rem;
+  font-weight: 900; /* ou font-weight: bold; */
+  font-size: 1.75rem; /* equivalente a text-2xl */
   display: flex;
   align-items: center;
-  letter-spacing: -0.1em;
   user-select: none;
+  color: #7C71B2;
+  transition: color 0.3s ease;
 }
 .logo sup {
   font-size: 0.9rem;
-  letter-spacing: normal;
   font-weight: 700;
   margin-left: -0.23rem;
   margin-top: 0.1rem;
@@ -94,7 +94,7 @@ nav a:hover::after {
   background-color: #F3F2FA;
   padding: 4rem 1rem;
   display: flex;
-  max-width: 1200px;
+  max-width: 900px;
   margin: 2rem auto 4rem auto;
   border-radius: 10px;
   box-shadow: 6px 8px 16px rgb(0 0 0 / 0.08);
@@ -105,8 +105,8 @@ nav a:hover::after {
 }
 #home .left-image {
   position: relative;
-  flex: 1 1 300px;
-  max-width: 320px;
+  flex: 1 1 250px;
+  max-width: 270px;
 }
 #home .left-image img {
   border-radius: 30px 10px 30px 10px;
@@ -438,9 +438,9 @@ nav a:hover::after {
   background-color: #D7CDF7;
   border: none;
   border-radius: 15px;
-  padding: 0.6rem 1rem;
+  padding: 0.3rem 1rem;
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 300;
   color: #261f4f;
   outline-offset: 3px;
   outline-color: transparent;

@@ -26,8 +26,8 @@
                         Nova Vaga
                     </a>
                     <a href="{{ url_for('candidatos_favoritos') }}"
-                       class="group bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center gap-2">
-                        <span class="transition-transform group-hover:scale-110">❤️</span>
+                       class="group bg-gradient-to-r from-yellow-500 to-yellow-500 hover:from-gold-600 hover:to-orange-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center gap-2">
+                        <span class="transition-transform group-hover:scale-110">⭐</span>
                         Favoritos
                     </a>
                     <a href="{{ url_for('relatorio_empresa') }}"
@@ -79,20 +79,6 @@
                     </div>
                     <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
                         <span class="text-2xl">👥</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 hover:border-orange-200">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm font-medium">Alta Qualidade</p>
-                        <p class="text-3xl font-bold text-orange-600">
-                            {{ (vagas|map(attribute='candidatos_80_plus')|map('int')|sum) if vagas else 0 }}
-                        </p>
-                    </div>
-                    <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                        <span class="text-2xl">⭐</span>
                     </div>
                 </div>
             </div>
