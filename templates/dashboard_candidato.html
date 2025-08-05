@@ -1,42 +1,9 @@
+
 {% extends "base.html" %}
 
 {% block title %}Dashboard - Candidato{% endblock %}
 
 {% block content %}
-<!-- Botão de notificações (fixo no canto superior direito) -->
-<div class="fixed top-4 right-4 z-50">
-    <button id="notificationBtn" class="relative p-3 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition duration-300">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zM6 3v12l-3-3H2a1 1 0 01-1-1V8a1 1 0 011-1h1L6 3z"></path>
-        </svg>
-        <span id="notificationBadge" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-2 py-1 hidden">0</span>
-    </button>
-</div>
-
-<!-- Modal de Notificações -->
-<div id="notificationModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-lg max-w-2xl w-full max-h-80vh overflow-hidden">
-            <div class="flex justify-between items-center p-6 border-b">
-                <h2 class="text-xl font-bold text-gray-800">📢 Notificações</h2>
-                <div class="flex gap-2">
-                    <button id="markAllReadBtn" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm hidden">
-                        Marcar todas como lidas
-                    </button>
-                    <button id="closeModalBtn" class="text-gray-500 hover:text-gray-700">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-
-            <div id="notificationsList" class="max-h-96 overflow-y-auto p-6">
-                <div class="text-center text-gray-500">Carregando notificações...</div>
-            </div>
-        </div>
-    </div>
-</div>
 
 <style> 
     .icone-contratado { color: #16a34a; font-size: 1.2em; margin-right: 8px; }
@@ -48,6 +15,13 @@
         color: white;
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    .notification-dot {
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
     }
 </style>
 
@@ -66,13 +40,48 @@
                     <p class="text-gray-500 text-sm">Gerencie suas candidaturas e explore oportunidades</p>
                 </div>
             </div>
-              <div class="flex gap-3 items-center">
-                  <!-- Botão: Editar perfil -->
-                  <a href="{{ url_for('editar_perfil_candidato') }}"
-                     class="bg-white hover:bg-gray-50 text-gray-700 w-12 h-12 rounded-xl flex items-center justify-center border border-gray-200 shadow transition-all duration-300"
-                     aria-label="Editar informações do perfil">
-                    <span class="text-xl">⚙️</span>
-                  </a>
+            <div class="flex gap-3 items-center">
+                <!-- Botão: Editar perfil -->
+                <a href="{{ url_for('editar_perfil_candidato') }}"
+                   class="bg-white hover:bg-gray-50 text-gray-700 w-12 h-12 rounded-xl flex items-center justify-center border border-gray-200 shadow transition-all duration-300"
+                   aria-label="Editar informações do perfil">
+                  <span class="text-xl">⚙️</span>
+                </a>
+
+                <!-- Botão de Notificações -->
+                <div class="relative">
+                  <button id="btnNotificacoes" onclick="toggleNotificacoes()"
+                          class="bg-white hover:bg-gray-50 text-gray-700 w-12 h-12 rounded-xl flex items-center justify-center border border-gray-200 shadow transition-all duration-300 relative"
+                          aria-label="Ver notificações">
+                    <span class="text-xl">🔔</span>
+                    <span id="badgeNotificacoes"
+                          class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold notification-dot">
+                    </span>
+                  </button>
+
+                  <div id="painelNotificacoes"
+                       class="hidden absolute right-0 mt-3 w-96 max-h-[28rem] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 overflow-hidden animate-fade-in-down">
+                    <!-- Cabeçalho -->
+                    <div class="px-5 py-4 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white z-10">
+                      <h3 class="text-lg font-semibold text-gray-800">🔔 Notificações</h3>
+                      <div class="flex gap-2">
+                        <button onclick="marcarTodasComoLidas()"
+                                class="text-sm text-purple-600 hover:text-purple-700 font-medium transition-colors">
+                          Marcar todas como lidas
+                        </button>
+                        <button onclick="apagarTodasNotificacoes()"
+                                class="text-sm text-red-600 hover:text-red-700 font-medium transition-colors">
+                          Apagar todas
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Lista de notificações -->
+                    <div class="max-h-80 overflow-y-auto">
+                      <ul id="notificacoes" class="divide-y divide-gray-100 font-[Inter,sans-serif] text-[15px]"></ul>
+                    </div>
+                  </div>
+                </div>
             </div>
         </div>
     </div>
@@ -151,94 +160,9 @@
                     <button onclick="showSection('favoritas')" class="filter-btn bg-gray-100 text-gray-700 px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105">
                         ⭐ Favoritas
                     </button>
-                    <button onclick="showSection('busca')" class="filter-btn bg-gray-100 text-gray-700 px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105">
-                        🔍 Busca Avançada
+                    <button onclick="showSection('assistente-ia')" class="filter-btn bg-gray-100 text-gray-700 px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105">
+                        🤖 Assistente IA
                     </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Seção Busca Avançada -->
-        <div id="section-busca" class="content-section hidden">
-            <div class="text-center mb-8">
-                <h2 class="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-3">
-                    Busca Avançada de Vagas
-                </h2>
-                <p class="text-gray-600">Use filtros para encontrar vagas que combinem com você</p>
-            </div>
-
-            <!-- Filtros de Busca -->
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">🔍 Palavra-chave</label>
-                        <input type="text" id="searchKeyword" placeholder="Ex: desenvolvedor, vendas..."
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">📍 Localização</label>
-                        <select id="searchLocation" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                            <option value="">Todas as localizações</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">🏷️ Categoria</label>
-                        <select id="searchCategory" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                            <option value="">Todas as categorias</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">⚡ Urgência</label>
-                        <select id="searchUrgency" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                            <option value="">Qualquer urgência</option>
-                            <option value="Imediata">Imediata</option>
-                            <option value="Em até 30 dias">Em até 30 dias</option>
-                            <option value="Sem urgência">Sem urgência</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">💰 Salário Mínimo</label>
-                        <input type="number" id="searchSalary" placeholder="Ex: 3000"
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">💼 Tipo de Vaga</label>
-                        <select id="searchType" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                            <option value="">Todos os tipos</option>
-                            <option value="Presencial">Presencial</option>
-                            <option value="Remoto">Remoto</option>
-                            <option value="Híbrida">Híbrida</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="flex gap-3">
-                    <button onclick="realizarBusca()" 
-                            class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
-                        <span>🔍</span>
-                        Buscar Vagas
-                    </button>
-                    <button onclick="limparFiltros()" 
-                            class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
-                        <span>🧹</span>
-                        Limpar Filtros
-                    </button>
-                </div>
-            </div>
-
-            <!-- Resultados da Busca -->
-            <div id="searchResults">
-                <div class="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
-                    <div class="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-6 flex items-center justify-center">
-                        <span class="text-4xl">🔍</span>
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-600 mb-3">Use os filtros para buscar vagas</h3>
-                    <p class="text-gray-500">Refine sua busca usando os filtros acima para encontrar as melhores oportunidades.</p>
                 </div>
             </div>
         </div>
@@ -350,6 +274,72 @@
                 <p class="text-gray-600">Explore todas as oportunidades disponíveis no momento</p>
             </div>
 
+            <!-- Filtros de Busca dentro de Todas as Vagas -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
+                <h3 class="text-lg font-semibold mb-4 text-gray-800">🔍 Busca Avançada</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">🔍 Palavra-chave</label>
+                        <input type="text" id="searchKeyword" placeholder="Ex: desenvolvedor, vendas..."
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">📍 Localização</label>
+                        <select id="searchLocation" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                            <option value="">Todas as localizações</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">🏷️ Categoria</label>
+                        <select id="searchCategory" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                            <option value="">Todas as categorias</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">⚡ Urgência</label>
+                        <select id="searchUrgency" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                            <option value="">Qualquer urgência</option>
+                            <option value="Imediata">Imediata</option>
+                            <option value="Em até 30 dias">Em até 30 dias</option>
+                            <option value="Sem urgência">Sem urgência</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">💰 Salário Mínimo</label>
+                        <input type="number" id="searchSalary" placeholder="Ex: 3000"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">💼 Tipo de Vaga</label>
+                        <select id="searchType" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                            <option value="">Todos os tipos</option>
+                            <option value="Presencial">Presencial</option>
+                            <option value="Remoto">Remoto</option>
+                            <option value="Híbrida">Híbrida</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="realizarBusca()" 
+                            class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                        <span>🔍</span>
+                        Buscar Vagas
+                    </button>
+                    <button onclick="limparFiltros()" 
+                            class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                        <span>🧹</span>
+                        Limpar Filtros
+                    </button>
+                </div>
+            </div>
+
+            <!-- Resultados -->
             <div id="todasVagasContainer">
                 <div class="text-center py-8">
                     <div class="animate-spin w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-4"></div>
@@ -545,54 +535,60 @@
             </div>
             {% endif %}
         </div>
+
+        <!-- Seção Assistente IA -->
+        <div id="section-assistente-ia" class="content-section hidden">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-3">
+                    🤖 Assistente de IA
+                </h2>
+                <p class="text-gray-600">Obtenha insights personalizados sobre seu perfil e recomendações inteligentes</p>
+            </div>
+
+            <!-- Cards do Assistente IA -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <div class="bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2">
+                    <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                        <span>📊</span> Análise do Perfil
+                    </h3>
+                    <p class="mb-4 opacity-90">Descubra seus pontos fortes e áreas de melhoria</p>
+                    <button onclick="analisarCurriculo()" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors w-full">
+                        Analisar Agora
+                    </button>
+                </div>
+
+                <div class="bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2">
+                    <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                        <span>🎯</span> Vagas Recomendadas IA
+                    </h3>
+                    <p class="mb-4 opacity-90">Recomendações personalizadas baseadas no seu perfil</p>
+                    <button onclick="obterRecomendacoesIA()" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors w-full">
+                        Ver Recomendações
+                    </button>
+                </div>
+
+                <div class="bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2">
+                    <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                        <span>💡</span> Dicas para Favoritas
+                    </h3>
+                    <p class="mb-4 opacity-90">Receba dicas para melhorar suas chances nas vagas favoritas</p>
+                    <button onclick="obterDicasFavoritas()" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors w-full">
+                        Obter Dicas
+                    </button>
+                </div>
+            </div>
+
+            <!-- Resultados da IA -->
+            <div id="resultadosIA" class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hidden">
+                <div id="conteudoIA"></div>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Modal de Notificações -->
-    <div id="notificacoesModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
-        <div class="flex justify-center items-center h-full">
-            <div class="bg-white rounded-lg p-6 w-11/12 max-w-2xl max-h-96 overflow-y-auto">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-semibold">Notificações</h3>
-                    <button onclick="fecharNotificacoes()" class="text-gray-500 hover:text-gray-700">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
-                <div id="notificacoesConteudo">
-                    <!-- Conteúdo será carregado via JavaScript -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Análise IA -->
-    <div id="analiseIAModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
-        <div class="flex justify-center items-center h-full">
-            <div class="bg-white rounded-lg p-6 w-11/12 max-w-4xl max-h-96 overflow-y-auto">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-semibold flex items-center">
-                        🤖 Análise IA do seu Perfil
-                    </h3>
-                    <button onclick="fecharAnaliseIA()" class="text-gray-500 hover:text-gray-700">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
-                <div id="analiseIAConteudo">
-                    <div class="text-center py-8">
-                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
-                        <p class="mt-2 text-gray-600">Analisando seu perfil...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
 <script>
-// Variáveis globais para busca
+// Variáveis globais
+let notificacoesCache = [];
 let categoriasBusca = [];
 let localizacoesBusca = [];
 
@@ -618,15 +614,140 @@ function showSection(sectionName) {
     // Carregar conteúdo específico se necessário
     if (sectionName === 'todas') {
         loadAllJobs();
-    } else if (sectionName === 'busca') {
         loadSearchFilters();
+    }
+}
+
+// Sistema de notificações melhorado
+async function carregarNotificacoes() {
+    try {
+        const response = await fetch('/api/notificacoes');
+        if (response.ok) {
+            notificacoesCache = await response.json();
+            atualizarNotificacoes();
+        }
+    } catch (error) {
+        console.error('Erro ao carregar notificações:', error);
+    }
+}
+
+function atualizarNotificacoes() {
+    const lista = document.getElementById('notificacoes');
+    const badge = document.getElementById('badgeNotificacoes');
+    const agora = new Date();
+
+    const naoLidas = notificacoesCache.filter(n => !n.lida).length;
+    badge.textContent = naoLidas > 99 ? '99+' : naoLidas;
+    badge.classList.toggle('hidden', naoLidas === 0);
+
+    lista.innerHTML = '';
+
+    if (notificacoesCache.length === 0) {
+        lista.innerHTML = '<li class="p-8 text-center text-gray-500">Nenhuma notificação</li>';
+        return;
+    }
+
+    notificacoesCache
+        .sort((a, b) => new Date(b.data_envio) - new Date(a.data_envio))
+        .forEach(n => {
+            const dataEnvio = new Date(n.data_envio);
+            const dias = Math.floor((agora - dataEnvio) / (1000 * 60 * 60 * 24));
+            let icone = '';
+
+            if (n.mensagem.toLowerCase().includes('selecionado')) {
+                icone = dias < 30 ? '<span class="icone-contratado">✅</span>' : '';
+            } else if (n.mensagem.toLowerCase().includes('vaga foi congelada')) {
+                icone = '<span class="icone-congelada">🧊</span>';
+            } else if (n.mensagem.toLowerCase().includes('foi removida')) {
+                icone = '<span class="icone-excluida">🗑️</span>';
+            } else if (!n.lida) {
+                icone = '<span class="icone-nao-lida">🔴</span>';
+            }
+
+            lista.innerHTML += `
+                <li class="px-5 py-4 hover:bg-gray-50 transition-all cursor-pointer font-sans ${!n.lida ? 'bg-blue-50' : ''}">
+                    <div class="flex items-start gap-2">
+                        ${icone}
+                        <div class="flex-1">
+                            <p class="text-[15px] font-semibold text-gray-800 leading-snug mb-0.5">
+                                ${n.vaga_titulo || 'Vaga'}
+                            </p>
+                            <p class="text-[14px] text-gray-600 leading-normal">
+                                ${n.mensagem}
+                            </p>
+                            <span class="text-xs text-gray-400 block mt-1">${dataEnvio.toLocaleString('pt-BR')}</span>
+                        </div>
+                        <div class="flex gap-1">
+                            ${!n.lida ? `<button onclick="marcarComoLida(${n.id})" class="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded">Marcar lida</button>` : ''}
+                            <button onclick="apagarNotificacao(${n.id})" class="text-xs text-red-600 hover:text-red-800 px-2 py-1 rounded">Apagar</button>
+                        </div>
+                    </div>
+                </li>
+            `;
+        });
+}
+
+function toggleNotificacoes() {
+    const painel = document.getElementById('painelNotificacoes');
+    painel.classList.toggle('hidden');
+    if (!painel.classList.contains('hidden')) {
+        carregarNotificacoes();
+    }
+}
+
+async function marcarComoLida(notificacaoId) {
+    try {
+        const response = await fetch('/api/notificacoes/marcar-lida', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: notificacaoId })
+        });
+        if (response.ok) {
+            carregarNotificacoes();
+        }
+    } catch (error) {
+        console.error('Erro ao marcar como lida:', error);
+    }
+}
+
+async function marcarTodasComoLidas() {
+    try {
+        const response = await fetch('/api/notificacoes/marcar-todas-lidas', { method: 'POST' });
+        if (response.ok) {
+            carregarNotificacoes();
+        }
+    } catch (error) {
+        console.error('Erro ao marcar todas como lidas:', error);
+    }
+}
+
+async function apagarNotificacao(notificacaoId) {
+    try {
+        const response = await fetch(`/api/notificacoes/${notificacaoId}/apagar`, { method: 'DELETE' });
+        if (response.ok) {
+            carregarNotificacoes();
+        }
+    } catch (error) {
+        console.error('Erro ao apagar notificação:', error);
+    }
+}
+
+async function apagarTodasNotificacoes() {
+    if (confirm('Tem certeza que deseja apagar todas as notificações?')) {
+        try {
+            const response = await fetch('/api/notificacoes/apagar-todas', { method: 'DELETE' });
+            if (response.ok) {
+                carregarNotificacoes();
+            }
+        } catch (error) {
+            console.error('Erro ao apagar todas as notificações:', error);
+        }
     }
 }
 
 // Carregar filtros para busca
 async function loadSearchFilters() {
     try {
-        // Carregar categorias
         const response = await fetch('/api/busca-filtros');
         const data = await response.json();
 
@@ -646,9 +767,44 @@ async function loadSearchFilters() {
         localizacoesBusca.forEach(loc => {
             locationSelect.innerHTML += `<option value="${loc}">${loc}</option>`;
         });
-
     } catch (error) {
         console.error('Erro ao carregar filtros:', error);
+    }
+}
+
+// Carregar todas as vagas
+async function loadAllJobs() {
+    const container = document.getElementById('todasVagasContainer');
+
+    try {
+        const response = await fetch('/api/todas-vagas');
+        const vagas = await response.json();
+
+        if (vagas.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
+                    <div class="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+                        <span class="text-4xl">🔍</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-600 mb-3">Nenhuma vaga disponível</h3>
+                    <p class="text-gray-500">No momento não há vagas ativas no sistema.</p>
+                </div>
+            `;
+            return;
+        }
+
+        renderVagas(vagas, container);
+    } catch (error) {
+        console.error('Erro ao carregar vagas:', error);
+        container.innerHTML = `
+            <div class="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
+                <div class="w-24 h-24 bg-red-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+                    <span class="text-4xl">❌</span>
+                </div>
+                <h3 class="text-xl font-bold text-gray-600 mb-3">Erro ao carregar vagas</h3>
+                <p class="text-gray-500">Tente novamente mais tarde.</p>
+            </div>
+        `;
     }
 }
 
@@ -663,7 +819,7 @@ async function realizarBusca() {
         type: document.getElementById('searchType').value
     };
 
-    const container = document.getElementById('searchResults');
+    const container = document.getElementById('todasVagasContainer');
     container.innerHTML = `
         <div class="text-center py-8">
             <div class="animate-spin w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-4"></div>
@@ -695,8 +851,7 @@ async function realizarBusca() {
             return;
         }
 
-        renderSearchResults(vagas);
-
+        renderVagas(vagas, container, `${vagas.length} vaga(s) encontrada(s)`);
     } catch (error) {
         console.error('Erro na busca:', error);
         container.innerHTML = `
@@ -711,17 +866,20 @@ async function realizarBusca() {
     }
 }
 
-// Renderizar resultados da busca
-function renderSearchResults(vagas) {
-    const container = document.getElementById('searchResults');
-
-    let html = `
-        <div class="mb-6">
-            <h3 class="text-xl font-bold text-gray-800 mb-2">Resultados da Busca</h3>
-            <p class="text-gray-600">${vagas.length} vaga(s) encontrada(s)</p>
-        </div>
-        <div class="grid gap-6">
-    `;
+// Renderizar vagas
+function renderVagas(vagas, container, titulo = null) {
+    let html = '';
+    
+    if (titulo) {
+        html += `
+            <div class="mb-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Resultados</h3>
+                <p class="text-gray-600">${titulo}</p>
+            </div>
+        `;
+    }
+    
+    html += '<div class="grid gap-6">';
 
     vagas.forEach(vaga => {
         html += `
@@ -753,9 +911,6 @@ function renderSearchResults(vagas) {
                                     <span class="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center text-xs">💰</span>
                                     R$ ${vaga.salario_oferecido.toFixed(2)}
                                 </p>
-                                ${vaga.categoria ? `<p class="text-sm text-gray-500 mb-2">🏷️ ${vaga.categoria}</p>` : ''}
-                                ${vaga.urgencia ? `<p class="text-sm text-orange-600 mb-2">⚡ ${vaga.urgencia}</p>` : ''}
-                                ${vaga.tipo_vaga ? `<p class="text-sm text-blue-600 mb-2">💼 ${vaga.tipo_vaga}</p>` : ''}
                             </div>
                         </div>
 
@@ -795,116 +950,10 @@ function limparFiltros() {
     document.getElementById('searchUrgency').value = '';
     document.getElementById('searchSalary').value = '';
     document.getElementById('searchType').value = '';
-
-    document.getElementById('searchResults').innerHTML = `
-        <div class="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
-            <div class="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-6 flex items-center justify-center">
-                <span class="text-4xl">🔍</span>
-            </div>
-            <h3 class="text-xl font-bold text-gray-600 mb-3">Use os filtros para buscar vagas</h3>
-            <p class="text-gray-500">Refine sua busca usando os filtros acima para encontrar as melhores oportunidades.</p>
-        </div>
-    `;
+    loadAllJobs();
 }
 
-// Carregar todas as vagas (função anterior mantida)
-async function loadAllJobs() {
-    const container = document.getElementById('todasVagasContainer');
-
-    try {
-        const response = await fetch('/api/todas-vagas');
-        const vagas = await response.json();
-
-        if (vagas.length === 0) {
-            container.innerHTML = `
-                <div class="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
-                    <div class="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-6 flex items-center justify-center">
-                        <span class="text-4xl">🔍</span>
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-600 mb-3">Nenhuma vaga disponível</h3>
-                    <p class="text-gray-500">No momento não há vagas ativas no sistema.</p>
-                </div>
-            `;
-            return;
-        }
-
-        let html = '<div class="grid gap-6">';
-
-        vagas.forEach(vaga => {
-            html += `
-                <div class="group bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-xl hover:border-purple-200 transition-all duration-300 transform hover:-translate-y-1">
-                    <div class="flex flex-col lg:flex-row gap-6">
-                        <div class="flex-1">
-                            <div class="flex items-start gap-4 mb-4">
-                                <div class="w-16 h-16 bg-gradient-to-br from-purple-100 to-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                                    <span class="text-2xl">💼</span>
-                                </div>
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-3 mb-2">
-                                        <a href="/vaga/${vaga.id}" class="block">
-                                            <h3 class="text-xl font-bold text-gray-800 group-hover:text-purple-600 transition-colors">
-                                                ${vaga.titulo}
-                                            </h3>
-                                        </a>
-                                        <button onclick="toggleFavorite(${vaga.id}, this)" 
-                                                class="favorite-btn text-xl transition-all duration-300 hover:scale-125 ${vaga.is_favorita ? 'text-yellow-400' : 'text-gray-300'}"
-                                                data-favorited="${vaga.is_favorita}">
-                                            ${vaga.is_favorita ? '⭐' : '☆'}
-                                        </button>
-                                    </div>
-                                    <p class="text-purple-600 font-semibold mb-2 flex items-center gap-2">
-                                        <span class="w-4 h-4 bg-purple-100 rounded-full flex items-center justify-center text-xs">🏢</span>
-                                        ${vaga.empresa_nome}
-                                    </p>
-                                    <p class="text-lg font-bold text-green-600 mb-3 flex items-center gap-2">
-                                        <span class="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center text-xs">💰</span>
-                                        R$ ${vaga.salario_oferecido.toFixed(2)}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div class="bg-gray-50 p-4 rounded-xl">
-                                <p class="text-sm text-gray-600 leading-relaxed">${vaga.descricao.substring(0, 150)}${vaga.descricao.length > 150 ? '...' : ''}</p>
-                            </div>
-                        </div>
-
-                        <div class="flex flex-col items-center justify-center lg:w-48 gap-4">
-                            <div class="text-center bg-gradient-to-br from-green-400 to-teal-500 text-white p-4 rounded-xl shadow-lg">
-                                <div class="text-2xl font-bold mb-1">${Math.round(vaga.score)}%</div>
-                                <p class="text-xs font-semibold opacity-90">MATCH</p>
-                            </div>
-
-                            ${vaga.ja_candidatou ? 
-                                '<div class="bg-green-100 text-green-800 px-4 py-2 rounded-xl font-semibold text-sm">✅ Candidatado</div>' :
-                                `<a href="/candidatar/${vaga.id}" class="group/btn bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold px-6 py-3 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl flex items-center gap-2">
-                                    <span class="transition-transform group-hover/btn:translate-x-1">🚀</span>
-                                    Candidatar-se
-                                </a>`
-                            }
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-
-        html += '</div>';
-        container.innerHTML = html;
-
-    } catch (error) {
-        console.error('Erro ao carregar vagas:', error);
-        container.innerHTML = `
-            <div class="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
-                <div class="w-24 h-24 bg-red-100 rounded-full mx-auto mb-6 flex items-center justify-center">
-                    <span class="text-4xl">❌</span>
-                </div>
-                <h3 class="text-xl font-bold text-gray-600 mb-3">Erro ao carregar vagas</h3>
-                <p class="text-gray-500">Tente novamente mais tarde.</p>
-            </div>
-        `;
-    }
-}
-
-// Sistema de favoritos (função anterior mantida)
+// Sistema de favoritos
 async function toggleFavorite(vagaId, button) {
     const isFavorited = button.dataset.favorited === 'true';
 
@@ -941,184 +990,7 @@ async function toggleFavorite(vagaId, button) {
     }
 }
 
-// Toast notifications (função anterior mantida)
-function showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `fixed bottom-4 right-4 z-50 px-6 py-4 rounded-xl shadow-lg transform translate-y-full transition-all duration-300 ${
-        type === 'success' ? 'bg-green-500 text-white' :
-        type === 'error' ? 'bg-red-500 text-white' :
-        'bg-blue-500 text-white'
-    }`;
-    toast.textContent = message;
-
-    document.body.appendChild(toast);
-
-    setTimeout(() => {
-        toast.classList.remove('translate-y-full');
-    }, 100);
-
-    setTimeout(() => {
-        toast.classList.add('translate-y-full');
-        setTimeout(() => {
-            document.body.removeChild(toast);
-        }, 300);
-    }, 3000);
-}
-
-// Gerenciamento de notificações (código anterior mantido)
-let notificationsData = [];
-
-function updateNotificationBadge() {
-    fetch('/api/notificacoes/nao-lidas')
-        .then(response => response.json())
-        .then(data => {
-            const badge = document.getElementById('notificationBadge');
-            if (data.count > 0) {
-                badge.textContent = data.count;
-                badge.classList.remove('hidden');
-            } else {
-                badge.classList.add('hidden');
-            }
-        })
-        .catch(error => console.error('Erro ao carregar contador:', error));
-}
-
-function loadNotifications() {
-    fetch('/api/notificacoes')
-        .then(response => response.json())
-        .then(data => {
-            notificationsData = data;
-            renderNotifications();
-            updateMarkAllButton();
-        })
-        .catch(error => {
-            console.error('Erro ao carregar notificações:', error);
-            document.getElementById('notificationsList').innerHTML = 
-                '<div class="text-center text-red-500">Erro ao carregar notificações</div>';
-        });
-}
-
-function renderNotifications() {
-    const container = document.getElementById('notificationsList');
-
-    if (notificationsData.length === 0) {
-        container.innerHTML = `
-            <div class="text-center py-8">
-                <div class="text-4xl mb-4">📭</div>
-                <p class="text-gray-500">Nenhuma notificação ainda</p>
-            </div>
-        `;
-        return;
-    }
-
-    const html = notificationsData.map(notif => `
-        <div class="notification-item mb-4 p-4 rounded-lg border-l-4 ${
-            !notif.lida ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-white'
-        } shadow-sm" data-id="${notif.id}">
-            <div class="flex justify-between items-start">
-                <div class="flex-1">
-                    <h4 class="font-semibold text-gray-800 flex items-center">
-                        ${notif.vaga_titulo || 'Notificação'}
-                        ${!notif.lida ? '<span class="w-2 h-2 bg-blue-500 rounded-full ml-2"></span>' : ''}
-                    </h4>
-                    ${notif.empresa_nome ? `<p class="text-sm text-gray-600 mb-2">Empresa: ${notif.empresa_nome}</p>` : ''}
-                    <p class="text-gray-700 text-sm mb-2">${notif.mensagem}</p>
-                    <p class="text-xs text-gray-500">${new Date(notif.data_envio).toLocaleString('pt-BR')}</p>
-                </div>
-
-                ${!notif.lida ? `
-                    <button class="mark-read-btn ml-4 px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700" 
-                            data-id="${notif.id}">
-                        Marcar como lida
-                    </button>
-                ` : `
-                    <span class="ml-4 text-sm text-green-600 font-medium">✓ Lida</span>
-                `}
-            </div>
-        </div>
-    `).join('');
-
-    container.innerHTML = html;
-
-    document.querySelectorAll('.mark-read-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            markAsRead(this.dataset.id, this);
-        });
-    });
-}
-
-function markAsRead(notificationId, buttonElement) {
-    fetch(`/api/notificacoes/marcar-lida`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ id: notificationId })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            const notif = notificationsData.find(n => n.id == notificationId);
-            if (notif) notif.lida = true;
-
-            const item = buttonElement.closest('.notification-item');
-            item.classList.remove('border-blue-500', 'bg-blue-50');
-            item.classList.add('border-gray-300', 'bg-white');
-
-            buttonElement.outerHTML = '<span class="ml-4 text-sm text-green-600 font-medium">✓ Lida</span>';
-
-            updateNotificationBadge();
-            updateMarkAllButton();
-        }
-    })
-    .catch(error => console.error('Erro:', error));
-}
-
-function markAllAsRead() {
-    fetch('/api/notificacoes/marcar-todas-lidas', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            loadNotifications();
-            updateNotificationBadge();
-        }
-    })
-    .catch(error => console.error('Erro:', error));
-}
-
-function updateMarkAllButton() {
-    const hasUnread = notificationsData.some(n => !n.lida);
-    const btn = document.getElementById('markAllReadBtn');
-    if (hasUnread) {
-        btn.classList.remove('hidden');
-    } else {
-        btn.classList.add('hidden');
-    }
-}
-
-// Event listeners para notificações
-document.getElementById('notificationBtn').addEventListener('click', function() {
-    document.getElementById('notificationModal').classList.remove('hidden');
-    loadNotifications();
-});
-
-document.getElementById('closeModalBtn').addEventListener('click', function() {
-    document.getElementById('notificationModal').classList.add('hidden');
-});
-
-document.getElementById('markAllReadBtn').addEventListener('click', markAllAsRead);
-
-document.getElementById('notificationModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        this.classList.add('hidden');
-    }
-});
-
+// Cancelar candidatura
 async function cancelarCandidatura(vagaId) {
     if (confirm('🤔 Tem certeza que deseja cancelar sua candidatura para esta vaga?')) {
         try {
@@ -1154,169 +1026,227 @@ async function cancelarCandidatura(vagaId) {
     }
 }
 
-// Função para marcar todas as notificações como lidas
-        function marcarTodasComoLidas() {
-            fetch('/api/notificacoes/marcar-todas-lidas', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    atualizarNotificacoes();
-                    atualizarContadorNotificacoes();
-                }
-            })
-            .catch(error => console.error('Erro:', error));
-        }
+// Funções do Assistente IA
+async function analisarCurriculo() {
+    const resultadosDiv = document.getElementById('resultadosIA');
+    const conteudoDiv = document.getElementById('conteudoIA');
+    
+    resultadosDiv.classList.remove('hidden');
+    conteudoDiv.innerHTML = `
+        <div class="text-center py-8">
+            <div class="animate-spin w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p class="text-gray-500">Analisando seu currículo...</p>
+        </div>
+    `;
 
-        // Funções do Assistente IA
-        function analisarCurriculo() {
-            document.getElementById('analiseIAModal').classList.remove('hidden');
+    try {
+        const response = await fetch('/api/ia/analisar-curriculo');
+        const data = await response.json();
 
-            fetch('/api/ia/analisar-curriculo')
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    document.getElementById('analiseIAConteudo').innerHTML = `
-                        <div class="text-center py-8 text-red-500">
-                            <p>Erro: ${data.error}</p>
-                        </div>
-                    `;
-                } else {
-                    mostrarAnaliseIA(data);
-                }
-            })
-            .catch(error => {
-                document.getElementById('analiseIAConteudo').innerHTML = `
-                    <div class="text-center py-8 text-red-500">
-                        <p>Erro ao carregar análise</p>
-                    </div>
-                `;
-            });
-        }
-
-        function mostrarAnaliseIA(analise) {
-            const tecnologias = analise.tecnologias_identificadas.map(t => t.nome).join(', ') || 'Nenhuma identificada';
-            const pontosFortes = analise.pontos_fortes.map(p => `<li class="text-green-600">✅ ${p}</li>`).join('');
-            const areasMelhoria = analise.areas_melhoria.map(a => `<li class="text-orange-600">⚠️ ${a}</li>`).join('');
-            const recomendacoes = analise.recomendacoes.map(r => `
-                <div class="bg-${r.urgencia === 'alta' ? 'red' : r.urgencia === 'media' ? 'yellow' : 'blue'}-50 p-3 rounded-lg mb-2">
-                    <h4 class="font-semibold">${r.titulo}</h4>
-                    <p class="text-sm text-gray-600">${r.descricao}</p>
-                </div>
-            `).join('');
-
-            document.getElementById('analiseIAConteudo').innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <h4 class="font-semibold mb-3 text-purple-600">📊 Análise Geral</h4>
-                        <div class="space-y-2">
-                            <p><strong>Nível:</strong> <span class="badge bg-blue-100 text-blue-800 px-2 py-1 rounded">${analise.nivel_senioridade}</span></p>
-                            <p><strong>Score do Perfil:</strong> <span class="text-2xl font-bold text-green-600">${analise.score_geral}/100</span></p>
-                            <p><strong>Tecnologias:</strong> ${tecnologias}</p>
-                        </div>
-                    </div>
-                    <div>
-                        <h4 class="font-semibold mb-3 text-green-600">✨ Pontos Fortes</h4>
-                        <ul class="space-y-1">
-                            ${pontosFortes || '<li class="text-gray-500">Analisando...</li>'}
-                        </ul>
-                    </div>
-                    <div>
-                        <h4 class="font-semibold mb-3 text-orange-600">🎯 Áreas de Melhoria</h4>
-                        <ul class="space-y-1">
-                            ${areasMelhoria || '<li class="text-gray-500">Nenhuma identificada</li>'}
-                        </ul>
-                    </div>
-                    <div>
-                        <h4 class="font-semibold mb-3 text-blue-600">💡 Recomendações</h4>
-                        <div>
-                            ${recomendacoes || '<p class="text-gray-500">Nenhuma recomendação no momento</p>'}
-                        </div>
-                    </div>
+        if (data.error) {
+            conteudoDiv.innerHTML = `
+                <div class="text-center py-8 text-red-500">
+                    <p>Erro: ${data.error}</p>
                 </div>
             `;
+        } else {
+            mostrarAnaliseIA(data);
         }
+    } catch (error) {
+        conteudoDiv.innerHTML = `
+            <div class="text-center py-8 text-red-500">
+                <p>Erro ao carregar análise</p>
+            </div>
+        `;
+    }
+}
 
-        function obterRecomendacoes() {
-            fetch('/api/ia/recomendacoes-vagas')
-            .then(response => response.json())
-            .then(data => {
-                if (data.length === 0) {
-                    alert('Nenhuma recomendação disponível no momento');
-                } else {
-                    mostrarRecomendacoes(data);
-                }
-            })
-            .catch(error => {
-                alert('Erro ao obter recomendações');
-            });
-        }
-
-        function mostrarRecomendacoes(recomendacoes) {
-            const recomendacoesHtml = recomendacoes.map(rec => `
-                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div class="flex justify-between items-start mb-2">
-                        <h3 class="font-semibold text-lg">${rec.titulo}</h3>
-                        <span class="text-sm text-purple-600 font-bold">${rec.compatibilidade.score.toFixed(0)}% compatível</span>
-                    </div>
-                    <p class="text-gray-600 mb-2">${rec.empresa}</p>
-                    <div class="text-sm text-gray-500">
-                        <p><strong>Motivos:</strong> ${rec.motivos.join(', ')}</p>
-                        ${rec.urgencia === 'Imediata' ? '<span class="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">🔥 URGENTE</span>' : ''}
-                    </div>
-                    <button onclick="candidatarVaga(${rec.vaga_id})" class="mt-3 bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition-colors">
-                        Candidatar-se
-                    </button>
+function mostrarAnaliseIA(analise) {
+    const conteudoDiv = document.getElementById('conteudoIA');
+    
+    const tecnologias = analise.tecnologias_identificadas?.map(t => t.nome)?.join(', ') || 'Nenhuma identificada';
+    const pontosFortes = analise.pontos_fortes?.map(p => `<li class="text-green-600">✅ ${p}</li>`)?.join('') || '<li class="text-gray-500">Analisando...</li>';
+    const areasMelhoria = analise.areas_melhoria?.map(a => `<li class="text-orange-600">⚠️ ${a}</li>`)?.join('') || '<li class="text-gray-500">Nenhuma identificada</li>';
+    
+    conteudoDiv.innerHTML = `
+        <h3 class="text-xl font-bold mb-6 text-gray-800">📊 Análise do seu Perfil</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <h4 class="font-semibold mb-3 text-purple-600">📊 Análise Geral</h4>
+                <div class="space-y-2">
+                    <p><strong>Nível:</strong> <span class="badge bg-blue-100 text-blue-800 px-2 py-1 rounded">${analise.nivel_senioridade || 'Analisando...'}</span></p>
+                    <p><strong>Score do Perfil:</strong> <span class="text-2xl font-bold text-green-600">${analise.score_geral || 0}/100</span></p>
+                    <p><strong>Tecnologias:</strong> ${tecnologias}</p>
                 </div>
-            `).join('');
+            </div>
+            <div>
+                <h4 class="font-semibold mb-3 text-green-600">✨ Pontos Fortes</h4>
+                <ul class="space-y-1">
+                    ${pontosFortes}
+                </ul>
+            </div>
+            <div class="md:col-span-2">
+                <h4 class="font-semibold mb-3 text-orange-600">🎯 Áreas de Melhoria</h4>
+                <ul class="space-y-1">
+                    ${areasMelhoria}
+                </ul>
+            </div>
+        </div>
+    `;
+}
 
-            document.getElementById('analiseIAModal').classList.remove('hidden');
-            document.getElementById('analiseIAConteudo').innerHTML = `
-                <div>
-                    <h4 class="font-semibold mb-4 text-purple-600">🎯 Vagas Recomendadas pela IA</h4>
-                    <div class="space-y-4 max-h-64 overflow-y-auto">
-                        ${recomendacoesHtml}
-                    </div>
+async function obterRecomendacoesIA() {
+    const resultadosDiv = document.getElementById('resultadosIA');
+    const conteudoDiv = document.getElementById('conteudoIA');
+    
+    resultadosDiv.classList.remove('hidden');
+    conteudoDiv.innerHTML = `
+        <div class="text-center py-8">
+            <div class="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p class="text-gray-500">Obtendo recomendações personalizadas...</p>
+        </div>
+    `;
+
+    try {
+        const response = await fetch('/api/ia/recomendacoes-vagas');
+        const data = await response.json();
+
+        if (data.length === 0) {
+            conteudoDiv.innerHTML = `
+                <div class="text-center py-8">
+                    <p class="text-gray-500">Nenhuma recomendação disponível no momento</p>
                 </div>
             `;
+        } else {
+            mostrarRecomendacoesIA(data);
         }
+    } catch (error) {
+        conteudoDiv.innerHTML = `
+            <div class="text-center py-8 text-red-500">
+                <p>Erro ao obter recomendações</p>
+            </div>
+        `;
+    }
+}
 
-        function enviarRecomendacoesPorEmail() {
-            if (confirm('Deseja receber suas recomendações personalizadas por email?')) {
-                fetch('/api/ia/enviar-recomendacoes', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert('✅ Recomendações enviadas para seu email!');
-                    } else {
-                        alert('❌ Erro ao enviar email: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    alert('❌ Erro ao enviar recomendações');
-                });
-            }
-        }
+function mostrarRecomendacoesIA(recomendacoes) {
+    const conteudoDiv = document.getElementById('conteudoIA');
+    
+    const recomendacoesHtml = recomendacoes.map(rec => `
+        <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div class="flex justify-between items-start mb-2">
+                <h3 class="font-semibold text-lg">${rec.titulo}</h3>
+                <span class="text-sm text-purple-600 font-bold">${rec.compatibilidade?.score?.toFixed(0) || 0}% compatível</span>
+            </div>
+            <p class="text-gray-600 mb-2">${rec.empresa}</p>
+            <div class="text-sm text-gray-500">
+                <p><strong>Motivos:</strong> ${rec.motivos?.join(', ') || 'N/A'}</p>
+                ${rec.urgencia === 'Imediata' ? '<span class="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">🔥 URGENTE</span>' : ''}
+            </div>
+            <a href="/candidatar/${rec.vaga_id}" class="mt-3 bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition-colors inline-block">
+                Candidatar-se
+            </a>
+        </div>
+    `).join('');
 
-        function fecharAnaliseIA() {
-            document.getElementById('analiseIAModal').classList.add('hidden');
-        }
+    conteudoDiv.innerHTML = `
+        <h3 class="text-xl font-bold mb-6 text-gray-800">🎯 Vagas Recomendadas pela IA</h3>
+        <div class="space-y-4 max-h-64 overflow-y-auto">
+            ${recomendacoesHtml}
+        </div>
+    `;
+}
+
+async function obterDicasFavoritas() {
+    const resultadosDiv = document.getElementById('resultadosIA');
+    const conteudoDiv = document.getElementById('conteudoIA');
+    
+    resultadosDiv.classList.remove('hidden');
+    conteudoDiv.innerHTML = `
+        <div class="text-center py-8">
+            <div class="animate-spin w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p class="text-gray-500">Analisando suas vagas favoritas...</p>
+        </div>
+    `;
+
+    // Simular análise das vagas favoritas
+    setTimeout(() => {
+        conteudoDiv.innerHTML = `
+            <h3 class="text-xl font-bold mb-6 text-gray-800">💡 Dicas para suas Vagas Favoritas</h3>
+            <div class="space-y-4">
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h4 class="font-semibold text-green-800 mb-2">✅ Pontos Fortes do seu Perfil</h4>
+                    <ul class="text-sm text-green-700 space-y-1">
+                        <li>• Experiência sólida na área</li>
+                        <li>• Competências técnicas alinhadas</li>
+                        <li>• Formação adequada para as posições</li>
+                    </ul>
+                </div>
+                
+                <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <h4 class="font-semibold text-orange-800 mb-2">🎯 Áreas para Melhorar</h4>
+                    <ul class="text-sm text-orange-700 space-y-1">
+                        <li>• Adicione mais projetos práticos ao seu currículo</li>
+                        <li>• Destaque certificações relevantes</li>
+                        <li>• Inclua métricas de resultados alcançados</li>
+                    </ul>
+                </div>
+                
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 class="font-semibold text-blue-800 mb-2">💡 Recomendações Específicas</h4>
+                    <ul class="text-sm text-blue-700 space-y-1">
+                        <li>• Personalize sua carta de apresentação</li>
+                        <li>• Atualize seu perfil no LinkedIn</li>
+                        <li>• Pratique entrevistas técnicas</li>
+                    </ul>
+                </div>
+            </div>
+        `;
+    }, 2000);
+}
+
+// Toast notifications
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-4 right-4 z-50 px-6 py-4 rounded-xl shadow-lg transform translate-y-full transition-all duration-300 ${
+        type === 'success' ? 'bg-green-500 text-white' :
+        type === 'error' ? 'bg-red-500 text-white' :
+        'bg-blue-500 text-white'
+    }`;
+    toast.textContent = message;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.remove('translate-y-full');
+    }, 100);
+
+    setTimeout(() => {
+        toast.classList.add('translate-y-full');
+        setTimeout(() => {
+            document.body.removeChild(toast);
+        }, 300);
+    }, 3000);
+}
+
+// Fechar painel ao clicar fora
+document.addEventListener('click', function(e) {
+    const painel = document.getElementById('painelNotificacoes');
+    const btn = document.getElementById('btnNotificacoes');
+
+    if (!painel.contains(e.target) && !btn.contains(e.target)) {
+        painel.classList.add('hidden');
+    }
+});
 
 // Inicialização
-updateNotificationBadge();
-setInterval(updateNotificationBadge, 30000);
-
-// Animações ao carregar a página
 document.addEventListener('DOMContentLoaded', function() {
+    carregarNotificacoes();
+    
+    // Atualizar notificações periodicamente
+    setInterval(carregarNotificacoes, 30000);
+
+    // Animar cards ao aparecer na tela
     const cards = document.querySelectorAll('.group');
     const observer = new IntersectionObserver((entries) => {
         entries.forEach((entry, index) => {
@@ -1337,43 +1267,4 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-
-<div class="max-w-7xl mx-auto px-4 py-8">
-        <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-
-        <!-- Seção Assistente IA -->
-                <div class="bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg shadow-md p-6 text-white mb-6">
-                    <h2 class="text-xl font-semibold mb-4 flex items-center">
-                        <span class="bg-white/20 p-2 rounded-full mr-3">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                <path d="M9 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                            </svg>
-                        </span>
-                        🤖 Assistente IA
-                    </h2>
-                    <p class="mb-4 opacity-90">Obtenha insights personalizados sobre seu perfil e recomendações inteligentes</p>
-                    <div class="flex flex-wrap gap-3">
-                        <button onclick="analisarCurriculo()" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors">
-                            📊 Analisar Perfil
-                        </button>
-                        <button onclick="obterRecomendacoes()" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors">
-                            🎯 Recomendações
-                        </button>
-                        <button onclick="enviarRecomendacoesPorEmail()" class="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg transition-colors">
-                            📧 Enviar por Email
-                        </button>
-                    </div>
-                </div>
-
-                <div class="bg-white rounded-lg shadow-md p-6">
-                    <h2 class="text-xl font-semibold mb-4 text-gray-800 flex items-center">
-                        <span class="bg-blue-100 p-2 rounded-full mr-3">
-                            <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                        </span>
-                        Vagas Recomendadas para Você
-                    </h2>
 {% endblock %}

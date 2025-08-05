@@ -224,5 +224,72 @@
     document.getElementById('vagaId').value = vagaId;
     document.getElementById('modalEncerramento').classList.remove('hidden');
   }
+
+  // Sistema de favoritos com auto-reload
+  async function toggleFavoriteCandidate(candidatoId, vagaId, button) {
+    const isFavorited = button.dataset.favorited === 'true';
+
+    try {
+      button.classList.add('animate-pulse');
+
+      const response = await fetch('/api/favoritar-candidato', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          candidato_id: candidatoId,
+          vaga_id: vagaId,
+          acao: 'toggle'
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        button.dataset.favorited = result.favorited;
+        button.textContent = result.favorited ? '❤️' : '🤍';
+        button.className = `favorite-btn text-xl transition-all duration-300 hover:scale-125 ${result.favorited ? 'text-red-500' : 'text-gray-300'}`;
+
+        showToast(result.message, 'success');
+        
+        // Auto-reload para refletir mudanças
+        setTimeout(() => {
+          location.reload();
+        }, 1000);
+      } else {
+        showToast(result.message || 'Erro ao favoritar candidato', 'error');
+      }
+    } catch (error) {
+      console.error('Erro ao favoritar:', error);
+      showToast('Erro ao favoritar candidato', 'error');
+    } finally {
+      button.classList.remove('animate-pulse');
+    }
+  }
+
+  // Toast notifications
+  function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-4 right-4 z-50 px-6 py-4 rounded-xl shadow-lg transform translate-y-full transition-all duration-300 ${
+      type === 'success' ? 'bg-green-500 text-white' :
+      type === 'error' ? 'bg-red-500 text-white' :
+      'bg-blue-500 text-white'
+    }`;
+    toast.textContent = message;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.classList.remove('translate-y-full');
+    }, 100);
+
+    setTimeout(() => {
+      toast.classList.add('translate-y-full');
+      setTimeout(() => {
+        document.body.removeChild(toast);
+      }, 300);
+    }, 3000);
+  }
 </script>
 {% endblock %}
