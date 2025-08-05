@@ -1,2 +1,295 @@
 
-<!-- Template removido - notificações agora são exibidas em modal no dashboard -->
+<!-- Modal de Notificações Melhorado -->
+<div id="modalNotificacoes" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+    <div class="w-full max-w-2xl mx-4 max-h-[90vh] bg-white rounded-2xl shadow-xl overflow-hidden">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-purple-500 to-blue-500 text-white p-6">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                        <span class="text-xl">🔔</span>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold">Notificações</h3>
+                        <p class="text-white/80 text-sm">Suas atualizações importantes</p>
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="marcarTodasComoLidas()" 
+                            class="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                        Marcar todas como lidas
+                    </button>
+                    <button onclick="fecharModalNotificacoes()" 
+                            class="bg-white/20 hover:bg-white/30 text-white w-10 h-10 rounded-lg flex items-center justify-center transition-colors">
+                        ✕
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Notificações -->
+        <div class="overflow-y-auto max-h-[60vh] p-6">
+            <div id="listaNotificacoes" class="space-y-4">
+                <!-- Notificações serão carregadas aqui -->
+            </div>
+            
+            <div id="notificacoesVazias" class="hidden text-center py-12">
+                <div class="w-20 h-20 bg-gray-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+                    <span class="text-3xl">📭</span>
+                </div>
+                <p class="text-gray-500 font-medium">Nenhuma notificação encontrada</p>
+                <p class="text-gray-400 text-sm">Você está em dia! 🎉</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Estilos para notificações */
+.notificacao-contratacao {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border-left: 6px solid #047857;
+    animation: pulse-green 2s infinite;
+}
+
+.notificacao-alteracao_vaga {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    border-left: 6px solid #1e40af;
+}
+
+.notificacao-vaga_congelada {
+    background: linear-gradient(135deg, #6b7280, #4b5563);
+    border-left: 6px solid #374151;
+}
+
+.notificacao-vaga_excluida {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    border-left: 6px solid #b91c1c;
+}
+
+.notificacao-geral {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    border-left: 6px solid #6d28d9;
+}
+
+.notificacao-fixada {
+    position: relative;
+    overflow: hidden;
+}
+
+.notificacao-fixada::before {
+    content: '📌';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 16px;
+    z-index: 10;
+}
+
+@keyframes pulse-green {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+    50% { box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); }
+}
+
+.scroll-area::-webkit-scrollbar {
+    width: 6px;
+}
+
+.scroll-area::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.scroll-area::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+}
+</style>
+
+<script>
+let notificacoesCarregadas = false;
+
+// Mapeamento de emojis por tipo
+const emojisPorTipo = {
+    'contratacao': '🎉',
+    'alteracao_vaga': '📝',
+    'vaga_congelada': '❄️',
+    'vaga_excluida': '❌',
+    'geral': '📢',
+    'recomendacao_ia': '🤖'
+};
+
+async function abrirModalNotificacoes() {
+    document.getElementById('modalNotificacoes').classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+    
+    if (!notificacoesCarregadas) {
+        await carregarNotificacoes();
+        notificacoesCarregadas = true;
+    }
+}
+
+function fecharModalNotificacoes() {
+    document.getElementById('modalNotificacoes').classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+}
+
+async function carregarNotificacoes() {
+    try {
+        const response = await fetch('/api/notificacoes');
+        const notificacoes = await response.json();
+        
+        const lista = document.getElementById('listaNotificacoes');
+        const vazio = document.getElementById('notificacoesVazias');
+        
+        if (notificacoes.length === 0) {
+            lista.innerHTML = '';
+            vazio.classList.remove('hidden');
+            return;
+        }
+        
+        vazio.classList.add('hidden');
+        
+        // Separar notificações de contratação para fixar no topo
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+        
+        const notificacoesContratacao = notificacoes.filter(n => 
+            n.tipo === 'contratacao' && new Date(n.data_envio) > thirtyDaysAgo
+        );
+        
+        const outrasNotificacoes = notificacoes.filter(n => 
+            n.tipo !== 'contratacao' || new Date(n.data_envio) <= thirtyDaysAgo
+        );
+        
+        // Ordenar: contratações fixadas no topo, depois outras por data
+        const notificacoesOrdenadas = [
+            ...notificacoesContratacao.sort((a, b) => new Date(b.data_envio) - new Date(a.data_envio)),
+            ...outrasNotificacoes.sort((a, b) => new Date(b.data_envio) - new Date(a.data_envio))
+        ];
+        
+        lista.innerHTML = notificacoesOrdenadas.map(notificacao => {
+            const emoji = emojisPorTipo[notificacao.tipo] || '📢';
+            const isContratacao = notificacao.tipo === 'contratacao' && new Date(notificacao.data_envio) > thirtyDaysAgo;
+            const classeFixada = isContratacao ? 'notificacao-fixada' : '';
+            const classeStatus = notificacao.lida ? 'opacity-70' : '';
+            
+            return `
+                <div class="notificacao-${notificacao.tipo} ${classeFixada} ${classeStatus} p-4 rounded-xl text-white shadow-lg transition-all duration-300 hover:transform hover:scale-[1.02]"
+                     data-id="${notificacao.id}">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span class="text-xl">${emoji}</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start mb-2">
+                                <p class="text-white/90 text-sm font-medium">
+                                    ${notificacao.vaga_titulo ? `${notificacao.vaga_titulo} - ${notificacao.empresa_nome || ''}` : 'Sistema'}
+                                </p>
+                                <span class="text-white/70 text-xs whitespace-nowrap ml-2">
+                                    ${formatarData(notificacao.data_envio)}
+                                </span>
+                            </div>
+                            <p class="text-white text-sm leading-relaxed break-words">
+                                ${notificacao.mensagem}
+                            </p>
+                            ${!notificacao.lida ? `
+                                <button onclick="marcarComoLida(${notificacao.id})" 
+                                        class="mt-2 bg-white/20 hover:bg-white/30 text-white text-xs px-3 py-1 rounded-lg transition-colors">
+                                    Marcar como lida
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('Erro ao carregar notificações:', error);
+        showToast('❌ Erro ao carregar notificações', 'error');
+    }
+}
+
+async function marcarComoLida(notificacaoId) {
+    try {
+        const response = await fetch(`/api/notificacoes/${notificacaoId}/marcar-lida`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            const elemento = document.querySelector(`[data-id="${notificacaoId}"]`);
+            if (elemento) {
+                elemento.classList.add('opacity-70');
+                const botao = elemento.querySelector('button');
+                if (botao) botao.remove();
+            }
+            await atualizarContadorNotificacoes();
+        }
+    } catch (error) {
+        console.error('Erro ao marcar como lida:', error);
+    }
+}
+
+async function marcarTodasComoLidas() {
+    try {
+        const response = await fetch('/api/notificacoes/marcar-todas-lidas', {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            await carregarNotificacoes();
+            await atualizarContadorNotificacoes();
+            showToast('✅ Todas as notificações foram marcadas como lidas', 'success');
+        }
+    } catch (error) {
+        console.error('Erro ao marcar todas como lidas:', error);
+        showToast('❌ Erro ao marcar notificações', 'error');
+    }
+}
+
+function formatarData(dataString) {
+    const data = new Date(dataString);
+    const agora = new Date();
+    const diffMs = agora - data;
+    const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffDias === 0) {
+        return 'Hoje';
+    } else if (diffDias === 1) {
+        return 'Ontem';
+    } else if (diffDias < 7) {
+        return `${diffDias} dias atrás`;
+    } else {
+        return data.toLocaleDateString('pt-BR');
+    }
+}
+
+async function atualizarContadorNotificacoes() {
+    try {
+        const response = await fetch('/api/notificacoes/contador');
+        const data = await response.json();
+        
+        const badge = document.getElementById('notification-badge');
+        if (badge) {
+            if (data.count > 0) {
+                badge.textContent = data.count > 99 ? '99+' : data.count;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+    } catch (error) {
+        console.error('Erro ao atualizar contador:', error);
+    }
+}
+
+// Fechar modal ao clicar fora
+document.getElementById('modalNotificacoes').addEventListener('click', function(e) {
+    if (e.target === this) {
+        fecharModalNotificacoes();
+    }
+});
+
+// Carregar contador ao inicializar
+document.addEventListener('DOMContentLoaded', atualizarContadorNotificacoes);
+</script>
