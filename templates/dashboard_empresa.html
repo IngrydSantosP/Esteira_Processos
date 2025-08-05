@@ -1,3 +1,4 @@
+
 {% extends "base.html" %}
 
 {% block title %}Dashboard Empresa{% endblock %}
@@ -103,7 +104,8 @@
     </div>
 </div>
 
-
+<!-- Inclui o modal e JS separado -->
+{% include 'partials/modal_encerramento.html' %}
 
 <script>
   function filtrarVagas(status) {
@@ -215,33 +217,12 @@
       alert('Erro ao reativar vaga. Tente novamente.');
     }
   }
+
+  // Função para encerrar vaga
+  function encerrarVaga(vagaId) {
+    // Abre o modal de encerramento
+    document.getElementById('vagaId').value = vagaId;
+    document.getElementById('modalEncerramento').classList.remove('hidden');
+  }
 </script>
-
-
-
-<!-- Inclui o modal e JS separado -->
-{% include 'partials/modal_encerramento.html' %}
 {% endblock %}
-<div class="flex justify-between items-center px-4 py-2 bg-gray-100 border-b">
-                        <span class="text-gray-600">Vaga ID: {{ vaga.id }}</span>
-                        <div>
-                        <a href="{{ url_for('editar_vaga', vaga_id=vaga.id) }}" 
-                           class="text-blue-600 hover:text-blue-800 mr-3">
-                            ✏️ Editar
-                        </a>
-                        <a href="{{ url_for('duplicar_vaga', vaga_id=vaga.id) }}" 
-                           class="text-green-600 hover:text-green-800 mr-3"
-                           onclick="return confirm('Deseja duplicar esta vaga?')">
-                            📋 Duplicar
-                        </a>
-                        {% if vaga.status == 'Ativa' %}
-                            <button onclick="encerrarVaga('{{ vaga.id }}')" class="text-red-600 hover:text-red-800">
-                                ❌ Encerrar
-                            </button>
-                        {% else %}
-                            <button onclick="reativarVaga('{{ vaga.id }}')" class="text-green-600 hover:text-green-800">
-                                ♻️ Reativar
-                            </button>
-                        {% endif %}
-                        </div>
-                    </div>
