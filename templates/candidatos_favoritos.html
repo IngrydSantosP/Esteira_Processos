@@ -9,11 +9,11 @@
         <div class="max-w-7xl mx-auto px-4 py-4">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
-                    <div class="w-12 h-12 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl flex items-center justify-center">
-                        <span class="text-white font-bold text-lg">❤️</span>
+                    <div class="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center">
+                        <span class="text-white font-bold text-lg"> ⭐</span>
                     </div>
                     <div>
-                        <h1 class="text-2xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
+                        <h1 class="text-2xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
                             Candidatos Favoritos
                         </h1>
                         <p class="text-gray-500 text-sm">Seus candidatos marcados como favoritos</p>
@@ -32,12 +32,12 @@
         <!-- Stats Card -->
         <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
             <div class="flex items-center gap-4">
-                <div class="w-16 h-16 bg-gradient-to-br from-red-100 to-pink-100 rounded-2xl flex items-center justify-center">
-                    <span class="text-3xl">❤️</span>
+                <div class="w-16 h-16 bg-gradient-to-br from-yellow-100 to-orange-100 rounded-2xl flex items-center justify-center">
+                    <span class="text-3xl"> ⭐</span>
                 </div>
                 <div>
                     <h2 class="text-xl font-bold text-gray-800">Total de Favoritos</h2>
-                    <p id="totalFavoritos" class="text-3xl font-bold text-red-600">-</p>
+                    <p id="totalFavoritos" class="text-3xl font-bold text-yellow-600">-</p>
                 </div>
             </div>
         </div>
@@ -49,14 +49,14 @@
                     <input type="text" 
                            id="searchInput" 
                            placeholder="🔍 Buscar por nome do candidato..."
-                           class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent">
+                           class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent">
                 </div>
                 <div class="flex gap-3">
-                    <select id="vagaFilter" class="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500">
+                    <select id="vagaFilter" class="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500">
                         <option value="">Todas as vagas</option>
                     </select>
                     <button onclick="aplicarFiltros()" 
-                            class="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105">
+                            class="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105">
                         Filtrar
                     </button>
                 </div>
@@ -66,7 +66,7 @@
         <!-- Lista de candidatos favoritos -->
         <div id="candidatosList">
             <div class="text-center py-8">
-                <div class="animate-spin w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                <div class="animate-spin w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full mx-auto mb-4"></div>
                 <p class="text-gray-500">Carregando candidatos favoritos...</p>
             </div>
         </div>
@@ -94,7 +94,7 @@ async function loadCandidatosFavoritos() {
         console.error('Erro ao carregar favoritos:', error);
         document.getElementById('candidatosList').innerHTML = `
             <div class="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
-                <div class="w-24 h-24 bg-red-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+                <div class="w-24 h-24 bg-yellow-100 rounded-full mx-auto mb-6 flex items-center justify-center">
                     <span class="text-4xl">❌</span>
                 </div>
                 <h3 class="text-xl font-bold text-gray-600 mb-3">Erro ao carregar favoritos</h3>
@@ -150,12 +150,12 @@ function renderCandidatos() {
             container.innerHTML = `
                 <div class="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
                     <div class="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-6 flex items-center justify-center">
-                        <span class="text-4xl">❤️</span>
+                        <span class="text-4xl"> ⭐</span>
                     </div>
                     <h3 class="text-xl font-bold text-gray-600 mb-3">Nenhum candidato favorito ainda</h3>
                     <p class="text-gray-500 mb-6">Favorite candidatos nas páginas de vagas para vê-los aqui.</p>
                     <a href="${url_for('dashboard_empresa')}" 
-                       class="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 inline-flex items-center gap-2">
+                       class="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 inline-flex items-center gap-2">
                         <span>🏢</span>
                         Ver Vagas
                     </a>
@@ -183,17 +183,17 @@ function renderCandidatos() {
 
     candidatosFiltrados.forEach(candidato => {
         html += `
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-lg hover:border-red-200 transition-all duration-300">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-lg hover:border-yellow-200 transition-all duration-300">
                 <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                     <div class="flex-1">
                         <div class="flex items-start gap-4">
-                            <div class="w-16 h-16 bg-gradient-to-br from-red-100 to-pink-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <div class="w-16 h-16 bg-gradient-to-br from-yellow-100 to-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
                                 <span class="text-2xl">👤</span>
                             </div>
                             <div class="flex-1">
                                 <div class="flex items-center gap-3 mb-2">
                                     <h3 class="text-xl font-bold text-gray-800">${candidato.nome}</h3>
-                                    <span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">❤️ Favorito</span>
+                                    <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium"> ⭐ Favorito</span>
                                 </div>
                                 <p class="text-purple-600 font-semibold mb-2 flex items-center gap-2">
                                     <span class="w-4 h-4 bg-purple-100 rounded-full flex items-center justify-center text-xs">💼</span>
@@ -235,7 +235,7 @@ function renderCandidatos() {
 
                         <div class="flex gap-2">
                             <button onclick="removeFavorite(${candidato.id}, ${candidato.vaga_id}, this)"
-                                    class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                                    class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
                                 <span>💔</span>
                                 Remover
                             </button>
@@ -313,7 +313,7 @@ function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `fixed bottom-4 right-4 z-50 px-6 py-4 rounded-xl shadow-lg transform translate-y-full transition-all duration-300 ${
         type === 'success' ? 'bg-green-500 text-white' :
-        type === 'error' ? 'bg-red-500 text-white' :
+        type === 'error' ? 'bg-yellow-500 text-white' :
         'bg-blue-500 text-white'
     }`;
     toast.textContent = message;

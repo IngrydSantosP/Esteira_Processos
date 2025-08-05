@@ -13,10 +13,11 @@
         Vaboo!
       </a>
       {% if session.tipo_usuario %}
-        <a href="{{ url_for('logout') }}" class="text-[#7C71B2] hover:text-bold-purple-600">Sair</a>
+        
+        <a href="{{ url_for('logout') }}" class="text-[#7C71B2] font-bold hover:text-purple-600">Sair</a>
       {% else %}
         <div class="flex gap-6">
-          <a href="{{ url_for('index') }}" class="text-[#7C71B2] hover:text-purple-600">Home</a>
+          <a href="{{ url_for('index') }}" class="text-[#7C71B2] font-bold hover:text-purple-600">Home</a>
         </div>
       {% endif %}
     </div>

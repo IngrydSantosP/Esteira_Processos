@@ -1,10 +1,10 @@
-
 from datetime import datetime
 import os
 
+
 class EmailTemplateManager:
     """Gerenciador de templates de email personalizados"""
-    
+
     def __init__(self):
         self.base_style = """
         <style>
@@ -83,7 +83,7 @@ class EmailTemplateManager:
             }
         </style>
         """
-    
+
     def template_contratacao(self, dados):
         """Template para notificação de contratação"""
         return f"""
@@ -167,7 +167,7 @@ class EmailTemplateManager:
         </body>
         </html>
         """
-    
+
     def template_vaga_alterada(self, dados):
         """Template para alteração de vaga"""
         return f"""
@@ -207,7 +207,7 @@ class EmailTemplateManager:
         </body>
         </html>
         """
-    
+
     def template_vaga_congelada(self, dados):
         """Template para vaga congelada"""
         return f"""
@@ -250,7 +250,7 @@ class EmailTemplateManager:
         </body>
         </html>
         """
-    
+
     def template_relatorio_empresa(self, dados):
         """Template para relatório da empresa"""
         return f"""
@@ -304,7 +304,7 @@ class EmailTemplateManager:
         </body>
         </html>
         """
-    
+
     def template_recomendacao_ia(self, dados):
         """Template para recomendações da IA"""
         return f"""
@@ -357,7 +357,7 @@ class EmailTemplateManager:
         </body>
         </html>
         """
-    
+
     def _gerar_mensagem_personalizada(self, dados):
         """Gera mensagem personalizada baseada no score"""
         score = dados.get('score', 0)
@@ -369,12 +369,12 @@ class EmailTemplateManager:
             return '<div class="highlight"><p><strong>👍 Muito Bom!</strong> Seu perfil se destacou entre os candidatos!</p></div>'
         else:
             return '<div class="highlight"><p><strong>✨ Parabéns!</strong> Você foi a melhor escolha para esta posição!</p></div>'
-    
+
     def _gerar_lista_top_vagas(self, vagas):
         """Gera lista HTML das top vagas"""
         if not vagas:
             return '<p>Nenhuma vaga para exibir.</p>'
-        
+
         html = '<ul>'
         for vaga in vagas[:3]:
             html += f'''
@@ -386,15 +386,16 @@ class EmailTemplateManager:
             '''
         html += '</ul>'
         return html
-    
+
     def _gerar_lista_recomendacoes(self, recomendacoes):
         """Gera lista HTML das recomendações"""
         if not recomendacoes:
             return '<p>Nenhuma recomendação disponível no momento.</p>'
-        
+
         html = '<ul>'
         for rec in recomendacoes[:3]:
-            urgencia_badge = 'urgent' if rec.get('urgencia') == 'Imediata' else 'medium'
+            urgencia_badge = 'urgent' if rec.get(
+                'urgencia') == 'Imediata' else 'medium'
             html += f'''
             <li>
                 <strong>{rec['titulo']}</strong> - {rec['empresa']}<br>
@@ -405,15 +406,17 @@ class EmailTemplateManager:
             '''
         html += '</ul>'
         return html
-    
+
     def _gerar_lista_dicas(self, dicas):
         """Gera lista HTML das dicas"""
         if not dicas:
             return '<p>Seu perfil está muito bem otimizado! 🎉</p>'
-        
+
         html = '<ul>'
         for dica in dicas[:3]:
-            prioridade_class = 'urgent' if dica.get('prioridade') == 'alta' else 'medium' if dica.get('prioridade') == 'media' else ''
+            prioridade_class = 'urgent' if dica.get(
+                'prioridade') == 'alta' else 'medium' if dica.get(
+                    'prioridade') == 'media' else ''
             html += f'''
             <li>
                 <strong>{dica.get('icone', '💡')} {dica['titulo']}</strong>
@@ -423,7 +426,7 @@ class EmailTemplateManager:
             '''
         html += '</ul>'
         return html
-    
+
     def _gerar_footer(self):
         """Gera footer padrão dos emails"""
         return f'''

@@ -40,6 +40,9 @@
                 </div>
             </div>
             <div class="flex gap-3 items-center">
+                <button onclick="showSection('favoritas')"  class="bg-white hover:bg-gray-50 text-gray-700 w-12 h-12 rounded-xl flex items-center justify-center border border-gray-200 shadow transition-all duration-300">
+                    ⭐ 
+                </button>
                 <!-- Botão: Editar perfil -->
                 <a href="{{ url_for('editar_perfil_candidato') }}"
                    class="bg-white hover:bg-gray-50 text-gray-700 w-12 h-12 rounded-xl flex items-center justify-center border border-gray-200 shadow transition-all duration-300"
@@ -166,9 +169,6 @@
                     </button>
                     <button onclick="showSection('candidaturas')" class="filter-btn bg-gray-100 text-gray-700 px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105">
                         🎯 Minhas Candidaturas
-                    </button>
-                    <button onclick="showSection('favoritas')" class="filter-btn bg-gray-100 text-gray-700 px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105">
-                        ⭐ Favoritas
                     </button>
                     <button onclick="showSection('assistente-ia')" class="filter-btn bg-gray-100 text-gray-700 px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105">
                         🤖 Assistente IA

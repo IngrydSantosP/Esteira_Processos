@@ -46,7 +46,7 @@ def gerar_feedback_ia_vaga(total, alta_compatibilidade, media_compatibilidade,
     alta_compatibilidade = alta_compatibilidade or 0
     media_compatibilidade = media_compatibilidade or 0
     baixa_compatibilidade = baixa_compatibilidade or 0
-    
+
     if total == 0:
         return {
             'texto': 'Nenhum candidato ainda',
@@ -305,10 +305,11 @@ def dashboard_empresa():
             'data_contratacao':
             data_criacao if vaga[9] == 'Concluída' else None,
             'feedback_ia':
-            gerar_feedback_ia_vaga(vaga[12] if len(vaga) > 12 and vaga[12] is not None else 0,
-                                   vaga[13] if len(vaga) > 13 and vaga[13] is not None else 0,
-                                   vaga[14] if len(vaga) > 14 and vaga[14] is not None else 0,
-                                   vaga[15] if len(vaga) > 15 and vaga[15] is not None else 0)
+            gerar_feedback_ia_vaga(
+                vaga[12] if len(vaga) > 12 and vaga[12] is not None else 0,
+                vaga[13] if len(vaga) > 13 and vaga[13] is not None else 0,
+                vaga[14] if len(vaga) > 14 and vaga[14] is not None else 0,
+                vaga[15] if len(vaga) > 15 and vaga[15] is not None else 0)
         }
         vagas_processadas.append(vaga_dict)
 
@@ -318,6 +319,7 @@ def dashboard_empresa():
 from flask import render_template, request, redirect, url_for, session, flash
 from datetime import datetime
 import sqlite3
+
 
 @app.route('/criar_vaga', methods=['GET', 'POST'])
 def criar_vaga():
@@ -336,7 +338,8 @@ def criar_vaga():
         categoria_id = request.form.get('categoria_id') or None
         nova_categoria = request.form.get('nova_categoria', '').strip()
         urgencia_contratacao = request.form.get('urgencia_contratacao', '')
-        data_congelamento_agendado = request.form.get('data_congelamento_agendado') or None
+        data_congelamento_agendado = request.form.get(
+            'data_congelamento_agendado') or None
         usar_endereco_empresa = 'usar_endereco_empresa' in request.form
 
         # Campos de localização
@@ -351,48 +354,59 @@ def criar_vaga():
         try:
             # Criar nova categoria, se aplicável
             if nova_categoria and (not categoria_id or categoria_id == 'nova'):
-                cursor.execute('INSERT OR IGNORE INTO categorias (nome) VALUES (?)', (nova_categoria,))
-                cursor.execute('SELECT id FROM categorias WHERE nome = ?', (nova_categoria,))
+                cursor.execute(
+                    'INSERT OR IGNORE INTO categorias (nome) VALUES (?)',
+                    (nova_categoria, ))
+                cursor.execute('SELECT id FROM categorias WHERE nome = ?',
+                               (nova_categoria, ))
                 categoria_result = cursor.fetchone()
                 if categoria_result:
                     categoria_id = categoria_result[0]
 
             # Buscar endereço da empresa, se solicitado
             if usar_endereco_empresa:
-                cursor.execute('SELECT endereco, cidade, estado, cep FROM empresas WHERE id = ?', (session['empresa_id'],))
+                cursor.execute(
+                    'SELECT endereco, cidade, estado, cep FROM empresas WHERE id = ?',
+                    (session['empresa_id'], ))
                 endereco_empresa = cursor.fetchone()
                 if endereco_empresa:
-                    localizacao_endereco = endereco_empresa[0] or localizacao_endereco
-                    localizacao_cidade = endereco_empresa[1] or localizacao_cidade
-                    localizacao_estado = endereco_empresa[2] or localizacao_estado
+                    localizacao_endereco = endereco_empresa[
+                        0] or localizacao_endereco
+                    localizacao_cidade = endereco_empresa[
+                        1] or localizacao_cidade
+                    localizacao_estado = endereco_empresa[
+                        2] or localizacao_estado
                     localizacao_cep = endereco_empresa[3] or localizacao_cep
 
             # Validar data de congelamento agendado
             if data_congelamento_agendado:
                 try:
-                    congelamento_date = datetime.strptime(data_congelamento_agendado, '%Y-%m-%d')
+                    congelamento_date = datetime.strptime(
+                        data_congelamento_agendado, '%Y-%m-%d')
                     if congelamento_date <= datetime.now():
-                        flash('A data de congelamento precisa ser uma data futura.', 'error')
+                        flash(
+                            'A data de congelamento precisa ser uma data futura.',
+                            'error')
                         return redirect(url_for('criar_vaga'))
                 except ValueError:
                     flash('Data de congelamento inválida.', 'error')
                     return redirect(url_for('criar_vaga'))
 
             # Inserir nova vaga
-            cursor.execute('''
+            cursor.execute(
+                '''
                 INSERT INTO vagas (
                     titulo, descricao, requisitos, salario_oferecido, tipo_vaga, diferenciais,
                     empresa_id, data_criacao, status, categoria_id, urgencia_contratacao,
                     data_congelamento_agendado, usar_endereco_empresa, localizacao_endereco,
                     localizacao_cidade, localizacao_estado, localizacao_cep
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Ativa', ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                titulo, descricao, requisitos, salario_oferecido, tipo_vaga, diferenciais,
-                session['empresa_id'], datetime.now().strftime('%Y-%m-%d %H:%M:%S'), categoria_id,
-                urgencia_contratacao, data_congelamento_agendado,
-                int(usar_endereco_empresa), localizacao_endereco,
-                localizacao_cidade, localizacao_estado, localizacao_cep
-            ))
+            ''', (titulo, descricao, requisitos, salario_oferecido, tipo_vaga,
+                  diferenciais, session['empresa_id'],
+                  datetime.now().strftime('%Y-%m-%d %H:%M:%S'), categoria_id,
+                  urgencia_contratacao, data_congelamento_agendado,
+                  int(usar_endereco_empresa), localizacao_endereco,
+                  localizacao_cidade, localizacao_estado, localizacao_cep))
 
             conn.commit()
             flash('Vaga criada com sucesso!', 'success')
@@ -413,10 +427,7 @@ def criar_vaga():
 
     hoje = datetime.now().strftime('%Y-%m-%d')  # usado no min do input de data
 
-    return render_template('criar_vaga.html',
-                           categorias=categorias,
-                           hoje=hoje)
-
+    return render_template('criar_vaga.html', categorias=categorias, hoje=hoje)
 
 
 @app.route('/candidatos_vaga/<int:vaga_id>')
@@ -730,58 +741,80 @@ def encerrar_vaga():
             cursor.execute(
                 '''UPDATE vagas 
                    SET status = "Concluída", candidato_selecionado_id = ? 
-                   WHERE id = ?''', 
-                (candidato_id, vaga_id))
+                   WHERE id = ?''', (candidato_id, vaga_id))
 
             # Notificar candidato contratado
-            notification_system.notificar_contratacao(
-                candidato_id, vaga_id, session['empresa_id'], mensagem_personalizada)
+            notification_system.notificar_contratacao(candidato_id, vaga_id,
+                                                      session['empresa_id'],
+                                                      mensagem_personalizada)
 
             # Notificar outros candidatos
             for cid in todos_candidatos:
                 if cid != candidato_id:
                     msg = f"A vaga '{vaga_titulo}' foi concluída. Outro candidato foi selecionado."
                     notification_system.criar_notificacao(
-                        cid, msg, vaga_id, session['empresa_id'], 'vaga_concluida')
+                        cid, msg, vaga_id, session['empresa_id'],
+                        'vaga_concluida')
 
-                    cursor.execute('SELECT email FROM candidatos WHERE id = ?', (cid,))
+                    cursor.execute('SELECT email FROM candidatos WHERE id = ?',
+                                   (cid, ))
                     email_result = cursor.fetchone()
                     if email_result:
                         notification_system.enviar_email(
-                            email_result[0], f"Vaga Concluída - {vaga_titulo}", msg)
+                            email_result[0], f"Vaga Concluída - {vaga_titulo}",
+                            msg)
 
-            response = {'success': True, 'message': 'Candidato contratado com sucesso!'}
+            response = {
+                'success': True,
+                'message': 'Candidato contratado com sucesso!'
+            }
 
         elif acao == 'congelar':
-            cursor.execute('UPDATE vagas SET status = "Congelada" WHERE id = ?', (vaga_id,))
+            cursor.execute(
+                'UPDATE vagas SET status = "Congelada" WHERE id = ?',
+                (vaga_id, ))
             notification_system.notificar_vaga_congelada(vaga_id)
-            response = {'success': True, 'message': 'Vaga congelada com sucesso!'}
+            response = {
+                'success': True,
+                'message': 'Vaga congelada com sucesso!'
+            }
 
         elif acao == 'excluir':
             # Notificar antes de excluir
             notification_system.notificar_vaga_excluida(vaga_id)
-            
+
             # Excluir candidaturas e vaga
-            cursor.execute('DELETE FROM candidaturas WHERE vaga_id = ?', (vaga_id,))
-            cursor.execute('DELETE FROM vagas WHERE id = ?', (vaga_id,))
-            response = {'success': True, 'message': 'Vaga excluída com sucesso!'}
+            cursor.execute('DELETE FROM candidaturas WHERE vaga_id = ?',
+                           (vaga_id, ))
+            cursor.execute('DELETE FROM vagas WHERE id = ?', (vaga_id, ))
+            response = {
+                'success': True,
+                'message': 'Vaga excluída com sucesso!'
+            }
 
         elif acao == 'reativar':
-            cursor.execute('UPDATE vagas SET status = "Ativa" WHERE id = ?', (vaga_id,))
-            
+            cursor.execute('UPDATE vagas SET status = "Ativa" WHERE id = ?',
+                           (vaga_id, ))
+
             # Notificar candidatos sobre reativação
             for cid in todos_candidatos:
                 msg = f"Boa notícia! A vaga '{vaga_titulo}' foi reativada. Sua candidatura continua válida e o processo seletivo foi retomado."
-                notification_system.criar_notificacao(
-                    cid, msg, vaga_id, session['empresa_id'], 'vaga_reativada')
+                notification_system.criar_notificacao(cid, msg, vaga_id,
+                                                      session['empresa_id'],
+                                                      'vaga_reativada')
 
-                cursor.execute('SELECT email FROM candidatos WHERE id = ?', (cid,))
+                cursor.execute('SELECT email FROM candidatos WHERE id = ?',
+                               (cid, ))
                 email_result = cursor.fetchone()
                 if email_result:
                     notification_system.enviar_email(
-                        email_result[0], f"Vaga Reativada - {vaga_titulo}", msg)
+                        email_result[0], f"Vaga Reativada - {vaga_titulo}",
+                        msg)
 
-            response = {'success': True, 'message': 'Vaga reativada com sucesso!'}
+            response = {
+                'success': True,
+                'message': 'Vaga reativada com sucesso!'
+            }
 
         else:
             return jsonify({'error': 'Ação inválida'}), 400
@@ -926,7 +959,7 @@ def editar_vaga(vaga_id):
             flash(f'Erro ao atualizar vaga: {str(e)}', 'error')
             print(f"Erro detalhado: {e}")
 
-    # Buscar dados da vaga para exibição
+    # Buscar dados da vaga para exibição (funciona tanto para GET quanto para POST com erro)
     cursor.execute(
         '''
         SELECT v.*, c.nome as categoria_nome
@@ -936,22 +969,25 @@ def editar_vaga(vaga_id):
     ''', (vaga_id, ))
     vaga_completa = cursor.fetchone()
 
+    if vaga_completa:
+        colunas = [desc[0] for desc in cursor.description]
+        vaga = dict(zip(colunas, vaga_completa))
+    else:
+        vaga = {}
+        flash('Vaga não encontrada', 'error')
+        return redirect(url_for('dashboard_empresa'))
+
     # Buscar categorias para o formulário
     cursor.execute('SELECT id, nome FROM categorias ORDER BY nome')
     categorias = [{'id': row[0], 'nome': row[1]} for row in cursor.fetchall()]
 
     conn.close()
 
-    # Converter tupla em objeto mais flexível para o template
-    if vaga_completa:
-        colunas = [desc[0] for desc in cursor.description]
-        vaga = dict(zip(colunas, vaga_completa))
-    else:
-        vaga = {}
-
     return render_template('editar_vaga.html',
                            vaga=vaga,
-                           categorias=categorias)
+                           categorias=categorias,
+                           datetime=datetime,
+                           timedelta=timedelta)
 
 
 @app.route('/vaga/<int:vaga_id>')
@@ -1451,7 +1487,7 @@ def apagar_todas_notificacoes():
         '''
         DELETE FROM notificacoes 
         WHERE candidato_id = ?
-    ''', (session['candidato_id'],))
+    ''', (session['candidato_id'], ))
 
     conn.commit()
     count = cursor.rowcount
@@ -1604,15 +1640,11 @@ def api_vagas_empresa():
     try:
         cursor.execute(
             'SELECT id, titulo, status FROM vagas WHERE empresa_id = ? ORDER BY titulo',
-            (session['empresa_id'],))
-        
+            (session['empresa_id'], ))
+
         vagas = []
         for row in cursor.fetchall():
-            vagas.append({
-                'id': row[0],
-                'titulo': row[1],
-                'status': row[2]
-            })
+            vagas.append({'id': row[0], 'titulo': row[1], 'status': row[2]})
 
         return jsonify(vagas)
 
