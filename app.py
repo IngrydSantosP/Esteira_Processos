@@ -1418,6 +1418,48 @@ def marcar_todas_notificacoes_lidas():
     return jsonify({'success': True})
 
 
+@app.route('/api/notificacoes/<int:notificacao_id>/apagar', methods=['DELETE'])
+def apagar_notificacao(notificacao_id):
+    if 'candidato_id' not in session:
+        return jsonify({'error': 'Não autorizado'}), 401
+
+    conn = sqlite3.connect('recrutamento.db')
+    cursor = conn.cursor()
+
+    cursor.execute(
+        '''
+        DELETE FROM notificacoes 
+        WHERE id = ? AND candidato_id = ?
+    ''', (notificacao_id, session['candidato_id']))
+
+    conn.commit()
+    sucesso = cursor.rowcount > 0
+    conn.close()
+
+    return jsonify({'success': sucesso})
+
+
+@app.route('/api/notificacoes/apagar-todas', methods=['DELETE'])
+def apagar_todas_notificacoes():
+    if 'candidato_id' not in session:
+        return jsonify({'error': 'Não autorizado'}), 401
+
+    conn = sqlite3.connect('recrutamento.db')
+    cursor = conn.cursor()
+
+    cursor.execute(
+        '''
+        DELETE FROM notificacoes 
+        WHERE candidato_id = ?
+    ''', (session['candidato_id'],))
+
+    conn.commit()
+    count = cursor.rowcount
+    conn.close()
+
+    return jsonify({'success': True, 'deleted_count': count})
+
+
 @app.route('/politica-privacidade')
 def politica_privacidade():
     from datetime import datetime
@@ -1497,6 +1539,58 @@ def favoritar_vaga():
         ja_favoritada = cursor.fetchone() is not None
 
         if acao == 'toggle' or (acao == 'add' and not ja_favoritada):
+            if ja_favoritada:
+                # Remover dos favoritos
+                cursor.execute(
+                    '''
+                    DELETE FROM candidato_vaga_favorita 
+                    WHERE candidato_id = ? AND vaga_id = ?
+                ''', (candidato_id, vaga_id))
+                conn.commit()
+                return jsonify({
+                    'success': True,
+                    'favorited': False,
+                    'message': 'Vaga removida dos favoritos'
+                })
+            else:
+                # Adicionar aos favoritos
+                cursor.execute(
+                    '''
+                    INSERT INTO candidato_vaga_favorita (candidato_id, vaga_id) 
+                    VALUES (?, ?)
+                ''', (candidato_id, vaga_id))
+                conn.commit()
+                return jsonify({
+                    'success': True,
+                    'favorited': True,
+                    'message': 'Vaga adicionada aos favoritos'
+                })
+
+        elif acao == 'remove' and ja_favoritada:
+            cursor.execute(
+                '''
+                DELETE FROM candidato_vaga_favorita 
+                WHERE candidato_id = ? AND vaga_id = ?
+            ''', (candidato_id, vaga_id))
+            conn.commit()
+            return jsonify({
+                'success': True,
+                'favorited': False,
+                'message': 'Vaga removida dos favoritos'
+            })
+
+        return jsonify({
+            'success': True,
+            'favorited': ja_favoritada,
+            'message': 'Nenhuma alteração necessária'
+        })
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
+    finally:
+        conn.close()
+
 
 @app.route('/api/vagas-empresa')
 def api_vagas_empresa():

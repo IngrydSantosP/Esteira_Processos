@@ -97,48 +97,70 @@ class EmailTemplateManager:
         <body>
             <div class="email-container">
                 <div class="email-header">
-                    <h1>🎉 PARABÉNS!</h1>
-                    <h2>Você foi selecionado(a)!</h2>
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">🎉</div>
+                        <h1 style="margin: 0; font-size: 28px; font-weight: bold;">PARABÉNS!</h1>
+                        <h2 style="margin: 5px 0 0 0; font-size: 18px; opacity: 0.9;">Você foi selecionado(a)!</h2>
+                    </div>
                 </div>
                 <div class="email-body">
-                    <p>Olá, <strong>{dados['candidato_nome']}</strong>!</p>
+                    <p style="font-size: 16px; margin-bottom: 20px;">Olá, <strong>{dados['candidato_nome']}</strong>! 👋</p>
                     
-                    <div class="highlight">
-                        <p><strong>Excelente notícia!</strong> Você foi selecionado(a) para a vaga <strong>"{dados['vaga_titulo']}"</strong> na empresa <strong>{dados['empresa_nome']}</strong>!</p>
+                    <div class="highlight" style="text-align: center; padding: 20px; margin: 20px 0;">
+                        <h3 style="margin: 0 0 10px 0; color: #2563eb;">🏆 EXCELENTE NOTÍCIA!</h3>
+                        <p style="margin: 0; font-size: 18px;"><strong>Você foi selecionado(a) para a vaga:</strong></p>
+                        <h2 style="margin: 10px 0; color: #1f2937; font-size: 22px;">"{dados['vaga_titulo']}"</h2>
+                        <p style="margin: 0; font-size: 16px;">na empresa <strong style="color: #7c3aed;">{dados['empresa_nome']}</strong></p>
                     </div>
                     
-                    <h3>📊 Detalhes da sua candidatura:</h3>
-                    <table class="stats-table">
-                        <tr>
-                            <th>Posição no ranking</th>
-                            <td><span class="badge">{dados['posicao']}º lugar</span></td>
-                        </tr>
-                        <tr>
-                            <th>Score de compatibilidade</th>
-                            <td><strong>{dados.get('score', 'N/A')}</strong></td>
-                        </tr>
-                        <tr>
-                            <th>Total de candidatos</th>
-                            <td>{dados.get('total_candidatos', 'N/A')}</td>
-                        </tr>
-                        <tr>
-                            <th>Data da seleção</th>
-                            <td>{datetime.now().strftime('%d/%m/%Y às %H:%M')}</td>
-                        </tr>
-                    </table>
+                    <div style="background: #f8fafc; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                        <h3 style="margin: 0 0 15px 0; color: #374151; display: flex; align-items: center;">
+                            📊 Detalhes da sua candidatura
+                        </h3>
+                        <table class="stats-table" style="width: 100%; background: white; border-radius: 8px; overflow: hidden;">
+                            <tr>
+                                <th style="background: #e5e7eb; padding: 12px; text-align: left;">🏅 Posição no ranking</th>
+                                <td style="padding: 12px;"><span class="badge" style="background: #10b981; color: white; padding: 4px 12px; border-radius: 20px; font-weight: bold;">{dados['posicao']}º lugar</span></td>
+                            </tr>
+                            <tr>
+                                <th style="background: #e5e7eb; padding: 12px; text-align: left;">⭐ Score de compatibilidade</th>
+                                <td style="padding: 12px;"><strong style="color: #059669; font-size: 18px;">{dados.get('score', 'N/A')}%</strong></td>
+                            </tr>
+                            <tr>
+                                <th style="background: #e5e7eb; padding: 12px; text-align: left;">👥 Total de candidatos</th>
+                                <td style="padding: 12px;"><strong>{dados.get('total_candidatos', 'N/A')}</strong></td>
+                            </tr>
+                            <tr>
+                                <th style="background: #e5e7eb; padding: 12px; text-align: left;">📅 Data da seleção</th>
+                                <td style="padding: 12px;"><strong>{datetime.now().strftime('%d/%m/%Y às %H:%M')}</strong></td>
+                            </tr>
+                        </table>
+                    </div>
                     
                     {self._gerar_mensagem_personalizada(dados)}
                     
-                    <div class="highlight">
-                        <p><strong>Próximos passos:</strong></p>
-                        <ul>
-                            <li>A empresa entrará em contato em breve</li>
-                            <li>Prepare-se para possíveis entrevistas finais</li>
-                            <li>Tenha seus documentos organizados</li>
+                    <div style="background: #dbeafe; border-left: 4px solid #3b82f6; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+                        <h3 style="margin: 0 0 15px 0; color: #1e40af; display: flex; align-items: center;">
+                            🚀 Próximos passos
+                        </h3>
+                        <ul style="margin: 0; padding-left: 20px; color: #1f2937;">
+                            <li style="margin-bottom: 8px;">💼 A empresa <strong>{dados['empresa_nome']}</strong> entrará em contato em breve</li>
+                            <li style="margin-bottom: 8px;">🎯 Prepare-se para possíveis entrevistas finais ou alinhamentos</li>
+                            <li style="margin-bottom: 8px;">📋 Tenha seus documentos pessoais organizados e atualizados</li>
+                            <li style="margin-bottom: 8px;">💡 Revise informações sobre a empresa e a vaga</li>
                         </ul>
                     </div>
                     
-                    <p>Mais uma vez, parabéns pela conquista! 🎊</p>
+                    {dados.get('mensagem_personalizada', '') and f'<div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 0 8px 8px 0;"><h4 style="margin: 0 0 10px 0; color: #92400e;">💬 Mensagem da empresa:</h4><p style="margin: 0; font-style: italic; color: #78350f;">"{dados["mensagem_personalizada"]}"</p></div>' or ''}
+                    
+                    <div style="text-align: center; margin: 30px 0;">
+                        <p style="font-size: 20px; margin: 0; color: #059669;">
+                            <strong>Mais uma vez, parabéns pela conquista! 🎊✨</strong>
+                        </p>
+                        <p style="margin: 10px 0 0 0; color: #6b7280;">
+                            Desejamos muito sucesso nesta nova jornada! 🌟
+                        </p>
+                    </div>
                 </div>
                 {self._gerar_footer()}
             </div>

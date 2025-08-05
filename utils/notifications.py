@@ -39,7 +39,7 @@ class NotificationSystem:
                 <html>
                   <body style="font-family: Arial, sans-serif;">
                     <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee;">
-                      <img src="https://i.imgur.com/1XGzG8h.png" alt="Vaboo!" style="height: 40px; margin-bottom: 20px;">
+                      <img src="" alt="Vaboo!" style="height: 40px; margin-bottom: 20px;">
                       <p style="font-size: 16px;">{corpo}</p>
                       <hr style="margin: 20px 0;">
                       <p style="font-size: 12px; color: gray;">Vaboo! — Simplicidade, agilidade e inteligência</p>
@@ -106,6 +106,7 @@ class NotificationSystem:
             # Buscar dados completos do candidato, vaga e empresa
             cursor.execute('''
                 SELECT c.nome, c.email, v.titulo, e.nome, ca.posicao, ca.score,
+                       v.salario_oferecido, v.tipo_vaga, v.descricao,
                        (SELECT COUNT(*) FROM candidaturas WHERE vaga_id = ?) as total_candidatos
                 FROM candidatos c
                 JOIN candidaturas ca ON c.id = ca.candidato_id
@@ -118,7 +119,7 @@ class NotificationSystem:
             if not resultado:
                 return False
                 
-            candidato_nome, candidato_email, vaga_titulo, empresa_nome, posicao, score, total_candidatos = resultado
+            candidato_nome, candidato_email, vaga_titulo, empresa_nome, posicao, score, salario, tipo_vaga, descricao, total_candidatos = resultado
             
             # Dados para o template
             template_data = {
@@ -129,30 +130,36 @@ class NotificationSystem:
                 'score': round(score, 1) if score else 'N/A',
                 'total_candidatos': total_candidatos,
                 'mensagem_personalizada': mensagem_personalizada,
-                'vaga_id': vaga_id
+                'vaga_id': vaga_id,
+                'salario_oferecido': salario,
+                'tipo_vaga': tipo_vaga,
+                'data_selecao': datetime.now().strftime('%d/%m/%Y às %H:%M')
             }
             
-            # Criar mensagem para notificação interna
-            mensagem_completa = f"""🎉 {mensagem_personalizada or f"Parabéns! Você foi selecionado(a) para a vaga '{vaga_titulo}' na empresa {empresa_nome}."}
-            
-Detalhes:
-• Vaga: {vaga_titulo}
-• Empresa: {empresa_nome}
-• Posição no ranking: {posicao}º
-• Score: {round(score, 1) if score else 'N/A'}
-• Data: {datetime.now().strftime('%d/%m/%Y às %H:%M')}
+            # Criar mensagem para notificação interna mais detalhada
+            mensagem_completa = f"""🎉 PARABÉNS! Você foi selecionado(a)!
 
-Aguarde o contato da empresa para os próximos passos!"""
+🏆 Vaga: {vaga_titulo}
+🏢 Empresa: {empresa_nome}
+📊 Sua posição: {posicao}º lugar (de {total_candidatos} candidatos)
+⭐ Score de compatibilidade: {round(score, 1) if score else 'N/A'}%
+💰 Salário: R$ {salario:,.2f}
+📋 Modalidade: {tipo_vaga}
+📅 Data da seleção: {datetime.now().strftime('%d/%m/%Y às %H:%M')}
+
+{mensagem_personalizada if mensagem_personalizada else 'A empresa entrará em contato em breve para os próximos passos. Prepare-se para uma nova jornada! 🚀'}
+
+🎊 Desejamos muito sucesso!"""
             
             # Criar notificação no sistema
             self.criar_notificacao(candidato_id, mensagem_completa, vaga_id, empresa_id, 'contratacao')
             
             # Enviar email com template personalizado
-            assunto = f"🎉 Você foi selecionado(a) - {vaga_titulo}"
+            assunto = f"🎉 PARABÉNS! Você foi selecionado(a) para {vaga_titulo} - {empresa_nome}"
             self.enviar_email(
                 candidato_email, 
                 assunto, 
-                mensagem_completa,
+                f"Parabéns! Você foi selecionado(a) para a vaga '{vaga_titulo}' na empresa {empresa_nome}!",
                 template_data,
                 'contratacao'
             )
