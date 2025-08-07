@@ -149,9 +149,10 @@
                                     <div class="text-lg font-bold">{{ candidato[5] }}º</div>
                                     <div class="text-xs opacity-90">posição</div>
                                 </div>
-                                <div class="text-center bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-3 rounded-xl shadow-md">
+                                <div class="text-center bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-3 rounded-xl shadow-md cursor-pointer hover:bg-gradient-to-r hover:from-green-600 hover:to-emerald-600 transition-all"
+                                     onclick="mostrarDetalhesScore({{ candidato[6] }}, '{{ candidato[0] }}', {{ candidato[4] }})">
                                     <div class="text-lg font-bold">{{ "%.0f"|format(candidato[4]) }}%</div>
-                                    <div class="text-xs opacity-90">match</div>
+                                    <div class="text-xs opacity-90">ver detalhes</div>
                                 </div>
                             </div>
 
@@ -425,6 +426,114 @@ function showToast(message, type = 'info') {
             document.body.removeChild(toast);
         }, 300);
     }, 3000);
+}
+</script>
+
+<!-- Modal de Detalhes do Score -->
+<div id="modalScore" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+    <div class="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <span>📊</span> Detalhes do Score
+            </h3>
+            <button onclick="fecharModalScore()" class="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+        </div>
+        
+        <div id="conteudoScore" class="space-y-4">
+            <!-- Conteúdo será preenchido via JavaScript -->
+        </div>
+        
+        <div class="mt-6 flex justify-end">
+            <button onclick="fecharModalScore()" 
+                    class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-xl font-semibold transition-all">
+                Fechar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+async function mostrarDetalhesScore(candidatoId, candidatoNome, scoreTotal) {
+    try {
+        // Buscar detalhes do score via API
+        const response = await fetch(`/api/score-detalhes/${candidatoId}/{{ vaga_id }}`);
+        const detalhes = await response.json();
+        
+        if (detalhes.error) {
+            showToast('Erro ao carregar detalhes do score', 'error');
+            return;
+        }
+        
+        // Preencher o modal
+        const conteudo = document.getElementById('conteudoScore');
+        conteudo.innerHTML = `
+            <div class="text-center mb-6">
+                <h4 class="text-xl font-bold text-gray-800 mb-2">${candidatoNome}</h4>
+                <div class="text-3xl font-bold text-green-600">${Math.round(scoreTotal)}% de Match</div>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="bg-purple-50 rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <h5 class="font-semibold text-purple-800">💰 Compatibilidade Salarial</h5>
+                        <span class="text-purple-600 font-bold">${detalhes.salarial || 0}pts (20%)</span>
+                    </div>
+                    <p class="text-sm text-gray-600">${detalhes.explicacao_salarial || 'Análise da pretensão vs. salário oferecido'}</p>
+                </div>
+                
+                <div class="bg-blue-50 rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <h5 class="font-semibold text-blue-800">⚡ Requisitos Técnicos</h5>
+                        <span class="text-blue-600 font-bold">${detalhes.requisitos || 0}pts (40%)</span>
+                    </div>
+                    <p class="text-sm text-gray-600">${detalhes.explicacao_requisitos || 'Compatibilidade com tecnologias e habilidades'}</p>
+                </div>
+                
+                <div class="bg-green-50 rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <h5 class="font-semibold text-green-800">🎓 Experiência</h5>
+                        <span class="text-green-600 font-bold">${detalhes.experiencia || 0}pts (15%)</span>
+                    </div>
+                    <p class="text-sm text-gray-600">${detalhes.explicacao_experiencia || 'Nível de senioridade identificado'}</p>
+                </div>
+                
+                <div class="bg-yellow-50 rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <h5 class="font-semibold text-yellow-800">⭐ Diferenciais</h5>
+                        <span class="text-yellow-600 font-bold">${detalhes.diferenciais || 0}pts (10%)</span>
+                    </div>
+                    <p class="text-sm text-gray-600">${detalhes.explicacao_diferenciais || 'Certificações e habilidades extras'}</p>
+                </div>
+                
+                <div class="bg-orange-50 rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <h5 class="font-semibold text-orange-800">📍 Localização</h5>
+                        <span class="text-orange-600 font-bold">${detalhes.localizacao || 0}pts (10%)</span>
+                    </div>
+                    <p class="text-sm text-gray-600">${detalhes.explicacao_localizacao || 'Proximidade geográfica'}</p>
+                </div>
+                
+                <div class="bg-indigo-50 rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <h5 class="font-semibold text-indigo-800">🎓 Formação</h5>
+                        <span class="text-indigo-600 font-bold">${detalhes.formacao || 0}pts (5%)</span>
+                    </div>
+                    <p class="text-sm text-gray-600">${detalhes.explicacao_formacao || 'Nível educacional'}</p>
+                </div>
+            </div>
+        `;
+        
+        // Mostrar modal
+        document.getElementById('modalScore').classList.remove('hidden');
+        
+    } catch (error) {
+        console.error('Erro ao carregar detalhes do score:', error);
+        showToast('Erro ao carregar detalhes do score', 'error');
+    }
+}
+
+function fecharModalScore() {
+    document.getElementById('modalScore').classList.add('hidden');
 }
 </script>
 

@@ -1,41 +1,72 @@
+
+
 {% extends "base.html" %}
 
 {% block title %}Dashboard Empresa{% endblock %}
 
 {% block content %}
+<style>
+    .filter-active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    .favorite-btn:hover .tooltiptext {
+        visibility: visible;
+        opacity: 1;
+    }
+    .favorite-btn .tooltiptext {
+        visibility: hidden;
+        width: 120px;
+        background-color: #555;
+        color: #fff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 5px 0;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        margin-left: -60px;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+</style>
+
 <div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
-    <!-- Header moderno -->
-    <div class="bg-white shadow-sm border-b sticky top-0 z-10 backdrop-blur-md bg-white/95">
-        <div class="max-w-7xl mx-auto px-4 py-4">
-            <div class="flex justify-between items-center">
-                <div class="flex items-center space-x-3">
-                    <div class="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
-                        <span class="text-white font-bold text-lg">🏢</span>
-                    </div>
-                    <div>
-                        <h1 class="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                            Painel de Controle
-                        </h1>
-                        <p class="text-gray-500 text-sm">Gerencie suas vagas e candidatos</p>
-                    </div>
+    <!-- Header da página -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 lg:gap-0 mb-6 lg:mb-8">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
+                    <span class="text-white font-bold text-base sm:text-lg">🏢</span>
                 </div>
-                <div class="flex gap-3">
-                    <a href="{{ url_for('criar_vaga') }}"
-                       class="group bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center gap-2">
-                        <span class="transition-transform group-hover:rotate-12">➕</span>
-                        Nova Vaga
-                    </a>
-                    <a href="{{ url_for('candidatos_favoritos') }}"
-                       class="group bg-gradient-to-r from-yellow-500 to-yellow-500 hover:from-gold-600 hover:to-orange-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center gap-2">
-                        <span class="transition-transform group-hover:scale-110">⭐</span>
-                        Favoritos
-                    </a>
-                    <a href="{{ url_for('relatorio_empresa') }}"
-                       class="group bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center gap-2">
-                        <span class="transition-transform group-hover:scale-110">📊</span>
-                        Relatórios
-                    </a>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                        Meu Dashboard
+                    </h1>
+                    <p class="text-gray-500 text-xs sm:text-sm">Gerencie suas vagas e candidatos</p>
                 </div>
+            </div>
+            <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center">
+                <a href="{{ url_for('criar_vaga') }}"
+                   class="group bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-4 sm:px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center justify-center gap-2 text-sm sm:text-base">
+                    <span class="transition-transform group-hover:rotate-12">➕</span>
+                    <span class="hidden sm:inline">Nova Vaga</span>
+                    <span class="sm:hidden">Nova</span>
+                </a>
+                <a href="{{ url_for('candidatos_geral') }}"
+                   class="group bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white px-4 sm:px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center justify-center gap-2 text-sm sm:text-base">
+                    <span class="transition-transform group-hover:scale-110">👥</span>
+                    Candidatos
+                </a>
+                <a href="{{ url_for('relatorio_empresa') }}"
+                   class="group bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white px-4 sm:px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center justify-center gap-2 text-sm sm:text-base">
+                    <span class="transition-transform group-hover:scale-110">📊</span>
+                    <span class="hidden sm:inline">Relatórios</span>
+                    <span class="sm:hidden">Stats</span>
+                </a>
             </div>
         </div>
     </div>
@@ -82,6 +113,104 @@
                     </div>
                 </div>
             </div>
+
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 hover:border-yellow-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm font-medium">Concluídas</p>
+                        <p class="text-3xl font-bold text-yellow-600">{{ vagas|selectattr('status', 'equalto', 'Concluída')|list|length if vagas else 0 }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
+                        <span class="text-2xl">🏆</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros e Busca -->
+        <div class="mb-8">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div class="flex flex-col lg:flex-row gap-4 items-center">
+                    <!-- Filtros -->
+                    <div class="flex flex-wrap gap-3">
+                        <button onclick="filtrarVagas('todas')" class="filter-btn filter-active px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105">
+                            📋 Todas ({{ vagas|length if vagas else 0 }})
+                        </button>
+                        <button onclick="filtrarVagas('Ativa')" class="filter-btn bg-gray-100 text-gray-700 px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105">
+                            ✅ Ativas ({{ vagas|selectattr('status', 'equalto', 'Ativa')|list|length if vagas else 0 }})
+                        </button>
+                        <button onclick="filtrarVagas('Congelada')" class="filter-btn bg-gray-100 text-gray-700 px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105">
+                            ❄️ Congeladas ({{ vagas|selectattr('status', 'equalto', 'Congelada')|list|length if vagas else 0 }})
+                        </button>
+                        <button onclick="filtrarVagas('Concluída')" class="filter-btn bg-gray-100 text-gray-700 px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105">
+                            🏆 Concluídas ({{ vagas|selectattr('status', 'equalto', 'Concluída')|list|length if vagas else 0 }})
+                        </button>
+                    </div>
+
+                    <!-- Botão Busca Inteligente -->
+                    <div class="flex-shrink-0 ml-auto">
+                        <button id="toggleSearchBtn" onclick="toggleAdvancedSearch()"
+                                class="group bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white px-4 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center gap-2">
+                            <span id="searchIcon" class="text-xl transition-transform group-hover:rotate-12">🔍</span>
+                            <span class="font-semibold">Busca Inteligente</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Painel de Busca Avançada (inicialmente oculto) -->
+                <div id="advancedSearchPanel" class="hidden mt-6 pt-6 border-t border-gray-200">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">🔍 Palavra-chave</label>
+                            <input type="text" id="searchKeyword" placeholder="Ex: desenvolvedor, vendas..."
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">📊 Status</label>
+                            <select id="searchStatus" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300">
+                                <option value="">Todos os status</option>
+                                <option value="Ativa">Ativa</option>
+                                <option value="Congelada">Congelada</option>
+                                <option value="Concluída">Concluída</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">⚡ Urgência</label>
+                            <select id="searchUrgency" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300">
+                                <option value="">Qualquer urgência</option>
+                                <option value="Imediata">Imediata</option>
+                                <option value="Em até 30 dias">Em até 30 dias</option>
+                                <option value="Sem urgência">Sem urgência</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">👥 Candidatos</label>
+                            <select id="searchCandidatos" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300">
+                                <option value="">Qualquer quantidade</option>
+                                <option value="sem_candidatos">Sem candidatos</option>
+                                <option value="poucos_candidatos">1-5 candidatos</option>
+                                <option value="muitos_candidatos">5+ candidatos</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3">
+                        <button onclick="realizarBuscaVagas()"
+                                class="group bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                            <span class="transition-transform group-hover:rotate-12">🔍</span>
+                            Buscar Vagas
+                        </button>
+                        <button onclick="limparFiltrosBusca()"
+                                class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                            <span>🧹</span>
+                            Limpar Filtros
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Lista de Vagas -->
@@ -93,6 +222,91 @@
 {% include 'partials/modal_encerramento.html' %}
 
 <script>
+  // Toggle para a Busca Avançada
+  function toggleAdvancedSearch() {
+    const panel = document.getElementById('advancedSearchPanel');
+    panel.classList.toggle('hidden');
+    const searchIcon = document.getElementById('searchIcon');
+    searchIcon.classList.toggle('rotate-12');
+  }
+
+  // Realizar busca de vagas
+  function realizarBuscaVagas() {
+    const keyword = document.getElementById('searchKeyword').value.toLowerCase();
+    const status = document.getElementById('searchStatus').value;
+    const urgency = document.getElementById('searchUrgency').value;
+    const candidatos = document.getElementById('searchCandidatos').value;
+
+    const cards = document.querySelectorAll('.vaga-card');
+    let visibleCount = 0;
+
+    cards.forEach(card => {
+      let shouldShow = true;
+
+      // Filtro por palavra-chave
+      if (keyword) {
+        const titulo = card.querySelector('h3').textContent.toLowerCase();
+        const descricao = card.querySelector('.vaga-descricao')?.textContent.toLowerCase() || '';
+        if (!titulo.includes(keyword) && !descricao.includes(keyword)) {
+          shouldShow = false;
+        }
+      }
+
+      // Filtro por status
+      if (status && card.getAttribute('data-status') !== status) {
+        shouldShow = false;
+      }
+
+      // Filtro por urgência
+      if (urgency) {
+        const vagaUrgency = card.getAttribute('data-urgencia');
+        if (vagaUrgency !== urgency) {
+          shouldShow = false;
+        }
+      }
+
+      // Filtro por candidatos
+      if (candidatos) {
+        const totalCandidatos = parseInt(card.getAttribute('data-candidatos')) || 0;
+        switch(candidatos) {
+          case 'sem_candidatos':
+            if (totalCandidatos > 0) shouldShow = false;
+            break;
+          case 'poucos_candidatos':
+            if (totalCandidatos === 0 || totalCandidatos > 5) shouldShow = false;
+            break;
+          case 'muitos_candidatos':
+            if (totalCandidatos <= 5) shouldShow = false;
+            break;
+        }
+      }
+
+      if (shouldShow) {
+        card.style.display = 'block';
+        visibleCount++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+
+    showToast(`${visibleCount} vaga(s) encontrada(s)`, 'success');
+  }
+
+  // Limpar filtros de busca
+  function limparFiltrosBusca() {
+    document.getElementById('searchKeyword').value = '';
+    document.getElementById('searchStatus').value = '';
+    document.getElementById('searchUrgency').value = '';
+    document.getElementById('searchCandidatos').value = '';
+
+    // Mostrar todas as vagas
+    document.querySelectorAll('.vaga-card').forEach(card => {
+      card.style.display = 'block';
+    });
+
+    showToast('Filtros limpos', 'info');
+  }
+
   function filtrarVagas(status) {
     const cards = document.querySelectorAll('.vaga-card');
     let visibleCount = 0;
@@ -107,26 +321,19 @@
       }
     });
 
-    // Atualiza o botão ativo com acessibilidade
+    // Atualizar botões com estilo similar ao dashboard candidato
     document.querySelectorAll('.filter-btn').forEach(btn => {
-      btn.classList.remove('active', 'bg-gradient-to-r', 'from-purple-500', 'to-blue-500', 'text-white', 'font-semibold');
-      btn.classList.add('bg-gray-100', 'text-gray-700', 'font-medium');
-      btn.setAttribute('aria-selected', 'false');
-      btn.setAttribute('tabindex', '-1');
+      btn.classList.remove('filter-active');
+      btn.classList.add('bg-gray-100', 'text-gray-700');
     });
 
     const activeBtn = document.querySelector(`.filter-btn[onclick="filtrarVagas('${status}')"]`);
     if (activeBtn) {
-      activeBtn.classList.remove('bg-gray-100', 'text-gray-700', 'font-medium');
-      activeBtn.classList.add('active', 'bg-gradient-to-r', 'from-purple-500', 'to-blue-500', 'text-white', 'font-semibold');
-      activeBtn.setAttribute('aria-selected', 'true');
-      activeBtn.setAttribute('tabindex', '0');
+      activeBtn.classList.remove('bg-gray-100', 'text-gray-700');
+      activeBtn.classList.add('filter-active');
     }
 
-    // Anunciar resultado para leitores de tela
-    const announcement = `${visibleCount} vaga(s) encontrada(s) para o filtro ${status}`;
-    const announcer = document.getElementById('filter-announcer') || createAnnouncer();
-    announcer.textContent = announcement;
+    showToast(`${visibleCount} vaga(s) encontrada(s)`, 'info');
   }
 
   function createAnnouncer() {
@@ -174,8 +381,9 @@
 
   // Função para reativar vaga (específica do dashboard)
   async function reativarVaga(vagaId) {
-    const confirmar = confirm('Tem certeza que deseja reativar esta vaga?');
-    if (!confirmar) return;
+    if (!confirm('Tem certeza que deseja reativar esta vaga?')) {
+      return;
+    }
 
     try {
       const response = await fetch('/encerrar_vaga', {
@@ -192,23 +400,22 @@
       const result = await response.json();
 
       if (result.success) {
-        alert('Vaga reativada com sucesso!');
-        location.reload();
+        showToast('Vaga reativada com sucesso!', 'success');
+        setTimeout(() => {
+          location.reload();
+        }, 1000);
       } else {
-        alert('Erro ao reativar vaga: ' + (result.error || 'Erro desconhecido'));
+        showToast('Erro ao reativar vaga: ' + (result.error || 'Erro desconhecido'), 'error');
       }
     } catch (error) {
       console.error('Erro ao reativar vaga:', error);
-      alert('Erro ao reativar vaga. Tente novamente.');
+      showToast('Erro ao reativar vaga. Tente novamente.', 'error');
     }
   }
 
-  // Função para encerrar vaga
-  function encerrarVaga(vagaId) {
-    // Abre o modal de encerramento
-    document.getElementById('vagaId').value = vagaId;
-    document.getElementById('modalEncerramento').classList.remove('hidden');
-  }
+  // Função para abrir modal de encerramento (usar a função do modal)
+  // Esta função já está definida no modal_encerramento.html
+  // Removendo duplicação para evitar conflitos
 
   // Sistema de favoritos com auto-reload
   async function toggleFavoriteCandidate(candidatoId, vagaId, button) {
@@ -238,10 +445,8 @@
 
         showToast(result.message, 'success');
 
-        // Auto-reload para refletir mudanças
-        setTimeout(() => {
-          location.reload();
-        }, 1000);
+        // Reload imediato para refletir mudanças
+        location.reload();
       } else {
         showToast(result.message || 'Erro ao favoritar candidato', 'error');
       }

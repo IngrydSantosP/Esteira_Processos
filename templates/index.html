@@ -10,6 +10,46 @@
     <title>VaBOO - Plataforma de Empregos</title>
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
+  <style>
+        .cards {
+        display: flex;
+        gap: 1.5rem;
+        overflow-x: auto;
+        scroll-behavior: smooth;
+        padding: 1rem 0;
+        }
+        .card {
+        min-width: 300px;
+        max-width: 320px;
+        background-color: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        flex-shrink: 0;
+        }
+        .card-actions {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 1rem;
+        }
+        .arrow {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background-color: white;
+        border: 1px solid #ddd;
+        border-radius: 9999px;
+        padding: 0.5rem;
+        cursor: pointer;
+        }
+        .arrow-right {
+        right: -2rem;
+        }
+        .arrow-left {
+        left: -2rem;
+        }
+
+  </style>
   <body>
     <!-- Navigation -->
     <header class="w-full bg-white shadow-sm sticky top-0 z-30">
@@ -23,12 +63,12 @@
         <nav>
           <ul class="flex gap-10 text-gray-900 font-semibold select-none">
             <li><a href="#home" class="nav-link active">Home</a></li>
+            <li><a href="#jobs" class="nav-link">Vagas</a></li>  
             <li><a href="#about" class="nav-link">Sobre</a></li>
-             <li><a href="#jobs" class="nav-link">Vagas</a></li>
           </ul>
         </nav>
         <a href="{{ url_for('cadastro_empresa') }}" class="btn-primary"
-          >Cadastrar-se</a
+          >Cadastre-se</a
         >
       </div>
     </header>
@@ -43,7 +83,7 @@
           onerror="this.style.display='none'"
         />
         <div class="shape shape-big octagon"></div>
-        <div class="shape shap e-small octagon"></div>
+        <div class="shape shape-small octagon"></div>
         <div class="shape shape-tiny octagon"></div>
       </div>
       <div class="right-text">
@@ -59,123 +99,56 @@
       </div>
     </section>
 
-    <!-- Section: About -->
-    <section id="about" aria-label="Sobre o VaBOO">
-      <div class="content-text">
-        <p>
-          <em>O <strong>Vaboo</strong></em> é um site de empregos moderno e
-          intuitivo, criado com o propósito de aproximar empresas e
-          profissionais de forma simples, rápida e eficiente.<br />
-          Voltado para quem busca novas oportunidades no mercado de trabalho, a
-          plataforma oferece uma experiência acessível tanto para candidatos
-          quanto para recrutadores.<br />
-          Com uma interface amigável e responsiva, o
-          <em><strong>Vaboo</strong></em> permite que os usuários encontrem
-          vagas por área, localização, tipo de trabalho (remoto, híbrido ou
-          presencial) e nível de experiência. As vagas são apresentadas com
-          clareza, destacando os principais requisitos, benefícios e formas de
-          candidatura.<br />
-          Além disso, o <em><strong>Vaboo</strong></em> preza pela humanização
-          do processo seletivo, promovendo oportunidades para todos os perfis
-          profissionais — desde o primeiro emprego até posições de liderança. O
-          nome e a identidade visual reforçam a proposta jovem, dinâmica e
-          acolhedora do projeto, que visa transformar a busca por emprego em uma
-          jornada mais leve, objetiva e otimista.<br />
-          <strong><em>Vaboo</em></strong
-          >: <strong>conectando talentos às melhores oportunidades.</strong>
-        </p>
-      </div>
-      <div class="content-image">
-        <img
-          src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/cec3b611-6a12-486a-adee-f40be9bc19af.png"
-          alt="Jovem mulher negra sorridente estendendo a mão para cumprimentar em um ambiente de escritório claro e moderno"
-          loading="lazy"
-          onerror="this.style.display='none'"
-        />
-        <div class="shape shape-big octagon"></div>
-        <div class="shape shape-small octagon"></div>
-        <div class="shape shape-tiny octagon"></div>
-      </div>
-    </section>
-
-    <!-- Section: Jobs -->
-    <section id="jobs" aria-label="Vagas disponíveis - Carrossel de empresas">
-      <div class="relative w-full max-w-4xl">
-        <div
-          class="cards"
-          tabindex="0"
-          aria-live="polite"
-          aria-label="Lista de vagas das empresas"
-        >
-          <article
-            class="card"
+      <!-- Section: Jobs -->
+      <section id="jobs" aria-label="Vagas disponíveis - Carrossel de empresas">
+        <div class="relative w-full max-w-4xl">
+          <div
+            class="cards"
             tabindex="0"
-            aria-labelledby="title-banco-brasil"
+            aria-live="polite"
+            aria-label="Lista de vagas das empresas"
           >
-            <img
-              src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/8f7f1912-1cba-4977-82d4-0f3f5f4ed0e8.png"
-              alt="Logo do Banco do Brasil com fundo amarelo e letras estilizadas em vermelho"
-            />
-            <a
-              href="#!"
-              class="more-info"
-              aria-describedby="desc-bb"
+            {% for vaga in vagas %}
+            <article
+              class="card"
               tabindex="0"
-              >Saber mais</a
+              aria-labelledby="title-vaga-{{ vaga.id }}"
             >
-            <button type="button" aria-label="Inscrever-se no Banco do Brasil">
-              Inscrever-se
-            </button>
-            <p id="desc-bb" class="sr-only">
-              O Banco do Brasil oferece vagas em diversas áreas com foco em
-              inovação e desenvolvimento financeiro.
-            </p>
-          </article>
-          <article class="card" tabindex="0" aria-labelledby="title-itau">
-            <img
-              src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/25600968-dfb0-4564-9490-2b495f1016cd.png"
-              alt="Logo do Itaú em preto com fundo branco e letras em estilo moderno"
-            />
-            <a
-              href="#!"
-              class="more-info"
-              aria-describedby="desc-itau"
-              tabindex="0"
-              >Saber mais</a
-            >
-            <button type="button" aria-label="Inscrever-se no Itaú">
-              Inscrever-se
-            </button>
-            <p id="desc-itau" class="sr-only">
-              Itaú disponibiliza vagas para profissionais de tecnologia,
-              atendimento e gestão em todo Brasil.
-            </p>
-          </article>
-          <article
-            class="card"
-            tabindex="0"
-            aria-labelledby="title-x-supermercado"
-          >
-            <img
-              src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/769a6c21-63fd-4669-a235-605dd7ad1812.png"
-              alt="Logo do Supermercados X com fundo amarelo e letras azul escuro, em estilo quadrado"
-            />
-            <a
-              href="#!"
-              class="more-info"
-              aria-describedby="desc-x"
-              tabindex="0"
-              >Saber mais</a
-            >
-            <button type="button" aria-label="Inscrever-se no Supermercados X">
-              Inscrever-se
-            </button>
-            <p id="desc-x" class="sr-only">
-              Supermercados X busca profissionais para área de varejo, logística
-              e atendimento ao cliente.
-            </p>
-          </article>
-        </div>
+              <div class="card-content">
+                <h3 id="title-vaga-{{ vaga.id }}" class="text-xl font-bold text-gray-800 mb-2">{{ vaga.titulo }}</h3>
+                <p class="text-sm text-purple-600 font-semibold mb-2">🏢 {{ vaga.empresa_nome }}</p>
+                <p class="text-gray-600 mb-3">{{ vaga.descricao }}</p>
+                <div class="flex flex-col gap-2">
+                  <span class="text-sm text-green-600 font-semibold">💰 R$ {{ "{:,.2f}".format(vaga.salario_oferecido) }}</span>
+                  <span class="text-sm text-blue-600 font-semibold">💼 {{ vaga.tipo_vaga }}</span>
+                  <span class="text-sm text-gray-500">📍 {{ vaga.localizacao }}</span>
+                </div>
+              </div>
+              <div class="card-actions">
+                <a
+                  href="{{ url_for('detalhes_vaga_publico', vaga_id=vaga.id) }}"
+                  class="more-info"
+                  tabindex="0"
+                  >Saiba mais</a
+                >
+                <a href="{{ url_for('cadastro_candidato') }}" class="btn-primary" aria-label="Inscrever-se para {{ vaga.titulo }}">
+                  Inscreva-se
+                </a>
+              </div>
+            </article>
+            {% endfor %}
+            
+            <!-- Caso não haja vagas -->
+            {% if not vagas %}
+            <article class="card" tabindex="0">
+              <div class="card-content text-center">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Nenhuma vaga disponível</h3>
+                <p class="text-gray-600 mb-4">No momento não há vagas cadastradas na plataforma.</p>
+                <p class="text-sm text-purple-600">Volte em breve para ver novas oportunidades!</p>
+              </div>
+            </article>
+            {% endif %}
+          </div>
         <button
           class="arrow arrow-right"
           aria-label="Próximo"
@@ -183,154 +156,54 @@
         >
           &rarr;
         </button>
-      </div>
-    </section>
-
-    <!-- Section: Authentication -->
-    <section id="auth" aria-label="Área de login e cadastro">
-      <!-- Left side: message and switch -->
-      <div class="side-left" id="create-account-side">
-        <h2>Criar Conta</h2>
-       
-        <form
-          id="create-account-form"
-          aria-describedby="create-account-desc"
-          novalidate
+        
+        <button
+          class="arrow arrow-left"
+          aria-label="Anterior"
+          onclick="scrollJobs('prev')"
         >
-          <label for="nome-create" aria-required="true"
-            ><span>Nome</span></label
-          >
-          <input
-            type="text"
-            id="nome"
-            name="nome"
-            placeholder="Nome completo"
-            required
-            aria-required="true"
-          />
+          &larr;
+        </button>
 
-          <label for="email-create" aria-required="true">
-            <span>E-mail</span></label
-          >
-          <input
-            icon="email"
-            type="email"
-            id="email-create"
-            name="email"
-            placeholder="E-mail"
-            required
-            aria-required="true"
-          />
-
-          <label for="telefone-create" aria-required="true">
-            <span>Telefone</span>
-          </label>
-          <input
-            icon="Telefone"
-            type="tel"
-            name="telefone"
-            placeholder="telefone"
-            maxlength="11"
-            required
-            aria-required="true"
-          />
-
-          <label for="pretencao-salarial-create" aria-required="true">
-            <span>Pretenção Salarial</span>
-          </label>
-
-          <input
-            icon="Pretenção Salarial"
-            type="number"
-            id="pretensao_salarial"
-            name="pretensao_salarial"
-            placeholder="Pretensão Salarial (R$)"
-            step="0.01"
-            required
-            aria-required="true"
-          />
-
-          <label for="senha-create" aria-required="true"
-            ><span>Senha</span></label
-          >
-          <input
-            icon="senha"
-            type="password"
-            id="senha"
-            name="senha"
-            placeholder="Senha"
-            required
-            aria-required="true"
-            minlength="6"
-          />
-          <input
-            icon="senha"
-            type="password"
-            id="confirmar_senha"
-            name="confirmar_senha"
-            placeholder="Confirmar Senha"
-            required
-            aria-required="true"
-            minlength="6"
-          />
-
-          <button
-            type="submit"
-            class="w-full bg-[#7C71B2] hover:bg-purple-600 text-white font-bold py-2 rounded-full transition"
-          >
-            Cadastrar
-          </button>
-        </form>
-      </div>
-
-      <!-- Right side: welcome text and switch -->
-      <div
-        class="side-right"
-        id="login-side"
-        aria-live="polite"
-        aria-atomic="true"
-        aria-relevant="text"
-      >
-        <div role="region" aria-label="Mensagem de boas-vindas" style="display: flex; flex-direction: column; align-items: center; text-align: center; justify-content: center;">
-          <div class="logo" aria-hidden="true" style="margin-bottom: 1.2rem;">
-              Vaboo!
-          </div>
-          <h2>Faça seu Login</h2>
-          <br>
         </div>
+      </section>
 
-        <form
-          id="login-form"
-          method="post"
-          action="{{ url_for('login_candidato') }}"
-          novalidate
-        >
-          <label for="email-login" aria-required="true">Email</label>
-          <input
-            icon="email"
-            type="email"
-            id="email"
-            name="email"
-            placeholder="E-mail"
-            required
-            aria-required="true"
-          />
+      <!-- Section: About -->
+      <section id="about" class="max-w-6xl mx-auto mb-16">
+          <div class="hero-section p-6 sm:p-8 lg:p-12">
+              <div class="flex flex-col lg:flex-row items-center gap-8 lg:gap-12">
+                  <div class="flex-1 order-2 lg:order-1">
+                      <p class="text-base sm:text-lg leading-relaxed text-gray-700">
+                          <em>O <strong class="text-purple-600">Vaboo</strong></em> é um site de empregos moderno e
+                          intuitivo, criado com o propósito de aproximar empresas e
+                          profissionais de forma simples, rápida e eficiente.<br />
+                          Voltado para quem busca novas oportunidades no mercado de trabalho, a
+                          plataforma oferece uma experiência acessível tanto para candidatos
+                          quanto para recrutadores.<br />
+                          Com uma interface amigável e responsiva, o
+                          <em><strong class="text-purple-600">Vaboo</strong></em> permite que os usuários encontrem
+                          vagas por área, localização, tipo de trabalho (remoto, híbrido ou
+                          presencial) e nível de experiência.<br />
+                          <strong class="text-purple-600"><em>Vaboo</em></strong>: 
+                          <strong>conectando talentos às melhores oportunidades.</strong>
+                      </p>
+                  </div>
 
-          <label for="senha-login" aria-required="true">Senha</label>
-          <input
-            icon="senha"
-            type="password"
-            id="senha-login"
-            name="senha"
-            placeholder="Senha"
-            required
-            aria-required="true"
-          />
-
-          <button type="submit" aria-label="Fazer login">Login</button>
-        </form>
-      </div>
-    </section>
+                  <div class="hero-image flex-1 max-w-sm lg:max-w-md relative order-1 lg:order-2">
+                      <img
+                          src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/cec3b611-6a12-486a-adee-f40be9bc19af.png"
+                          alt="Jovem mulher negra sorridente estendendo a mão para cumprimentar"
+                          loading="lazy"
+                          onerror="this.style.display='none'"
+                          class="rounded-full"
+                      />
+                      <div class="shape shape-big -top-6 -right-6"></div>
+                      <div class="shape shape-small bottom-8 right-4"></div>
+                      <div class="shape shape-tiny top-12 right-20 opacity-25"></div>
+                  </div>
+              </div>
+          </div>
+      </section>
 
     <script>
       // Menu navigation
@@ -369,54 +242,78 @@
         setActiveLink(hash);
       });
 
-      // Jobs carousel
+      // Jobs carousel - Responsivo baseado no tamanho da tela
       function scrollJobs(direction) {
         const cardsContainer = document.querySelector("#jobs .cards");
         const card = cardsContainer.querySelector(".card");
-        const cardWidth = card.offsetWidth + 32;
+        if (!card) return;
+        
+        const cardWidth = card.offsetWidth;
+        const gap = 24; // 1.5rem em px
+        const containerWidth = cardsContainer.clientWidth;
+        
+        // Calcular quantos cards são visíveis
+        const visibleCards = Math.floor((containerWidth + gap) / (cardWidth + gap));
+        const scrollAmount = (cardWidth + gap) * Math.max(1, visibleCards);
+        
         if (direction === "next") {
-          cardsContainer.scrollBy({ left: cardWidth, behavior: "smooth" });
+          cardsContainer.scrollBy({ left: scrollAmount, behavior: "smooth" });
+        } else if (direction === "prev") {
+          cardsContainer.scrollBy({ left: -scrollAmount, behavior: "smooth" });
         }
       }
 
-      // Form submission
-      const form = document.getElementById("create-account-form");
-
-      form.addEventListener("submit", async (event) => {
-        event.preventDefault();
-
-        const formData = new FormData(form);
-        let data = Object.fromEntries(formData.entries());
-        data.pretensao_salarial = parseFloat(data.pretensao_salarial);
-
-        if (data.senha !== data.confirmar_senha) {
-          alert("As senhas não coincidem!");
-          return;
-        }
-
-        try {
-          const response = await fetch("/auth/register", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(data),
-          });
-
-          const result = await response.json();
-          if (response.status === 201) {
-            alert("Cadastro realizado com sucesso!");
-            form.reset();
-          } else {
-            alert(result.msg || "Erro ao cadastrar!");
+      // Add keyboard navigation for carousel
+      document.addEventListener("keydown", (e) => {
+        const focusedElement = document.activeElement;
+        if (focusedElement && focusedElement.closest("#jobs")) {
+          if (e.key === "ArrowRight") {
+            e.preventDefault();
+            scrollJobs("next");
+          } else if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            scrollJobs("prev");
           }
-        } catch (error) {
-          console.error(error);
-          alert("Erro ao se conectar com o servidor!");
         }
       });
-    </script>
 
-  
+      // Form submission (if needed)
+      const form = document.getElementById("create-account-form");
+      if (form) {
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+
+          const formData = new FormData(form);
+          let data = Object.fromEntries(formData.entries());
+          data.pretensao_salarial = parseFloat(data.pretensao_salarial);
+
+          if (data.senha !== data.confirmar_senha) {
+            alert("As senhas não coincidem!");
+            return;
+          }
+
+          try {
+            const response = await fetch("/auth/register", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(data),
+            });
+
+            const result = await response.json();
+            if (response.status === 201) {
+              alert("Cadastro realizado com sucesso!");
+              form.reset();
+            } else {
+              alert(result.msg || "Erro ao cadastrar!");
+            }
+          } catch (error) {
+            console.error(error);
+            alert("Erro ao se conectar com o servidor!");
+          }
+        });
+      }
+    </script>
   </body>
 </html>

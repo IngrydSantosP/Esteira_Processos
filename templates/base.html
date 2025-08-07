@@ -6,42 +6,220 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{% block title %}Recrutamento{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-purple-50 min-h-screen">
-    <div class="flex justify-between items-center pt-3 pb-3 pl-40 pr-40 bg-white shadow-md">
-      <a href="{{ url_for('index') }}" class="text-2xl font-bold text-[#7C71B2] hover:text-purple-600">
-        Vaboo!
-      </a>
-      {% if session.tipo_usuario %}
+    <style>
+        /* Animações para menu mobile */
+        .mobile-menu {
+            transition: all 0.3s ease-in-out;
+        }
+        .mobile-menu.hidden {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+        .mobile-menu.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
         
-        <a href="{{ url_for('logout') }}" class="text-[#7C71B2] font-bold hover:text-purple-600">Sair</a>
-      {% else %}
-        <div class="flex gap-6">
-          <a href="{{ url_for('index') }}" class="text-[#7C71B2] font-bold hover:text-purple-600">Home</a>
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        /* Responsividade para texto do logo */
+        @media (max-width: 480px) {
+            .logo-text {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-purple-50 min-h-screen flex flex-col">
+    <!-- Header responsivo -->
+    <header class="bg-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-3 md:py-4">
+                <!-- Logo -->
+                <a href="{{ url_for('index') }}" 
+                   class="logo-text text-xl md:text-2xl font-bold text-[#7C71B2] hover:text-purple-600 transition-colors duration-300">
+                    Vaboo!
+                </a>
+
+                <!-- Menu Desktop -->
+                {% if session.tipo_usuario %}
+                    <div class="hidden md:flex items-center space-x-4">
+                        <a href="{{ url_for('logout') }}" 
+                           class="text-[#7C71B2] font-bold hover:text-purple-600 transition-colors duration-300 px-4 py-2 rounded-lg hover:bg-purple-50">
+                            Sair
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="hidden md:flex items-center space-x-6">
+                        <a href="{{ url_for('index') }}" 
+                           class="text-[#7C71B2] font-bold hover:text-purple-600 transition-colors duration-300 px-4 py-2 rounded-lg hover:bg-purple-50">
+                            Home
+                        </a>
+                    </div>
+                {% endif %}
+
+                <!-- Botão Menu Mobile -->
+                <div class="md:hidden">
+                    <button id="mobile-menu-toggle" 
+                            class="text-[#7C71B2] hover:text-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 rounded-lg p-2"
+                            aria-label="Abrir menu"
+                            aria-expanded="false">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
         </div>
-      {% endif %}
-    </div>
 
+        <!-- Menu Mobile (oculto por padrão) -->
+        <div id="mobile-menu" class="mobile-menu hidden md:hidden bg-white border-t border-gray-200 shadow-lg">
+            <div class="px-4 py-3 space-y-2">
+                {% if session.tipo_usuario %}
+                    <a href="{{ url_for('logout') }}" 
+                       class="block text-[#7C71B2] font-bold hover:text-purple-600 hover:bg-purple-50 px-4 py-3 rounded-lg transition-all duration-300">
+                        Sair
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('index') }}" 
+                       class="block text-[#7C71B2] font-bold hover:text-purple-600 hover:bg-purple-50 px-4 py-3 rounded-lg transition-all duration-300">
+                            Home
+                        </a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
 
-    <main class="container mx-auto mt-8 px-4">
+    <!-- Container principal responsivo -->
+    <main class="flex-1 container mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
+        <!-- Flash Messages responsivas -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                {% for category, message in messages %}
-                    <div class="mb-4 p-4 rounded-lg 
-                        {% if category == 'error' %}
-                            bg-red-100 text-red-700
-                        {% elif category == 'success' %}
-                            bg-green-100 text-green-700
-                        {% else %}
-                            bg-purple-100 text-purple-700
-                        {% endif %}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
+                <div class="mb-4 md:mb-6 space-y-3">
+                    {% for category, message in messages %}
+                        <div class="p-3 md:p-4 rounded-lg text-sm md:text-base
+                            {% if category == 'error' %}
+                                bg-red-100 text-red-700 border border-red-200
+                            {% elif category == 'success' %}
+                                bg-green-100 text-green-700 border border-green-200
+                            {% else %}
+                                bg-purple-100 text-purple-700 border border-purple-200
+                            {% endif %}">
+                            <div class="flex items-start space-x-2">
+                                <span class="flex-shrink-0 mt-0.5">
+                                    {% if category == 'error' %}❌
+                                    {% elif category == 'success' %}✅
+                                    {% else %}ℹ️
+                                    {% endif %}
+                                </span>
+                                <span class="flex-1">{{ message }}</span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
             {% endif %}
         {% endwith %}
 
+        <!-- Conteúdo da página -->
         {% block content %}{% endblock %}
     </main>
+
+    <!-- Footer sempre no fundo -->
+    <footer class="bg-white border-t border-gray-200 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="text-center text-gray-500 text-sm">
+                © 2025 Vaboo! - Sistema de Recrutamento
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript para menu mobile -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+            const mobileMenu = document.getElementById('mobile-menu');
+            let isMenuOpen = false;
+
+            if (mobileMenuToggle && mobileMenu) {
+                mobileMenuToggle.addEventListener('click', function() {
+                    isMenuOpen = !isMenuOpen;
+                    
+                    if (isMenuOpen) {
+                        mobileMenu.classList.remove('hidden');
+                        setTimeout(() => {
+                            mobileMenu.classList.add('show');
+                        }, 10);
+                        mobileMenuToggle.setAttribute('aria-expanded', 'true');
+                        mobileMenuToggle.innerHTML = `
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        `;
+                    } else {
+                        mobileMenu.classList.remove('show');
+                        mobileMenuToggle.setAttribute('aria-expanded', 'false');
+                        setTimeout(() => {
+                            mobileMenu.classList.add('hidden');
+                        }, 300);
+                        mobileMenuToggle.innerHTML = `
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        `;
+                    }
+                });
+
+                // Fechar menu ao clicar em links
+                const menuLinks = mobileMenu.querySelectorAll('a');
+                menuLinks.forEach(link => {
+                    link.addEventListener('click', function() {
+                        isMenuOpen = false;
+                        mobileMenu.classList.remove('show');
+                        mobileMenuToggle.setAttribute('aria-expanded', 'false');
+                        setTimeout(() => {
+                            mobileMenu.classList.add('hidden');
+                        }, 300);
+                        mobileMenuToggle.innerHTML = `
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        `;
+                    });
+                });
+
+                // Fechar menu ao redimensionar para desktop
+                window.addEventListener('resize', function() {
+                    if (window.innerWidth >= 768 && isMenuOpen) {
+                        isMenuOpen = false;
+                        mobileMenu.classList.remove('show');
+                        mobileMenu.classList.add('hidden');
+                        mobileMenuToggle.setAttribute('aria-expanded', 'false');
+                        mobileMenuToggle.innerHTML = `
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        `;
+                    }
+                });
+            }
+        });
+
+        // Scroll suave para links âncora
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
 </body>
 </html>

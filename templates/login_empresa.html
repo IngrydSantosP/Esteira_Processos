@@ -3,12 +3,12 @@
 {% block title %}Login Empresa{% endblock %}
 
 {% block content %}
-<div class="flex items-center justify-center py-10">
-  <div class="flex w-full max-w-4xl bg-white rounded-xl shadow-lg overflow-hidden">
+<div class="flex items-center justify-center py-6 md:py-10 px-4">
+  <div class="flex flex-col md:flex-row w-full max-w-4xl bg-white rounded-xl shadow-lg overflow-hidden">
     
     <!-- Lado esquerdo: Login Empresa -->
-    <div class="w-1/2 p-8">
-      <h2 class="text-3xl font-bold text-[#7C71B2] text-center mb-4">Login Empresa</h2>
+    <div class="w-full md:w-1/2 p-6 md:p-8">
+      <h2 class="text-2xl md:text-3xl font-bold text-[#7C71B2] text-center mb-4 md:mb-6">Login Empresa</h2>
       
       <form method="POST" class="space-y-4">
         <div>
@@ -27,20 +27,20 @@
         </button>
       </form>
 
-      <div class="mt-4 text-center">
+      <div class="mt-4 md:mt-6 text-center">
         <a href="{{ url_for('cadastro_empresa') }}" 
-           class="text-[#7C71B2] hover:text-purple-600 transition-colors duration-200">
+           class="text-sm md:text-base text-[#7C71B2] hover:text-purple-600 transition-colors duration-200">
           Não tem conta? Cadastre-se
         </a>
       </div>
     </div>
 
     <!-- Lado direito: Boas-vindas -->
-    <div class="w-1/2 bg-[#7C71B2] text-white p-8 flex flex-col justify-center items-center rounded-l-[4rem]">
-      <h1 class="text-4xl font-bold mb-4">Olá, empresa!</h1>
-      <p class="mb-6 text-sm">Ainda não tem uma conta? </p>
+    <div class="w-full md:w-1/2 bg-[#7C71B2] text-white p-6 md:p-8 flex flex-col justify-center items-center md:rounded-l-[4rem] order-first md:order-last">
+      <h1 class="text-2xl md:text-4xl font-bold mb-4 text-center">Olá, empresa!</h1>
+      <p class="mb-6 text-xs md:text-sm text-center">Ainda não tem uma conta?</p>
       <a href="{{ url_for('cadastro_empresa') }}"
-         class="bg-white text-[#7C71B2] px-6 py-2 rounded-full font-bold hover:bg-gray-100 transition">
+         class="bg-white text-[#7C71B2] px-4 md:px-6 py-2 rounded-full font-bold hover:bg-gray-100 transition text-sm md:text-base">
         Cadastre-se
       </a>
     </div>

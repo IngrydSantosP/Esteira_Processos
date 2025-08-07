@@ -10,7 +10,7 @@
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-3">
                     <div class="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-xl flex items-center justify-center">
-                        <span class="text-white font-bold text-lg"> ⭐</span>
+                        <span class="text-white font-bold text-lg">⭐</span>
                     </div>
                     <div>
                         <h1 class="text-2xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
@@ -19,7 +19,7 @@
                         <p class="text-gray-500 text-sm">Seus candidatos marcados como favoritos</p>
                     </div>
                 </div>
-                <a href="{{ url_for('dashboard_empresa') }}" 
+                <a href="{{ url_for('dashboard_empresa') }}"
                    class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-xl transition-all duration-300 flex items-center gap-2">
                     <span>⬅️</span>
                     Voltar ao Dashboard
@@ -33,7 +33,7 @@
         <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
             <div class="flex items-center gap-4">
                 <div class="w-16 h-16 bg-gradient-to-br from-yellow-100 to-orange-100 rounded-2xl flex items-center justify-center">
-                    <span class="text-3xl"> ⭐</span>
+                    <span class="text-3xl">⭐</span>
                 </div>
                 <div>
                     <h2 class="text-xl font-bold text-gray-800">Total de Favoritos</h2>
@@ -46,8 +46,8 @@
         <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
             <div class="flex flex-col md:flex-row gap-4">
                 <div class="flex-1">
-                    <input type="text" 
-                           id="searchInput" 
+                    <input type="text"
+                           id="searchInput"
                            placeholder="🔍 Buscar por nome do candidato..."
                            class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent">
                 </div>
@@ -55,7 +55,7 @@
                     <select id="vagaFilter" class="px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-500">
                         <option value="">Todas as vagas</option>
                     </select>
-                    <button onclick="aplicarFiltros()" 
+                    <button onclick="aplicarFiltros()"
                             class="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105">
                         Filtrar
                     </button>
@@ -77,7 +77,6 @@
 let candidatosFavoritos = [];
 let candidatosFiltrados = [];
 
-// Carregar candidatos favoritos
 async function loadCandidatosFavoritos() {
     try {
         const response = await fetch('/api/candidatos-favoritos');
@@ -104,20 +103,14 @@ async function loadCandidatosFavoritos() {
     }
 }
 
-// Atualizar estatísticas
 function updateStats() {
     document.getElementById('totalFavoritos').textContent = candidatosFavoritos.length;
 }
 
-// Popular filtro de vagas
 function populateVagaFilter() {
     const vagaFilter = document.getElementById('vagaFilter');
     const vagas = [...new Set(candidatosFavoritos.map(c => c.vaga_titulo))];
-
-    // Limpar opções existentes (manter "Todas as vagas")
     vagaFilter.innerHTML = '<option value="">Todas as vagas</option>';
-
-    // Adicionar opções de vagas
     vagas.forEach(vaga => {
         const option = document.createElement('option');
         option.value = vaga;
@@ -126,7 +119,6 @@ function populateVagaFilter() {
     });
 }
 
-// Aplicar filtros
 function aplicarFiltros() {
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
     const vagaSelecionada = document.getElementById('vagaFilter').value;
@@ -134,14 +126,12 @@ function aplicarFiltros() {
     candidatosFiltrados = candidatosFavoritos.filter(candidato => {
         const matchSearch = !searchTerm || candidato.nome.toLowerCase().includes(searchTerm);
         const matchVaga = !vagaSelecionada || candidato.vaga_titulo === vagaSelecionada;
-
         return matchSearch && matchVaga;
     });
 
     renderCandidatos();
 }
 
-// Renderizar candidatos
 function renderCandidatos() {
     const container = document.getElementById('candidatosList');
 
@@ -150,11 +140,11 @@ function renderCandidatos() {
             container.innerHTML = `
                 <div class="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
                     <div class="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-6 flex items-center justify-center">
-                        <span class="text-4xl"> ⭐</span>
+                        <span class="text-4xl">⭐</span>
                     </div>
                     <h3 class="text-xl font-bold text-gray-600 mb-3">Nenhum candidato favorito ainda</h3>
                     <p class="text-gray-500 mb-6">Favorite candidatos nas páginas de vagas para vê-los aqui.</p>
-                    <a href="${url_for('dashboard_empresa')}" 
+                    <a href="{{ url_for('dashboard_empresa') }}"
                        class="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 inline-flex items-center gap-2">
                         <span>🏢</span>
                         Ver Vagas
@@ -169,7 +159,7 @@ function renderCandidatos() {
                     </div>
                     <h3 class="text-xl font-bold text-gray-600 mb-3">Nenhum resultado encontrado</h3>
                     <p class="text-gray-500 mb-6">Tente ajustar os filtros de busca.</p>
-                    <button onclick="limparFiltros()" 
+                    <button onclick="limparFiltros()"
                             class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300">
                         Limpar Filtros
                     </button>
@@ -182,8 +172,9 @@ function renderCandidatos() {
     let html = '<div class="grid gap-6">';
 
     candidatosFiltrados.forEach(candidato => {
+        const favorited = true;
         html += `
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-lg hover:border-yellow-200 transition-all duration-300">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-lg hover:border-yellow-200 transition-all duration-300 candidato-favorito-card" data-vaga-id="${candidato.vaga_id}">
                 <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                     <div class="flex-1">
                         <div class="flex items-start gap-4">
@@ -193,57 +184,56 @@ function renderCandidatos() {
                             <div class="flex-1">
                                 <div class="flex items-center gap-3 mb-2">
                                     <h3 class="text-xl font-bold text-gray-800">${candidato.nome}</h3>
-                                    <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium"> ⭐ Favorito</span>
+                                    <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">⭐ Favorito</span>
                                 </div>
                                 <p class="text-purple-600 font-semibold mb-2 flex items-center gap-2">
-                                    <span class="w-4 h-4 bg-purple-100 rounded-full flex items-center justify-center text-xs">💼</span>
+                                    <span class="w-4 h-4 bg-purple-100 rounded-full flex items-center justify-center text-xs">
+                                        ${candidato.vaga_titulo === 'Favorito Geral' ? '⭐' : '💼'}
+                                    </span>
                                     ${candidato.vaga_titulo}
                                 </p>
                                 <div class="flex flex-wrap gap-4 text-sm text-gray-600">
                                     <span class="flex items-center gap-1">
                                         <span>📧</span> ${candidato.email}
                                     </span>
-                                    ${candidato.telefone ? `
-                                        <span class="flex items-center gap-1">
-                                            <span>📱</span> ${candidato.telefone}
-                                        </span>
-                                    ` : ''}
-                                    ${candidato.linkedin ? `
-                                        <a href="${candidato.linkedin}" target="_blank" class="flex items-center gap-1 text-blue-600 hover:text-blue-800">
-                                            <span>🔗</span> LinkedIn
-                                        </a>
-                                    ` : ''}
+                                    ${candidato.telefone ? `<span class="flex items-center gap-1"><span>📱</span> ${candidato.telefone}</span>` : ''}
+                                    ${candidato.linkedin ? `<a href="${candidato.linkedin}" target="_blank" class="flex items-center gap-1 text-blue-600 hover:text-blue-800"><span>🔗</span> LinkedIn</a>` : ''}
                                 </div>
-                                <p class="text-xs text-gray-500 mt-2">
-                                    Favoritado em: ${new Date(candidato.data_favorito).toLocaleDateString('pt-BR')}
-                                </p>
+                                <p class="text-xs text-gray-500 mt-2">Favoritado em: ${new Date(candidato.data_favorito).toLocaleDateString('pt-BR')}</p>
                             </div>
                         </div>
                     </div>
-
                     <div class="flex flex-col items-center gap-4 lg:w-48">
                         <div class="flex gap-3">
-                            <div class="text-center bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-3 rounded-xl shadow-md">
-                                <div class="text-lg font-bold">${candidato.posicao}º</div>
-                                <div class="text-xs opacity-90">posição</div>
-                            </div>
-                            <div class="text-center bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-3 rounded-xl shadow-md">
-                                <div class="text-lg font-bold">${candidato.score}%</div>
-                                <div class="text-xs opacity-90">match</div>
-                            </div>
+                            ${
+                                candidato.vaga_titulo !== 'Favorito Geral' ?
+                                `<div class="text-center bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-3 rounded-xl shadow-md">
+                                    <div class="text-lg font-bold">${candidato.posicao}º</div>
+                                    <div class="text-xs opacity-90">posição</div>
+                                </div>
+                                <div class="text-center bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-3 rounded-xl shadow-md">
+                                    <div class="text-lg font-bold">${candidato.score}%</div>
+                                    <div class="text-xs opacity-90">match</div>
+                                </div>` :
+                                `<div class="text-center bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-4 py-3 rounded-xl shadow-md">
+                                    <div class="text-lg font-bold">⭐</div>
+                                    <div class="text-xs opacity-90">geral</div>
+                                </div>`
+                            }
                         </div>
-
                         <div class="flex gap-2">
-                            <button onclick="removeFavorite(${candidato.id}, ${candidato.vaga_id}, this)"
-                                    class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
-                                <span>💔</span>
-                                Remover
+                            <button onclick="toggleFavoriteCandidate(${candidato.id}, ${candidato.vaga_id}, this)"
+                                    class="text-2xl favorite-btn transition duration-200 hover:scale-125"
+                                    data-favorited="true"
+                                    title="Clique para remover dos favoritos">
+                                ⭐
                             </button>
-                            <a href="/candidatos_vaga/${candidato.vaga_id}" 
-                               class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
-                                <span>👁️</span>
-                                Ver Vaga
-                            </a>
+                            ${
+                                candidato.vaga_id > 0 ? `<button onclick="encerrarVagaDireta(this, ${candidato.vaga_id})"
+                                    class="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-3 py-1 rounded-lg text-sm font-semibold transition-all duration-300 transform hover:scale-105">
+                                    🔒 Encerrar Vaga
+                                </button>` : ''
+                            }
                         </div>
                     </div>
                 </div>
@@ -255,52 +245,72 @@ function renderCandidatos() {
     container.innerHTML = html;
 }
 
-// Remover favorito
-async function removeFavorite(candidatoId, vagaId, button) {
-    if (!confirm('Tem certeza que deseja remover este candidato dos favoritos?')) {
-        return;
-    }
+async function toggleFavoriteCandidate(candidatoId, vagaId, button) {
+    const isFavorited = button.getAttribute('data-favorited') === 'true';
+    const apiUrl = vagaId === 0 ? '/api/favoritar-candidato-geral' : '/api/favoritar-candidato';
+    const payload = { candidato_id: candidatoId, acao: isFavorited ? 'remove' : 'add' };
+    if (vagaId !== 0) payload.vaga_id = vagaId;
 
     try {
         button.classList.add('opacity-50', 'pointer-events-none');
 
-        const response = await fetch('/api/favoritar-candidato', {
+        const response = await fetch(apiUrl, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                candidato_id: candidatoId,
-                vaga_id: vagaId,
-                acao: 'remove'
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
         });
 
         const result = await response.json();
 
         if (result.success) {
-            // Remover da lista local
-            candidatosFavoritos = candidatosFavoritos.filter(c => 
-                !(c.id === candidatoId && c.vaga_id === vagaId)
-            );
+            button.setAttribute('data-favorited', isFavorited ? 'false' : 'true');
+            button.innerHTML = isFavorited ? '☆' : '⭐';
 
-            // Reaplicar filtros
+            if (isFavorited) {
+                candidatosFavoritos = candidatosFavoritos.filter(c => c.id !== candidatoId || c.vaga_id !== vagaId);
+            } else {
+                await loadCandidatosFavoritos();
+            }
+
             aplicarFiltros();
             updateStats();
-
-            showToast('Candidato removido dos favoritos', 'success');
+            showToast(isFavorited ? 'Removido dos favoritos' : 'Adicionado aos favoritos', 'success');
         } else {
-            showToast(result.message || 'Erro ao remover favorito', 'error');
+            showToast(result.message || 'Erro ao atualizar favorito', 'error');
         }
     } catch (error) {
-        console.error('Erro ao remover favorito:', error);
-        showToast('Erro ao remover favorito', 'error');
+        console.error('Erro ao atualizar favorito:', error);
+        showToast('Erro ao atualizar favorito', 'error');
     } finally {
         button.classList.remove('opacity-50', 'pointer-events-none');
     }
 }
 
-// Limpar filtros
+async function encerrarVagaDireta(button, vagaId) {
+    if (!confirm('Deseja encerrar esta vaga?')) return;
+
+    try {
+        button.disabled = true;
+        button.classList.add('opacity-50');
+        const response = await fetch(`/api/vagas/${vagaId}/encerrar`, { method: 'POST' });
+        const result = await response.json();
+
+        if (result.success) {
+            showToast('Vaga encerrada com sucesso!', 'success');
+            button.textContent = 'Encerrada';
+            button.classList.remove('hover:from-orange-600', 'hover:to-red-600');
+            button.classList.add('bg-gray-400', 'cursor-not-allowed');
+        } else {
+            showToast(result.message || 'Erro ao encerrar a vaga.', 'error');
+            button.disabled = false;
+        }
+    } catch (error) {
+        console.error('Erro ao encerrar vaga:', error);
+        showToast('Erro ao encerrar vaga.', 'error');
+        button.disabled = false;
+    }
+}
+
 function limparFiltros() {
     document.getElementById('searchInput').value = '';
     document.getElementById('vagaFilter').value = '';
@@ -308,7 +318,6 @@ function limparFiltros() {
     renderCandidatos();
 }
 
-// Toast notifications
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `fixed bottom-4 right-4 z-50 px-6 py-4 rounded-xl shadow-lg transform translate-y-full transition-all duration-300 ${
@@ -317,74 +326,15 @@ function showToast(message, type = 'info') {
         'bg-blue-500 text-white'
     }`;
     toast.textContent = message;
-
     document.body.appendChild(toast);
-
-    setTimeout(() => {
-        toast.classList.remove('translate-y-full');
-    }, 100);
-
+    setTimeout(() => { toast.classList.remove('translate-y-full'); }, 100);
     setTimeout(() => {
         toast.classList.add('translate-y-full');
-        setTimeout(() => {
-            document.body.removeChild(toast);
-        }, 300);
+        setTimeout(() => { document.body.removeChild(toast); }, 300);
     }, 3000);
 }
 
-// Eventos de busca em tempo real
-document.getElementById('searchInput').addEventListener('input', function() {
-    aplicarFiltros();
-});
-
-// Carregar favoritos quando a página carregar
-document.addEventListener('DOMContentLoaded', function() {
-    loadCandidatosFavoritos();
-    carregarVagasParaFiltro();
-});
-
-// Carregar vagas para o filtro
-async function carregarVagasParaFiltro() {
-    try {
-        // Implementar API para buscar vagas da empresa
-        const response = await fetch('/api/vagas-empresa');
-        const vagas = await response.json();
-
-        const select = document.getElementById('filtroVaga');
-        select.innerHTML = '<option value="">Todas as vagas</option>';
-
-        vagas.forEach(vaga => {
-            const option = document.createElement('option');
-            option.value = vaga.id;
-            option.textContent = vaga.titulo;
-            select.appendChild(option);
-        });
-    } catch (error) {
-        console.error('Erro ao carregar vagas:', error);
-    }
-}
-
-// Aplicar filtro por vaga
-function aplicarFiltroVaga() {
-    const vagaId = document.getElementById('filtroVaga').value;
-    const cards = document.querySelectorAll('.candidato-favorito-card');
-
-    cards.forEach(card => {
-        if (!vagaId || card.dataset.vagaId === vagaId) {
-            card.style.display = 'block';
-        } else {
-            card.style.display = 'none';
-        }
-    });
-}
-
-// Limpar filtro
-function limparFiltroVaga() {
-    document.getElementById('filtroVaga').value = '';
-    const cards = document.querySelectorAll('.candidato-favorito-card');
-    cards.forEach(card => {
-        card.style.display = 'block';
-    });
-}
+document.getElementById('searchInput').addEventListener('input', aplicarFiltros);
+document.addEventListener('DOMContentLoaded', loadCandidatosFavoritos);
 </script>
 {% endblock %}

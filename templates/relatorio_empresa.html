@@ -3,7 +3,35 @@
 {% extends "base.html" %} {% block title %}Relatório Estratégico{% endblock %}
 {% block content %}
 <div class="max-w-7xl mx-auto bg-white p-6 rounded-lg shadow-md">
-  <div class="flex justify-between items-center mb-6">
+  <!-- Cabeçalho -->
+  <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+    <div class="flex justify-between items-center">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xl">
+          📊
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">Relatório Estratégico</h1>
+          <p class="text-gray-600">Análise completa dos dados de recrutamento</p>
+        </div>
+      </div>
+      <div class="flex gap-3">
+        <button
+          onclick="gerarRelatorioCompleto()"
+          class="bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-3 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-2"
+        >
+          📋 Relatório Completo
+        </button>
+          <a href="{{ url_for('dashboard_empresa') }}" 
+             class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-xl transition-all duration-300 flex items-center gap-2">
+              <span>⬅️</span>
+              Dashboard
+          </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex justify-between items-center mb-6 hidden">
     <div class="flex items-center gap-4">
       <a href="{{ url_for('dashboard_empresa') }}" class="text-blue-600 hover:text-blue-800 flex items-center gap-2">
         ← Voltar ao Dashboard

@@ -231,19 +231,20 @@ def dashboard_empresa():
     cursor = conn.cursor()
 
     cursor.execute(
-        '''SELECT v.*, 
-               COUNT(ca.id) as total_candidatos,
-               COUNT(CASE WHEN ca.score >= 80 THEN 1 END) as candidatos_80_plus,
-               COUNT(CASE WHEN ca.score >= 60 AND ca.score < 80 THEN 1 END) as candidatos_60_79,
-               COUNT(CASE WHEN ca.score < 60 THEN 1 END) as candidatos_abaixo_60,
+        '''SELECT v.id, v.empresa_id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido, v.data_criacao, v.tipo_vaga, v.endereco_vaga, v.status, v.candidato_selecionado_id, v.diferenciais,
+               COALESCE(COUNT(DISTINCT ca.id), 0) as total_candidatos,
+               COALESCE(COUNT(CASE WHEN ca.score >= 80 THEN 1 END), 0) as candidatos_80_plus,
+               COALESCE(COUNT(CASE WHEN ca.score >= 60 AND ca.score < 80 THEN 1 END), 0) as candidatos_60_79,
+               COALESCE(COUNT(CASE WHEN ca.score < 60 THEN 1 END), 0) as candidatos_abaixo_60,
                c.nome as candidato_contratado_nome,
-               ca_contratado.posicao as candidato_contratado_posicao
+               ca_contratado.posicao as candidato_contratado_posicao,
+               ca_contratado.data_candidatura as data_contratacao_candidatura
            FROM vagas v
            LEFT JOIN candidaturas ca ON v.id = ca.vaga_id
            LEFT JOIN candidatos c ON v.candidato_selecionado_id = c.id
            LEFT JOIN candidaturas ca_contratado ON v.candidato_selecionado_id = ca_contratado.candidato_id AND v.id = ca_contratado.vaga_id
            WHERE v.empresa_id = ?
-           GROUP BY v.id
+           GROUP BY v.id, v.empresa_id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido, v.data_criacao, v.tipo_vaga, v.endereco_vaga, v.status, v.candidato_selecionado_id, v.diferenciais, c.nome, ca_contratado.posicao, ca_contratado.data_candidatura
            ORDER BY v.data_criacao DESC''', (session['empresa_id'], ))
 
     vagas_com_stats = cursor.fetchall()
@@ -265,51 +266,35 @@ def dashboard_empresa():
             data_criacao = datetime.utcfromtimestamp(
                 vaga[6]).strftime('%d/%m/%Y') if vaga[6] else 'N/A'
 
+        # Garantir que todos os valores sejam tratados corretamente
+        total_candidatos = int(vaga[12]) if vaga[12] is not None else 0
+        candidatos_80_plus = int(vaga[13]) if vaga[13] is not None else 0
+        candidatos_60_79 = int(vaga[14]) if vaga[14] is not None else 0
+        candidatos_abaixo_60 = int(vaga[15]) if vaga[15] is not None else 0
+
         vaga_dict = {
-            'id':
-            vaga[0],
-            'empresa_id':
-            vaga[1],
-            'titulo':
-            vaga[2],
-            'descricao':
-            vaga[3],
-            'requisitos':
-            vaga[4],
-            'salario_oferecido':
-            vaga[5],
-            'diferenciais':
-            vaga[11] if len(vaga) > 11 and vaga[11] else '',
-            'tipo_vaga':
-            vaga[7] if vaga[7] else 'Presencial',
-            'endereco_vaga':
-            vaga[8] if vaga[8] else '',
-            'status':
-            vaga[9] if vaga[9] else 'Ativa',
-            'candidato_selecionado_id':
-            vaga[10],
-            'data_criacao':
-            data_criacao,
-            'total_candidatos':
-            int(vaga[12]) if len(vaga) > 12 and vaga[12] is not None else 0,
-            'candidatos_80_plus':
-            int(vaga[13]) if len(vaga) > 13 and vaga[13] is not None else 0,
-            'candidatos_60_79':
-            int(vaga[14]) if len(vaga) > 14 and vaga[14] is not None else 0,
-            'candidatos_abaixo_60':
-            int(vaga[15]) if len(vaga) > 15 and vaga[15] is not None else 0,
+            'id': vaga[0],
+            'empresa_id': vaga[1],
+            'titulo': vaga[2],
+            'descricao': vaga[3],
+            'requisitos': vaga[4],
+            'salario_oferecido': vaga[5],
+            'diferenciais': vaga[11] if vaga[11] else '',
+            'tipo_vaga': vaga[7] if vaga[7] else 'Presencial',
+            'endereco_vaga': vaga[8] if vaga[8] else '',
+            'status': vaga[9] if vaga[9] else 'Ativa',
+            'candidato_selecionado_id': vaga[10],
+            'data_criacao': data_criacao,
+            'total_candidatos': total_candidatos,
+            'candidatos_80_plus': candidatos_80_plus,
+            'candidatos_60_79': candidatos_60_79,
+            'candidatos_abaixo_60': candidatos_abaixo_60,
             'candidato_contratado': {
                 'nome': vaga[16] if len(vaga) > 16 and vaga[16] else None,
                 'posicao': vaga[17] if len(vaga) > 17 and vaga[17] else None
-            } if vaga[9] == 'Concluída' else None,
-            'data_contratacao':
-            data_criacao if vaga[9] == 'Concluída' else None,
-            'feedback_ia':
-            gerar_feedback_ia_vaga(
-                vaga[12] if len(vaga) > 12 and vaga[12] is not None else 0,
-                vaga[13] if len(vaga) > 13 and vaga[13] is not None else 0,
-                vaga[14] if len(vaga) > 14 and vaga[14] is not None else 0,
-                vaga[15] if len(vaga) > 15 and vaga[15] is not None else 0)
+            } if vaga[9] == 'Concluída' and len(vaga) > 16 and vaga[16] else None,
+            'data_contratacao': vaga[18] if len(vaga) > 18 and vaga[18] and vaga[9] == 'Concluída' else data_criacao if vaga[9] == 'Concluída' else None,
+            'feedback_ia': gerar_feedback_ia_vaga(total_candidatos, candidatos_80_plus, candidatos_60_79, candidatos_abaixo_60)
         }
         vagas_processadas.append(vaga_dict)
 
@@ -737,6 +722,13 @@ def encerrar_vaga():
                 return jsonify(
                     {'error': 'Candidato não se candidatou a esta vaga'}), 400
 
+            # Verificar se o candidato existe
+            cursor.execute('SELECT nome FROM candidatos WHERE id = ?', (candidato_id,))
+            candidato_info = cursor.fetchone()
+
+            if not candidato_info:
+                return jsonify({'error': 'Candidato não encontrado'}), 404
+
             # Atualizar vaga como concluída
             cursor.execute(
                 '''UPDATE vagas 
@@ -1056,9 +1048,8 @@ def detalhes_vaga(vaga_id):
 
     empresa = {'nome': vaga_data[12]}
 
-    # Calcular score e feedback se não candidatado ainda
+    # Calcular score se não candidatado ainda
     score = None
-    feedback_performance = None
 
     if candidato_data:
         from avaliador import criar_avaliador
@@ -1069,33 +1060,10 @@ def detalhes_vaga(vaga_id):
             vaga['salario_oferecido'], vaga['diferenciais'], candidato_data[1],
             vaga['endereco_vaga'], vaga['tipo_vaga'])
 
-        # Gerar feedback de performance
-        feedback_performance = {
-            'requisitos_atendidos':
-            len([
-                r for r in avaliador._extrair_palavras_chave(
-                    vaga['requisitos'].lower())
-                if r in candidato_data[0].lower()
-            ]),
-            'total_requisitos':
-            len(avaliador._extrair_palavras_chave(vaga['requisitos'].lower())),
-            'diferenciais_atendidos':
-            len([
-                d for d in avaliador._extrair_palavras_chave(
-                    vaga['diferenciais'].lower(
-                    ) if vaga['diferenciais'] else '')
-                if d in candidato_data[0].lower()
-            ]) if vaga['diferenciais'] else 0,
-            'bonus_localizacao':
-            bool(vaga['tipo_vaga'] in ['Presencial', 'Híbrida']
-                 and candidato_data[1] and vaga['endereco_vaga'])
-        }
-
     return render_template('detalhes_vaga.html',
                            vaga=vaga,
                            empresa=empresa,
                            score=score,
-                           feedback_performance=feedback_performance,
                            ja_candidatado=bool(candidatura))
 
 
@@ -1110,7 +1078,8 @@ def minhas_candidaturas():
     cursor.execute(
         '''
         SELECT v.id, v.titulo, e.nome as empresa_nome, v.salario_oferecido,
-               ca.score, ca.posicao, ca.data_candidatura
+               ca.score, ca.posicao, ca.data_candidatura,
+               DATE(ca.data_candidatura) as data_formatada
         FROM candidaturas ca
         JOIN vagas v ON ca.vaga_id = v.id
         JOIN empresas e ON v.empresa_id = e.id
@@ -1373,43 +1342,84 @@ def duplicar_vaga(vaga_id):
 
 @app.route('/api/notificacoes')
 def api_notificacoes():
+    """API para buscar notificações do candidato"""
     if 'candidato_id' not in session:
-        return jsonify([])
+        return jsonify({'notificacoes': []})
 
     conn = sqlite3.connect('recrutamento.db')
     cursor = conn.cursor()
 
-    cursor.execute(
-        '''
-        SELECT n.id, n.vaga_id, n.empresa_id, n.mensagem, n.lida, n.data_envio,
-               v.titulo AS vaga_titulo,
-               e.nome AS empresa_nome
-        FROM notificacoes n
-        LEFT JOIN vagas v ON n.vaga_id = v.id
-        LEFT JOIN empresas e ON n.empresa_id = e.id
-        WHERE n.candidato_id = ?
-        ORDER BY n.data_envio DESC
-    ''', (session['candidato_id'], ))
+    # Verificar se a coluna tipo existe, se não, criar
+    cursor.execute("PRAGMA table_info(notificacoes)")
+    columns = [column[1] for column in cursor.fetchall()]
 
-    notificacoes = [{
-        'id': row[0],
-        'vaga_id': row[1],
-        'empresa_id': row[2],
-        'mensagem': row[3],
-        'lida': bool(row[4]),
-        'data_envio': row[5],
-        'vaga_titulo': row[6],
-        'empresa_nome': row[7]
-    } for row in cursor.fetchall()]
+    if 'tipo' not in columns:
+        cursor.execute('ALTER TABLE notificacoes ADD COLUMN tipo TEXT DEFAULT "geral"')
+        conn.commit()
+
+    if 'titulo' not in columns:
+        cursor.execute('ALTER TABLE notificacoes ADD COLUMN titulo TEXT DEFAULT ""')
+        conn.commit()
+
+    cursor.execute('''
+        SELECT n.id, n.candidato_id, n.tipo, n.mensagem, n.lida, 
+               COALESCE(n.data_envio, datetime('now')) as data_criacao,
+               n.vaga_id, n.empresa_id
+        FROM notificacoes n
+        WHERE n.candidato_id = ?
+        ORDER BY n.lida ASC, COALESCE(n.data_envio, datetime('now')) DESC
+    ''', (session['candidato_id'],))
+
+    # Mapeamento de emojis por tipo
+    emojis_tipo = {
+        'contratacao': '🎉',
+        'vaga_congelada': '❄️',
+        'candidatura': '📋',
+        'vaga_nova': '✨',
+        'alteracao_vaga': '🔔',
+        'vaga_excluida': '❌',
+        'geral': '📢'
+    }
+
+    notificacoes = []
+    from datetime import datetime, timedelta
+
+    for row in cursor.fetchall():
+        # Verificar se é notificação de contratação recente (30 dias)
+        data_criacao = datetime.strptime(row[5], '%Y-%m-%d %H:%M:%S')
+        dias_passados = (datetime.now() - data_criacao).days
+        is_contratacao_recente = row[2] == 'contratacao' and dias_passados <= 30
+
+        # Gerar emoji baseado no conteúdo da mensagem se não tiver tipo específico
+        emoji = emojis_tipo.get(row[2], '📢')
+        if '🎉' in row[3] or 'PARABÉNS' in row[3]:
+            emoji = '🎉'
+        elif '❄️' in row[3] or 'congelada' in row[3]:
+            emoji = '❄️'
+        elif '❌' in row[3] or 'excluída' in row[3]:
+            emoji = '❌'
+        elif '📝' in row[3] or 'atualizada' in row[3]:
+            emoji = '🔔'
+
+        notificacoes.append({
+            'id': row[0],
+            'tipo': row[2],
+            'mensagem': row[3],
+            'data_criacao': row[5],
+            'lida': bool(row[4]),
+            'emoji': emoji,
+            'is_fixada': is_contratacao_recente
+        })
 
     conn.close()
-    return jsonify(notificacoes)
+    return jsonify({'notificacoes': notificacoes})
 
 
 @app.route('/api/notificacoes/marcar-lida', methods=['POST'])
 def marcar_notificacao_lida():
+    """API para marcar notificação individual como lida"""
     if 'candidato_id' not in session:
-        return jsonify({'error': 'Não autorizado'}), 401
+        return jsonify({'success': False, 'message': 'Acesso negado'})
 
     data = request.get_json()
     notificacao_id = data.get('id')
@@ -1435,8 +1445,9 @@ def marcar_notificacao_lida():
 
 @app.route('/api/notificacoes/marcar-todas-lidas', methods=['POST'])
 def marcar_todas_notificacoes_lidas():
+    """API para marcar todas as notificações como lidas"""
     if 'candidato_id' not in session:
-        return jsonify({'error': 'Não autorizado'}), 401
+        return jsonify({'success': False, 'message': 'Acesso negado'})
 
     conn = sqlite3.connect('recrutamento.db')
     cursor = conn.cursor()
@@ -1764,19 +1775,60 @@ def api_candidatos_favoritos():
     cursor = conn.cursor()
 
     try:
+        # Garantir que as tabelas existem
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS empresa_favorito_candidato_geral (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                empresa_id INTEGER NOT NULL,
+                candidato_id INTEGER NOT NULL,
+                data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (empresa_id) REFERENCES empresas (id),
+                FOREIGN KEY (candidato_id) REFERENCES candidatos (id),
+                UNIQUE(empresa_id, candidato_id)
+            )
+        ''')
+
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS empresa_candidato_favorito (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                empresa_id INTEGER,
+                candidato_id INTEGER,
+                vaga_id INTEGER,
+                data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (empresa_id) REFERENCES empresas (id),
+                FOREIGN KEY (candidato_id) REFERENCES candidatos (id),
+                FOREIGN KEY (vaga_id) REFERENCES vagas (id),
+                UNIQUE(empresa_id, candidato_id, vaga_id)
+            )
+        ''')
+
+        empresa_id = session['empresa_id']
+
+        # Buscar candidatos favoritos gerais
         cursor.execute(
             '''
             SELECT DISTINCT c.id, c.nome, c.email, c.telefone, c.linkedin,
+                   'Favorito Geral' as vaga_titulo, 0 as vaga_id,
+                   0 as score, 0 as posicao,
+                   efcg.data_criacao as data_favorito
+            FROM empresa_favorito_candidato_geral efcg
+            JOIN candidatos c ON efcg.candidato_id = c.id
+            WHERE efcg.empresa_id = ?
+
+            UNION
+
+            SELECT DISTINCT c.id, c.nome, c.email, c.telefone, c.linkedin,
                    v.titulo as vaga_titulo, v.id as vaga_id,
-                   ca.score, ca.posicao,
+                   COALESCE(ca.score, 0) as score, COALESCE(ca.posicao, 0) as posicao,
                    ecf.data_criacao as data_favorito
             FROM empresa_candidato_favorito ecf
             JOIN candidatos c ON ecf.candidato_id = c.id
             JOIN vagas v ON ecf.vaga_id = v.id
-            JOIN candidaturas ca ON ca.candidato_id = c.id AND ca.vaga_id = v.id
+            LEFT JOIN candidaturas ca ON ca.candidato_id = c.id AND ca.vaga_id = v.id
             WHERE ecf.empresa_id = ?
-            ORDER BY ecf.data_criacao DESC
-        ''', (session['empresa_id'], ))
+
+            ORDER BY data_favorito DESC
+        ''', (empresa_id, empresa_id))
 
         favoritos = []
         for row in cursor.fetchall():
@@ -1789,14 +1841,347 @@ def api_candidatos_favoritos():
                 'vaga_titulo': row[5],
                 'vaga_id': row[6],
                 'score': round(row[7], 1) if row[7] else 0,
-                'posicao': row[8],
+                'posicao': row[8] if row[8] else 0,
                 'data_favorito': row[9]
             })
 
         return jsonify(favoritos)
 
     except Exception as e:
+        print(f"Erro na API candidatos-favoritos: {e}")
         return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+
+
+@app.route('/candidatos-geral')
+def candidatos_geral():
+    """Página para visualizar todos os candidatos cadastrados"""
+    if 'empresa_id' not in session:
+        return redirect(url_for('login_empresa'))
+
+    return render_template('candidatos_geral.html')
+
+
+@app.route('/api/score-detalhes/<int:candidato_id>/<int:vaga_id>')
+def api_score_detalhes(candidato_id, vaga_id):
+    """API para obter detalhes do cálculo do score"""
+    if 'empresa_id' not in session:
+        return jsonify({'error': 'Não autorizado'}), 401
+
+    conn = sqlite3.connect('recrutamento.db')
+    cursor = conn.cursor()
+
+    try:
+        # Verificar se a empresa tem acesso ao candidato
+        cursor.execute(
+            '''
+            SELECT c.texto_curriculo, c.pretensao_salarial, c.endereco_completo,
+                   v.requisitos, v.salario_oferecido, v.diferenciais, v.tipo_vaga, v.endereco_vaga
+            FROM candidatos c, vagas v
+            WHERE c.id = ? AND v.id = ? AND v.empresa_id = ?
+        ''', (candidato_id, vaga_id, session['empresa_id']))
+
+        resultado = cursor.fetchone()
+        if not resultado:
+            return jsonify({'error': 'Dados não encontrados'}), 404
+
+        curriculo, pretensao_salarial, candidato_endereco, requisitos, salario_oferecido, diferenciais, tipo_vaga, vaga_endereco = resultado
+
+        # Calcular score detalhado
+        from avaliador import criar_avaliador
+        avaliador = criar_avaliador(MODO_IA)
+
+        # Usar o método local que retorna detalhes
+        from avaliador.avaliador_local import AvaliadorLocal
+        avaliador_local = AvaliadorLocal()
+
+        score_salarial = avaliador_local._calcular_score_salarial(pretensao_salarial, salario_oferecido)
+        score_requisitos = avaliador_local._calcular_score_requisitos_avancado(curriculo, requisitos)
+        score_experiencia = avaliador_local._calcular_score_experiencia(curriculo)
+        score_diferenciais = avaliador_local._calcular_score_diferenciais(curriculo, diferenciais)
+        score_localizacao = avaliador_local._calcular_score_localizacao(candidato_endereco, vaga_endereco, tipo_vaga)
+        score_formacao = avaliador_local._calcular_score_formacao(curriculo, requisitos)
+
+        # Gerar explicações
+        detalhes = {
+            'salarial': round(score_salarial, 1),
+            'requisitos': round(score_requisitos, 1),
+            'experiencia': round(score_experiencia, 1),
+            'diferenciais': round(score_diferenciais, 1),
+            'localizacao': round(score_localizacao, 1),
+            'formacao': round(score_formacao, 1),
+            'explicacao_salarial': gerar_explicacao_salarial(pretensao_salarial, salario_oferecido),
+            'explicacao_requisitos': gerar_explicacao_requisitos(curriculo, requisitos),
+            'explicacao_experiencia': gerar_explicacao_experiencia(curriculo),
+            'explicacao_diferenciais': 'Baseado em certificações e habilidades extras identificadas',
+            'explicacao_localizacao': gerar_explicacao_localizacao(candidato_endereco, vaga_endereco, tipo_vaga),
+            'explicacao_formacao': gerar_explicacao_formacao(curriculo, requisitos)
+        }
+
+        return jsonify(detalhes)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+
+
+def gerar_explicacao_salarial(pretensao, oferecido):
+    """Gera explicação para o score salarial"""
+    if not pretensao or not oferecido:
+        return "Sem informação salarial suficiente"
+
+    if oferecido >= pretensao:
+        diferenca = ((oferecido / pretensao) - 1) * 100
+        return f"Salário oferecido é {diferenca:.0f}% superior à pretensão"
+    else:
+        diferenca = ((pretensao / oferecido) - 1) * 100
+        return f"Pretensão é {diferenca:.0f}% acima do oferecido"
+
+
+def gerar_explicacao_requisitos(curriculo, requisitos):
+    """Gera explicação para o score de requisitos"""
+    if not curriculo or not requisitos:
+        return "Dados insuficientes para análise"
+
+    from avaliador.avaliador_local import AvaliadorLocal
+    avaliador = AvaliadorLocal()
+
+    tecnologias_vaga = avaliador._extrair_tecnologias(requisitos.lower())
+    tecnologias_candidato = avaliador._extrair_tecnologias(curriculo.lower())
+    matches = len([tech for tech in tecnologias_vaga if tech in tecnologias_candidato])
+
+    if tecnologias_vaga:
+        percentual = (matches / len(tecnologias_vaga)) * 100
+        return f"Atende {matches} de {len(tecnologias_vaga)} tecnologias ({percentual:.0f}%)"
+
+    return "Análise baseada em compatibilidade geral de habilidades"
+
+
+def gerar_explicacao_experiencia(curriculo):
+    """Gera explicação para o score de experiência"""
+    if not curriculo:
+        return "Currículo não disponível"
+
+    curriculo_lower = curriculo.lower()
+
+    if any(palavra in curriculo_lower for palavra in ['senior', 'sênior', 'líder', 'lead']):
+        return "Perfil Senior identificado"
+    elif any(palavra in curriculo_lower for palavra in ['pleno', 'analista']):
+        return "Perfil Pleno identificado"
+    elif any(palavra in curriculo_lower for palavra in ['junior', 'júnior', 'estagiário']):
+        return "Perfil Junior identificado"
+    else:
+        return "Nível de experiência baseado no histórico profissional"
+
+
+def gerar_explicacao_localizacao(candidato_endereco, vaga_endereco, tipo_vaga):
+    """Gera explicação para o score de localização"""
+    if tipo_vaga == 'Remota':
+        return "Vaga remota - localização não é fator limitante"
+
+    if not candidato_endereco or not vaga_endereco:
+        return "Dados de localização insuficientes"
+
+    if candidato_endereco.lower() in vaga_endereco.lower() or vaga_endereco.lower() in candidato_endereco.lower():
+        return "Localização muito compatível"
+    else:
+        return f"Localização para vaga {tipo_vaga.lower()}"
+
+
+def gerar_explicacao_formacao(curriculo, requisitos):
+    """Gera explicação para o score de formação"""
+    if not curriculo:
+        return "Dados de formação não disponíveis"
+
+    curriculo_lower = curriculo.lower()
+
+    if any(form in curriculo_lower for form in ['mestrado', 'doutorado', 'phd']):
+        return "Pós-graduação stricto sensu identificada"
+    elif any(form in curriculo_lower for form in ['mba', 'especialização', 'pós-graduação']):
+        return "Pós-graduação lato sensu identificada"
+    elif any(form in curriculo_lower for form in ['graduação', 'bacharelado', 'licenciatura']):
+        return "Ensino superior completo"
+    else:
+        return "Formação baseada no perfil profissional"
+
+
+@app.route('/api/candidatos-geral')
+def api_candidatos_geral():
+    """API para listar todos os candidatos cadastrados"""
+    if 'empresa_id' not in session:
+        return jsonify({'error': 'Não autorizado'}), 401
+
+    conn = sqlite3.connect('recrutamento.db')
+    cursor = conn.cursor()
+
+    try:
+        # Primeiro, verificar se a tabela de favoritos existe e criá-la se necessário
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS empresa_favorito_candidato_geral (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                empresa_id INTEGER NOT NULL,
+                candidato_id INTEGER NOT NULL,
+                data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (empresa_id) REFERENCES empresas (id),
+                FOREIGN KEY (candidato_id) REFERENCES candidatos (id),
+                UNIQUE(empresa_id, candidato_id)
+            )
+        ''')
+
+        # Verificar se a coluna data_cadastro existe e criá-la se necessário
+        cursor.execute("PRAGMA table_info(candidatos)")
+        columns = [column[1] for column in cursor.fetchall()]
+
+        if 'data_cadastro' not in columns:
+            cursor.execute('ALTER TABLE candidatos ADD COLUMN data_cadastro TIMESTAMP')
+            # Atualizar registros existentes com data atual
+            cursor.execute('UPDATE candidatos SET data_cadastro = datetime("now") WHERE data_cadastro IS NULL')
+
+        empresa_id = session['empresa_id']
+
+        cursor.execute(
+            '''
+            SELECT DISTINCT c.id, c.nome, c.email, c.telefone, c.linkedin,
+                   c.endereco_completo, c.pretensao_salarial, c.competencias,
+                   c.texto_curriculo, COALESCE(c.data_cadastro, datetime('now')) as data_cadastro,
+                   CASE WHEN c.texto_curriculo IS NOT NULL AND c.texto_curriculo != '' THEN 1 ELSE 0 END as tem_curriculo,
+                   CASE WHEN efcg.candidato_id IS NOT NULL THEN 1 ELSE 0 END as is_favorito
+            FROM candidatos c
+            LEFT JOIN empresa_favorito_candidato_geral efcg ON efcg.candidato_id = c.id AND efcg.empresa_id = ?
+            ORDER BY COALESCE(c.data_cadastro, datetime('now')) DESC
+        ''', (empresa_id,))
+
+        candidatos = []
+        for row in cursor.fetchall():
+            candidatos.append({
+                'id': row[0],
+                'nome': row[1] or '',
+                'email': row[2] or '',
+                'telefone': row[3] or '',
+                'linkedin': row[4] or '',
+                'endereco_completo': row[5] or '',
+                'pretensao_salarial': row[6] or 0,
+                'competencias': row[7] or '',
+                'texto_curriculo': row[8] or '',
+                'data_cadastro': row[9] or '',
+                'tem_curriculo': bool(row[10]),
+                'is_favorito': bool(row[11])
+            })
+
+        return jsonify(candidatos)
+
+    except Exception as e:
+        print(f"Erro na API candidatos-geral: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+
+
+@app.route('/api/favoritar-candidato-geral', methods=['POST'])
+def favoritar_candidato_geral():
+    """API para empresa favoritar/desfavoritar candidato geral"""
+    if 'empresa_id' not in session:
+        return jsonify({'success': False, 'message': 'Não autorizado'}), 401
+
+    data = request.get_json()
+    candidato_id = data.get('candidato_id')
+    acao = data.get('acao', 'toggle')
+
+    if not candidato_id:
+        return jsonify({
+            'success': False,
+            'message': 'Candidato ID obrigatório'
+        }), 400
+
+    conn = sqlite3.connect('recrutamento.db')
+    cursor = conn.cursor()
+
+    try:
+        # Garantir que a tabela existe
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS empresa_favorito_candidato_geral (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                empresa_id INTEGER NOT NULL,
+                candidato_id INTEGER NOT NULL,
+                data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (empresa_id) REFERENCES empresas (id),
+                FOREIGN KEY (candidato_id) REFERENCES candidatos (id),
+                UNIQUE(empresa_id, candidato_id)
+            )
+        ''')
+
+        empresa_id = session['empresa_id']
+
+        # Verificar se o candidato existe
+        cursor.execute('SELECT id FROM candidatos WHERE id = ?', (candidato_id,))
+        if not cursor.fetchone():
+            return jsonify({
+                'success': False,
+                'message': 'Candidato não encontrado'
+            }), 404
+
+        # Verificar se já está favoritado
+        cursor.execute(
+            '''
+            SELECT id FROM empresa_favorito_candidato_geral 
+            WHERE empresa_id = ? AND candidato_id = ?
+        ''', (empresa_id, candidato_id))
+
+        ja_favoritado = cursor.fetchone() is not None
+
+        if acao == 'toggle' or (acao == 'add' and not ja_favoritado):
+            if ja_favoritado:
+                # Remover dos favoritos
+                cursor.execute(
+                    '''
+                    DELETE FROM empresa_favorito_candidato_geral 
+                    WHERE empresa_id = ? AND candidato_id = ?
+                ''', (empresa_id, candidato_id))
+                conn.commit()
+                return jsonify({
+                    'success': True,
+                    'favorited': False,
+                    'message': 'Candidato removido dos favoritos'
+                })
+            else:
+                # Adicionar aos favoritos
+                cursor.execute(
+                    '''
+                    INSERT INTO empresa_favorito_candidato_geral (empresa_id, candidato_id) 
+                    VALUES (?, ?)
+                ''', (empresa_id, candidato_id))
+                conn.commit()
+                return jsonify({
+                    'success': True,
+                    'favorited': True,
+                    'message': 'Candidato adicionado aos favoritos'
+                })
+
+        elif acao == 'remove' and ja_favoritado:
+            cursor.execute(
+                '''
+                DELETE FROM empresa_favorito_candidato_geral 
+                WHERE empresa_id = ? AND candidato_id = ?
+            ''', (empresa_id, candidato_id))
+            conn.commit()
+            return jsonify({
+                'success': True,
+                'favorited': False,
+                'message': 'Candidato removido dos favoritos'
+            })
+
+        return jsonify({
+            'success': True,
+            'favorited': ja_favoritado,
+            'message': 'Nenhuma alteração necessária'
+        })
+
+    except Exception as e:
+        conn.rollback()
+        print(f"Erro ao favoritar candidato geral: {e}")
+        return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
     finally:
         conn.close()
 
@@ -2117,7 +2502,7 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"Erro ao iniciar scheduler: {e}")
 
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)
 
 # =========================
 # ROTAS DO ASSISTENTE IA

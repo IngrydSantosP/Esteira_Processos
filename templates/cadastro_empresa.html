@@ -7,12 +7,12 @@
 {% endblock %}
 
 {% block content %}
-<div class="flex items-center justify-center px-4 py-10">
-  <div class="flex w-full max-w-4xl bg-white rounded-xl shadow-lg overflow-hidden">
+<div class="flex items-center justify-center px-4 py-6 md:py-10">
+  <div class="flex flex-col md:flex-row w-full max-w-4xl bg-white rounded-xl shadow-lg overflow-hidden">
 
     <!-- Lado esquerdo: Criar conta -->
-    <div class="w-1/2 p-8 bg-white">
-      <h2 class="text-3xl font-bold text-[#7C71B2] text-center mb-4">Criar Conta</h2>
+    <div class="w-full md:w-1/2 p-6 md:p-8 bg-white">
+      <h2 class="text-2xl md:text-3xl font-bold text-[#7C71B2] text-center mb-4 md:mb-6">Criar Conta</h2>
 
       <form method="POST" class="space-y-4">
         <div>
@@ -37,7 +37,7 @@
                  class="w-full px-4 py-2 rounded-full bg-[#E1D8EB] placeholder-[#7C71B2] text-sm focus:outline-none">
         </div>
 
-        <h3 class="text-xl font-semibold text-[#7C71B2] mt-6 mb-2">Localização da Empresa</h3>
+        <h3 class="text-lg md:text-xl font-semibold text-[#7C71B2] mt-6 mb-2">Localização da Empresa</h3>
         <div>
           <label for="endereco" class="sr-only">Endereço</label>
           <input type="text" id="endereco" name="endereco" placeholder="Rua, número"
@@ -83,16 +83,16 @@
     </div>
 
     <!-- Lado direito: Boas-vindas -->
-    <div class="w-1/2 bg-[#7C71B2] text-white p-8 flex flex-col justify-center items-center rounded-l-[4rem]">
-      <h1 class="text-4xl font-bold mb-4">Bem-Vindo de Volta!</h1>
-      <p class="mb-6 text-sm">Já possui uma conta? Faça seu login abaixo</p>
+    <div class="w-full md:w-1/2 bg-[#7C71B2] text-white p-6 md:p-8 flex flex-col justify-center items-center md:rounded-l-[4rem] order-first md:order-last">
+      <h1 class="text-2xl md:text-4xl font-bold mb-4 text-center">Bem-Vindo de Volta!</h1>
+      <p class="mb-6 text-xs md:text-sm text-center">Já possui uma conta? Faça seu login abaixo</p>
       <a href="{{ url_for('login_empresa') }}"
-         class="bg-white text-[#7C71B2] px-6 py-2 rounded-full font-bold hover:bg-gray-100 transition">
+         class="bg-white text-[#7C71B2] px-4 md:px-6 py-2 rounded-full font-bold hover:bg-gray-100 transition text-sm md:text-base">
         Login
       </a>
 
       <a href="{{ url_for('cadastro_candidato') }}"
-         class="mt-4 text-sm text-white underline hover:text-[#E1D8EB] transition-colors duration-200">
+         class="mt-4 text-xs md:text-sm text-white underline hover:text-[#E1D8EB] transition-colors duration-200">
         Sou candidato
       </a>
     </div>
