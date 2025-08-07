@@ -105,14 +105,14 @@ class EmailTemplateManager:
                 </div>
                 <div class="email-body">
                     <p style="font-size: 16px; margin-bottom: 20px;">Olá, <strong>{dados['candidato_nome']}</strong>! 👋</p>
-                    
+
                     <div class="highlight" style="text-align: center; padding: 20px; margin: 20px 0;">
                         <h3 style="margin: 0 0 10px 0; color: #2563eb;">🏆 EXCELENTE NOTÍCIA!</h3>
                         <p style="margin: 0; font-size: 18px;"><strong>Você foi selecionado(a) para a vaga:</strong></p>
                         <h2 style="margin: 10px 0; color: #1f2937; font-size: 22px;">"{dados['vaga_titulo']}"</h2>
                         <p style="margin: 0; font-size: 16px;">na empresa <strong style="color: #7c3aed;">{dados['empresa_nome']}</strong></p>
                     </div>
-                    
+
                     <div style="background: #f8fafc; padding: 20px; border-radius: 10px; margin: 20px 0;">
                         <h3 style="margin: 0 0 15px 0; color: #374151; display: flex; align-items: center;">
                             📊 Detalhes da sua candidatura
@@ -136,9 +136,9 @@ class EmailTemplateManager:
                             </tr>
                         </table>
                     </div>
-                    
+
                     {self._gerar_mensagem_personalizada(dados)}
-                    
+
                     <div style="background: #dbeafe; border-left: 4px solid #3b82f6; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
                         <h3 style="margin: 0 0 15px 0; color: #1e40af; display: flex; align-items: center;">
                             🚀 Próximos passos
@@ -150,9 +150,9 @@ class EmailTemplateManager:
                             <li style="margin-bottom: 8px;">💡 Revise informações sobre a empresa e a vaga</li>
                         </ul>
                     </div>
-                    
+
                     {dados.get('mensagem_personalizada', '') and f'<div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 0 8px 8px 0;"><h4 style="margin: 0 0 10px 0; color: #92400e;">💬 Mensagem da empresa:</h4><p style="margin: 0; font-style: italic; color: #78350f;">"{dados["mensagem_personalizada"]}"</p></div>' or ''}
-                    
+
                     <div style="text-align: center; margin: 30px 0;">
                         <p style="font-size: 20px; margin: 0; color: #059669;">
                             <strong>Mais uma vez, parabéns pela conquista! 🎊✨</strong>
@@ -170,6 +170,17 @@ class EmailTemplateManager:
 
     def template_vaga_alterada(self, dados):
         """Template para alteração de vaga"""
+        corpo = f"""
+                    <p>A vaga <strong>"{dados['vaga_titulo']}"</strong> da empresa <strong>{dados['empresa_nome']}</strong> foi <strong>{dados['tipo_alteracao']}</strong>.</p>
+                    <h3>ℹ️ O que isso significa:</h3>
+                    <ul>
+                        <li>Sua candidatura continua válida</li>
+                        <li>Podem ter havido mudanças nos requisitos ou benefícios</li>
+                        <li>Recomendamos revisar a vaga atualizada</li>
+                    </ul>
+                    <a href="#{dados['vaga_id']}" class="action-button">Ver Vaga Atualizada</a>
+                    <p><small>Data da alteração: {datetime.now().strftime('%d/%m/%Y às %H:%M')}</small></p>
+        """
         return f"""
         <!DOCTYPE html>
         <html>
@@ -186,21 +197,13 @@ class EmailTemplateManager:
                 </div>
                 <div class="email-body">
                     <p>Olá, <strong>{dados['candidato_nome']}</strong>!</p>
-                    
-                    <div class="highlight">
-                        <p>A vaga <strong>"{dados['vaga_titulo']}"</strong> da empresa <strong>{dados['empresa_nome']}</strong> foi <strong>{dados['tipo_alteracao']}</strong>.</p>
+                    <div style="text-align: center; margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px;">
+                        <h2 style="margin: 0 0 10px 0; font-size: 24px; font-weight: bold;">Vaboo!</h2>
+                        <p style="margin: 0; font-size: 14px; opacity: 0.9;">Simplicidade, agilidade e inteligência</p>
                     </div>
-                    
-                    <h3>ℹ️ O que isso significa:</h3>
-                    <ul>
-                        <li>Sua candidatura continua válida</li>
-                        <li>Podem ter havido mudanças nos requisitos ou benefícios</li>
-                        <li>Recomendamos revisar a vaga atualizada</li>
-                    </ul>
-                    
-                    <a href="#{dados['vaga_id']}" class="action-button">Ver Vaga Atualizada</a>
-                    
-                    <p><small>Data da alteração: {datetime.now().strftime('%d/%m/%Y às %H:%M')}</small></p>
+                    <div style="padding: 20px;">
+                        <p style="font-size: 16px; line-height: 1.6; color: #333;">{corpo}</p>
+                    </div>
                 </div>
                 {self._gerar_footer()}
             </div>
@@ -210,6 +213,20 @@ class EmailTemplateManager:
 
     def template_vaga_congelada(self, dados):
         """Template para vaga congelada"""
+        corpo = f"""
+                    <p>A vaga <strong>"{dados['vaga_titulo']}"</strong> da empresa <strong>{dados['empresa_nome']}</strong> foi temporariamente <strong>congelada</strong>.</p>
+                    <h3>🔍 O que isso significa:</h3>
+                    <ul>
+                        <li><strong>Sua candidatura permanece válida</strong></li>
+                        <li>O processo seletivo foi pausado temporariamente</li>
+                        <li>Você será notificado quando a vaga for reativada</li>
+                        <li>Não há ação necessária de sua parte</li>
+                    </ul>
+                    <div class="highlight">
+                        <p><strong>💡 Sugestão:</strong> Continue explorando outras oportunidades enquanto aguarda!</p>
+                    </div>
+                    <a href="#/dashboard" class="action-button">Ver Outras Vagas</a>
+        """
         return f"""
         <!DOCTYPE html>
         <html>
@@ -226,24 +243,13 @@ class EmailTemplateManager:
                 </div>
                 <div class="email-body">
                     <p>Olá, <strong>{dados['candidato_nome']}</strong>!</p>
-                    
-                    <div class="highlight">
-                        <p>A vaga <strong>"{dados['vaga_titulo']}"</strong> da empresa <strong>{dados['empresa_nome']}</strong> foi temporariamente <strong>congelada</strong>.</p>
+                    <div style="text-align: center; margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px;">
+                        <h2 style="margin: 0 0 10px 0; font-size: 24px; font-weight: bold;">Vaboo!</h2>
+                        <p style="margin: 0; font-size: 14px; opacity: 0.9;">Simplicidade, agilidade e inteligência</p>
                     </div>
-                    
-                    <h3>🔍 O que isso significa:</h3>
-                    <ul>
-                        <li><strong>Sua candidatura permanece válida</strong></li>
-                        <li>O processo seletivo foi pausado temporariamente</li>
-                        <li>Você será notificado quando a vaga for reativada</li>
-                        <li>Não há ação necessária de sua parte</li>
-                    </ul>
-                    
-                    <div class="highlight">
-                        <p><strong>💡 Sugestão:</strong> Continue explorando outras oportunidades enquanto aguarda!</p>
+                    <div style="padding: 20px;">
+                        <p style="font-size: 16px; line-height: 1.6; color: #333;">{corpo}</p>
                     </div>
-                    
-                    <a href="#/dashboard" class="action-button">Ver Outras Vagas</a>
                 </div>
                 {self._gerar_footer()}
             </div>
@@ -253,23 +259,8 @@ class EmailTemplateManager:
 
     def template_relatorio_empresa(self, dados):
         """Template para relatório da empresa"""
-        return f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>📊 Relatório de Vagas - {dados['empresa_nome']}</title>
-            {self.base_style}
-        </head>
-        <body>
-            <div class="email-container">
-                <div class="email-header">
-                    <h1>📊 RELATÓRIO SEMANAL</h1>
-                    <h2>Suas Vagas em Números</h2>
-                </div>
-                <div class="email-body">
+        corpo = f"""
                     <p>Olá, <strong>{dados['empresa_nome']}</strong>!</p>
-                    
                     <h3>📈 Resumo da Semana:</h3>
                     <table class="stats-table">
                         <tr>
@@ -289,15 +280,35 @@ class EmailTemplateManager:
                             <td><span class="badge urgent">{dados['vagas_urgentes']}</span></td>
                         </tr>
                     </table>
-                    
                     <h3>🎯 Top Vagas por Performance:</h3>
                     {self._gerar_lista_top_vagas(dados.get('top_vagas', []))}
-                    
                     <div class="highlight">
                         <p><strong>💡 Dica da Semana:</strong> Vagas com descrições detalhadas e requisitos claros atraem 40% mais candidatos qualificados!</p>
                     </div>
-                    
                     <a href="#/dashboard" class="action-button">Ver Dashboard Completo</a>
+        """
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>📊 Relatório de Vagas - {dados['empresa_nome']}</title>
+            {self.base_style}
+        </head>
+        <body>
+            <div class="email-container">
+                <div class="email-header">
+                    <h1>📊 RELATÓRIO SEMANAL</h1>
+                    <h2>Suas Vagas em Números</h2>
+                </div>
+                <div class="email-body">
+                    <div style="text-align: center; margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px;">
+                        <h2 style="margin: 0 0 10px 0; font-size: 24px; font-weight: bold;">Vaboo!</h2>
+                        <p style="margin: 0; font-size: 14px; opacity: 0.9;">Simplicidade, agilidade e inteligência</p>
+                    </div>
+                    <div style="padding: 20px;">
+                        <p style="font-size: 16px; line-height: 1.6; color: #333;">{corpo}</p>
+                    </div>
                 </div>
                 {self._gerar_footer()}
             </div>
@@ -307,27 +318,11 @@ class EmailTemplateManager:
 
     def template_recomendacao_ia(self, dados):
         """Template para recomendações da IA"""
-        return f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <title>🤖 Recomendações Personalizadas da IA</title>
-            {self.base_style}
-        </head>
-        <body>
-            <div class="email-container">
-                <div class="email-header">
-                    <h1>🤖 IA ASSISTANT</h1>
-                    <h2>Recomendações Personalizadas</h2>
-                </div>
-                <div class="email-body">
+        corpo = f"""
                     <p>Olá, <strong>{dados['candidato_nome']}</strong>!</p>
-                    
                     <div class="highlight">
                         <p>Baseado na análise do seu perfil, nossa IA identificou <strong>{len(dados['recomendacoes'])} oportunidades</strong> perfeitas para você!</p>
                     </div>
-                    
                     <h3>📊 Análise do seu Perfil:</h3>
                     <table class="stats-table">
                         <tr>
@@ -343,14 +338,34 @@ class EmailTemplateManager:
                             <td><span class="badge">{dados['analise']['score_geral']}/100</span></td>
                         </tr>
                     </table>
-                    
                     <h3>🎯 Vagas Recomendadas:</h3>
                     {self._gerar_lista_recomendacoes(dados['recomendacoes'])}
-                    
                     <h3>💡 Dicas de Melhoria:</h3>
                     {self._gerar_lista_dicas(dados.get('dicas', []))}
-                    
                     <a href="#/dashboard" class="action-button">Ver Recomendações Completas</a>
+        """
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>🤖 Recomendações Personalizadas da IA</title>
+            {self.base_style}
+        </head>
+        <body>
+            <div class="email-container">
+                <div class="email-header">
+                    <h1>🤖 IA ASSISTANT</h1>
+                    <h2>Recomendações Personalizadas</h2>
+                </div>
+                <div class="email-body">
+                    <div style="text-align: center; margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px;">
+                        <h2 style="margin: 0 0 10px 0; font-size: 24px; font-weight: bold;">Vaboo!</h2>
+                        <p style="margin: 0; font-size: 14px; opacity: 0.9;">Simplicidade, agilidade e inteligência</p>
+                    </div>
+                    <div style="padding: 20px;">
+                        <p style="font-size: 16px; line-height: 1.6; color: #333;">{corpo}</p>
+                    </div>
                 </div>
                 {self._gerar_footer()}
             </div>
