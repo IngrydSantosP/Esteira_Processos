@@ -1,10 +1,6 @@
-- Ajustar menu da versão responsiva opções centralizadas;
-- Ajustar menu cadastro para campos maiores layout mais moderno;
-- Confirmar senha cadastro empresa;
-- Tirar a parte do home e substituir por inicio ou outra palavra;
-- Retirar mensagens apos sair do usuario em ambos dashboards;
-- Retirar Configuração e substituir por imagem redonda e aplicar função ao clicar para exibir o nome e colocar opção sair la também;
-- Arrumar modal e encerramento;
-- Apos clicar na parte de ver candidatos colocar o botão de encerrar vaga por la;
-- Retirar corações do favorito e também retirar msg de Remover favorito;
-- E retirar opção de encerrar vagas pelos favoritos;
+python -m venv venv
+venv\Scripts\activate
+pip install flask pymupdf python-dotenv schedule
+py app.py
+
+
