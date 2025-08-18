@@ -19,6 +19,9 @@ from utils.notifications import (obter_historico_notificacoes,
                                  notification_system)
 from utils.ia_assistant import IAAssistant
 from scheduler import iniciar_scheduler_background
+from functools import lru_cache
+import threading
+from collections import Counter
 
 data_brasil = (datetime.utcnow() -
                timedelta(hours=3)).strftime('%Y-%m-%d %H:%M:%S')
@@ -27,20 +30,55 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# Inicializar assistente IA
-ia_assistant = IAAssistant()
+# Cache para conexões de banco
+_db_connections = threading.local()
+
+def get_db_connection():
+    """Obtém conexão de banco otimizada para evitar locks"""
+    # Sempre criar nova conexão para evitar locks
+    conn = sqlite3.connect('recrutamento.db',
+                          timeout=60.0,
+                          check_same_thread=False)
+    conn.execute('PRAGMA journal_mode=WAL')
+    conn.execute('PRAGMA synchronous=NORMAL')
+    conn.execute('PRAGMA cache_size=10000')
+    conn.execute('PRAGMA temp_store=memory')
+    conn.execute('PRAGMA busy_timeout=60000')
+    return conn
+
+# Cache de configuração
+@lru_cache(maxsize=1)
+def get_config():
+    return {
+        'MODO_IA': os.getenv('MODO_IA', 'local'),
+        'TOP_JOBS': int(os.getenv('TOP_JOBS', '3'))
+    }
+
+# Inicializar assistente IA (lazy loading)
+_ia_assistant = None
+
+def get_ia_assistant():
+    global _ia_assistant
+    if _ia_assistant is None:
+        _ia_assistant = IAAssistant()
+    return _ia_assistant
+
 app.secret_key = 'chave-secreta-mvp-recrutamento-2024'
 app.config['SESSION_PERMANENT'] = False
 app.config['SESSION_TYPE'] = 'filesystem'
 
-# Configurações do ambiente
-MODO_IA = os.getenv('MODO_IA', 'local')
-TOP_JOBS = int(os.getenv('TOP_JOBS', '3'))
+# Cache para avaliadores
+_avaliadores_cache = {}
 
+def get_avaliador(modo='local'):
+    """Cache de avaliadores para evitar recriar objetos"""
+    if modo not in _avaliadores_cache:
+        _avaliadores_cache[modo] = criar_avaliador(modo)
+    return _avaliadores_cache[modo]
 
-def gerar_feedback_ia_vaga(total, alta_compatibilidade, media_compatibilidade,
-                           baixa_compatibilidade):
-    """Gera feedback inteligente sobre os candidatos da vaga"""
+@lru_cache(maxsize=100)
+def gerar_feedback_ia_vaga_cached(total, alta_compatibilidade, media_compatibilidade, baixa_compatibilidade):
+    """Versão cached do feedback IA"""
     # Garantir que todos os valores são inteiros
     total = total or 0
     alta_compatibilidade = alta_compatibilidade or 0
@@ -85,10 +123,98 @@ def gerar_feedback_ia_vaga(total, alta_compatibilidade, media_compatibilidade,
         'icone': '⚠️'
     }
 
-
 @app.route('/')
 def index():
-    return render_template('index.html')
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        '''SELECT v.id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido,
+                  v.tipo_vaga, v.diferenciais, e.nome as empresa_nome,
+                  v.localizacao_cidade, v.localizacao_estado
+           FROM vagas v
+           JOIN empresas e ON v.empresa_id = e.id
+           WHERE v.status = 'Ativa'
+           ORDER BY v.data_criacao DESC
+           LIMIT 10''') # Limitando a 10 vagas mais recentes
+
+    vagas_raw = cursor.fetchall()
+
+    # Processar as vagas para o template
+    vagas = []
+    for vaga in vagas_raw:
+        vaga_dict = {
+            'id':
+            vaga[0],
+            'titulo':
+            vaga[1],
+            'descricao':
+            vaga[2][:100] +
+            '...' if len(vaga[2]) > 100 else vaga[2],  # Truncar descrição
+            'requisitos':
+            vaga[3],
+            'salario_oferecido':
+            vaga[4],
+            'tipo_vaga':
+            vaga[5] or 'Presencial',
+            'diferenciais':
+            vaga[6] or '',
+            'empresa_nome':
+            vaga[7],
+            'localizacao':
+            f"{vaga[8]}, {vaga[9]}" if vaga[8] and vaga[9] else
+            (vaga[8] or vaga[9] or 'Não informado')
+        }
+        vagas.append(vaga_dict)
+
+    return render_template('index.html', vagas=vagas)
+
+
+@app.route('/vaga-publico/<int:vaga_id>')
+def detalhes_vaga_publico(vaga_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        '''
+        SELECT v.*, e.nome as empresa_nome
+        FROM vagas v
+        JOIN empresas e ON v.empresa_id = e.id
+        WHERE v.id = ? AND v.status = 'Ativa'
+    ''', (vaga_id, ))
+    vaga_data = cursor.fetchone()
+
+    if not vaga_data:
+        flash('Vaga não encontrada ou não está mais ativa', 'error')
+        return redirect(url_for('index'))
+
+    vaga = {
+        'id':
+        vaga_data[0],
+        'titulo':
+        vaga_data[2],
+        'descricao':
+        vaga_data[3],
+        'requisitos':
+        vaga_data[4],
+        'salario_oferecido':
+        vaga_data[5],
+        'tipo_vaga':
+        vaga_data[7] or 'Presencial',
+        'endereco_vaga':
+        vaga_data[8],
+        'diferenciais':
+        vaga_data[11],
+        'data_criacao':
+        datetime.strptime(vaga_data[6], '%Y-%m-%d %H:%M:%S')
+        if vaga_data[6] else None
+    }
+
+    empresa = {'nome': vaga_data[12]}
+
+    return render_template('detalhes_vaga_publico.html',
+                           vaga=vaga,
+                           empresa=empresa)
 
 
 @app.route('/login_empresa', methods=['GET', 'POST'])
@@ -107,7 +233,7 @@ def login_empresa():
             flash('CNPJ deve ter exatamente 14 dígitos', 'error')
             return render_template('login_empresa.html')
 
-        conn = sqlite3.connect('recrutamento.db')
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         try:
@@ -145,7 +271,7 @@ def cadastro_empresa():
         estado = request.form.get('estado', '')
         cep = request.form.get('cep', '')
 
-        conn = sqlite3.connect('recrutamento.db')
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         try:
@@ -172,13 +298,12 @@ def login_candidato():
         email = request.form['email']
         senha = request.form['senha']
 
-        conn = sqlite3.connect('recrutamento.db')
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute('SELECT id, senha_hash FROM candidatos WHERE email = ?',
                        (email, ))
         candidato = cursor.fetchone()
-        conn.close()
 
         if candidato and check_password_hash(candidato[1], senha):
             session['candidato_id'] = candidato[0]
@@ -201,7 +326,7 @@ def cadastro_candidato():
         endereco_completo = request.form['endereco_completo']
         pretensao_salarial = float(request.form['pretensao_salarial'])
 
-        conn = sqlite3.connect('recrutamento.db')
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         try:
@@ -227,46 +352,52 @@ def dashboard_empresa():
         flash('Faça login para acessar esta página', 'error')
         return redirect(url_for('login_empresa'))
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
+    # Query otimizada com índices e CTEs para contagem de candidatos
     cursor.execute(
-        '''SELECT v.id, v.empresa_id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido, v.data_criacao, v.tipo_vaga, v.endereco_vaga, v.status, v.candidato_selecionado_id, v.diferenciais,
-               COALESCE(COUNT(DISTINCT ca.id), 0) as total_candidatos,
-               COALESCE(COUNT(CASE WHEN ca.score >= 80 THEN 1 END), 0) as candidatos_80_plus,
-               COALESCE(COUNT(CASE WHEN ca.score >= 60 AND ca.score < 80 THEN 1 END), 0) as candidatos_60_79,
-               COALESCE(COUNT(CASE WHEN ca.score < 60 THEN 1 END), 0) as candidatos_abaixo_60,
-               c.nome as candidato_contratado_nome,
-               ca_contratado.posicao as candidato_contratado_posicao,
-               ca_contratado.data_candidatura as data_contratacao_candidatura
-           FROM vagas v
-           LEFT JOIN candidaturas ca ON v.id = ca.vaga_id
-           LEFT JOIN candidatos c ON v.candidato_selecionado_id = c.id
-           LEFT JOIN candidaturas ca_contratado ON v.candidato_selecionado_id = ca_contratado.candidato_id AND v.id = ca_contratado.vaga_id
-           WHERE v.empresa_id = ?
-           GROUP BY v.id, v.empresa_id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido, v.data_criacao, v.tipo_vaga, v.endereco_vaga, v.status, v.candidato_selecionado_id, v.diferenciais, c.nome, ca_contratado.posicao, ca_contratado.data_candidatura
-           ORDER BY v.data_criacao DESC''', (session['empresa_id'], ))
+        '''
+        WITH CandidatoStats AS (
+            SELECT 
+                vaga_id,
+                COUNT(*) as total_candidatos,
+                SUM(CASE WHEN score >= 80 THEN 1 ELSE 0 END) as candidatos_80_plus,
+                SUM(CASE WHEN score >= 60 AND score < 80 THEN 1 ELSE 0 END) as candidatos_60_79,
+                SUM(CASE WHEN score < 60 THEN 1 ELSE 0 END) as candidatos_abaixo_60
+            FROM candidaturas
+            GROUP BY vaga_id
+        )
+        SELECT 
+            v.id, v.empresa_id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido, 
+            v.data_criacao, v.tipo_vaga, v.endereco_vaga, v.status, v.candidato_selecionado_id, 
+            v.diferenciais,
+            COALESCE(cs.total_candidatos, 0) as total_candidatos,
+            COALESCE(cs.candidatos_80_plus, 0) as candidatos_80_plus,
+            COALESCE(cs.candidatos_60_79, 0) as candidatos_60_79,
+            COALESCE(cs.candidatos_abaixo_60, 0) as candidatos_abaixo_60,
+            c.nome as candidato_contratado_nome
+        FROM vagas v
+        LEFT JOIN CandidatoStats cs ON v.id = cs.vaga_id
+        LEFT JOIN candidatos c ON v.candidato_selecionado_id = c.id
+        WHERE v.empresa_id = ?
+        ORDER BY v.data_criacao DESC
+        ''', (session['empresa_id'], ))
 
     vagas_com_stats = cursor.fetchall()
-    conn.close()
 
     vagas_processadas = []
     for vaga in vagas_com_stats:
-        # Verificar se data_criacao é timestamp ou string
-        if isinstance(vaga[6], str):
-            # Se for string, tentar converter para datetime
-            try:
-                data_criacao = datetime.strptime(
-                    vaga[6], '%Y-%m-%d %H:%M:%S').strftime('%d/%m/%Y')
-            except:
-                data_criacao = vaga[6][:10] if vaga[
-                    6] else 'N/A'  # Pegar apenas a data
-        else:
-            # Se for timestamp
-            data_criacao = datetime.utcfromtimestamp(
-                vaga[6]).strftime('%d/%m/%Y') if vaga[6] else 'N/A'
+        # Formatação de data otimizada
+        try:
+            if isinstance(vaga[6], str):
+                data_criacao = datetime.strptime(vaga[6], '%Y-%m-%d %H:%M:%S').strftime('%d/%m/%Y')
+            else: # Assume que é um timestamp numérico
+                data_criacao = datetime.utcfromtimestamp(vaga[6]).strftime('%d/%m/%Y') if vaga[6] else 'N/A'
+        except (ValueError, TypeError):
+            data_criacao = vaga[6][:10] if vaga[6] else 'N/A' # Fallback para string curta
 
-        # Garantir que todos os valores sejam tratados corretamente
+        # Conversão segura para inteiros
         total_candidatos = int(vaga[12]) if vaga[12] is not None else 0
         candidatos_80_plus = int(vaga[13]) if vaga[13] is not None else 0
         candidatos_60_79 = int(vaga[14]) if vaga[14] is not None else 0
@@ -290,20 +421,13 @@ def dashboard_empresa():
             'candidatos_60_79': candidatos_60_79,
             'candidatos_abaixo_60': candidatos_abaixo_60,
             'candidato_contratado': {
-                'nome': vaga[16] if len(vaga) > 16 and vaga[16] else None,
-                'posicao': vaga[17] if len(vaga) > 17 and vaga[17] else None
+                'nome': vaga[16] if len(vaga) > 16 and vaga[16] else None
             } if vaga[9] == 'Concluída' and len(vaga) > 16 and vaga[16] else None,
-            'data_contratacao': vaga[18] if len(vaga) > 18 and vaga[18] and vaga[9] == 'Concluída' else data_criacao if vaga[9] == 'Concluída' else None,
-            'feedback_ia': gerar_feedback_ia_vaga(total_candidatos, candidatos_80_plus, candidatos_60_79, candidatos_abaixo_60)
+            'feedback_ia': gerar_feedback_ia_vaga_cached(total_candidatos, candidatos_80_plus, candidatos_60_79, candidatos_abaixo_60)
         }
         vagas_processadas.append(vaga_dict)
 
     return render_template('dashboard_empresa.html', vagas=vagas_processadas)
-
-
-from flask import render_template, request, redirect, url_for, session, flash
-from datetime import datetime
-import sqlite3
 
 
 @app.route('/criar_vaga', methods=['GET', 'POST'])
@@ -323,8 +447,7 @@ def criar_vaga():
         categoria_id = request.form.get('categoria_id') or None
         nova_categoria = request.form.get('nova_categoria', '').strip()
         urgencia_contratacao = request.form.get('urgencia_contratacao', '')
-        data_congelamento_agendado = request.form.get(
-            'data_congelamento_agendado') or None
+        data_congelamento_agendado = request.form.get('data_congelamento_agendado') or None
         usar_endereco_empresa = 'usar_endereco_empresa' in request.form
 
         # Campos de localização
@@ -333,15 +456,14 @@ def criar_vaga():
         localizacao_estado = request.form.get('localizacao_estado', '')
         localizacao_cep = request.form.get('localizacao_cep', '')
 
-        conn = sqlite3.connect('recrutamento.db')
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         try:
             # Criar nova categoria, se aplicável
             if nova_categoria and (not categoria_id or categoria_id == 'nova'):
-                cursor.execute(
-                    'INSERT OR IGNORE INTO categorias (nome) VALUES (?)',
-                    (nova_categoria, ))
+                cursor.execute('INSERT OR IGNORE INTO categorias (nome) VALUES (?)',
+                               (nova_categoria, ))
                 cursor.execute('SELECT id FROM categorias WHERE nome = ?',
                                (nova_categoria, ))
                 categoria_result = cursor.fetchone()
@@ -350,28 +472,21 @@ def criar_vaga():
 
             # Buscar endereço da empresa, se solicitado
             if usar_endereco_empresa:
-                cursor.execute(
-                    'SELECT endereco, cidade, estado, cep FROM empresas WHERE id = ?',
-                    (session['empresa_id'], ))
+                cursor.execute('SELECT endereco, cidade, estado, cep FROM empresas WHERE id = ?',
+                               (session['empresa_id'], ))
                 endereco_empresa = cursor.fetchone()
                 if endereco_empresa:
-                    localizacao_endereco = endereco_empresa[
-                        0] or localizacao_endereco
-                    localizacao_cidade = endereco_empresa[
-                        1] or localizacao_cidade
-                    localizacao_estado = endereco_empresa[
-                        2] or localizacao_estado
+                    localizacao_endereco = endereco_empresa[0] or localizacao_endereco
+                    localizacao_cidade = endereco_empresa[1] or localizacao_cidade
+                    localizacao_estado = endereco_empresa[2] or localizacao_estado
                     localizacao_cep = endereco_empresa[3] or localizacao_cep
 
             # Validar data de congelamento agendado
             if data_congelamento_agendado:
                 try:
-                    congelamento_date = datetime.strptime(
-                        data_congelamento_agendado, '%Y-%m-%d')
+                    congelamento_date = datetime.strptime(data_congelamento_agendado, '%Y-%m-%d')
                     if congelamento_date <= datetime.now():
-                        flash(
-                            'A data de congelamento precisa ser uma data futura.',
-                            'error')
+                        flash('A data de congelamento precisa ser uma data futura.', 'error')
                         return redirect(url_for('criar_vaga'))
                 except ValueError:
                     flash('Data de congelamento inválida.', 'error')
@@ -404,7 +519,7 @@ def criar_vaga():
             conn.close()
 
     # GET: renderizar formulário
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('SELECT id, nome FROM categorias ORDER BY nome')
     categorias = [{'id': row[0], 'nome': row[1]} for row in cursor.fetchall()]
@@ -420,7 +535,7 @@ def candidatos_vaga(vaga_id):
     if 'empresa_id' not in session:
         return redirect(url_for('login_empresa'))
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     cursor.execute(
@@ -447,7 +562,7 @@ def dashboard_candidato():
     if 'candidato_id' not in session:
         return redirect(url_for('login_candidato'))
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     # Verifica se o candidato já enviou currículo
@@ -490,7 +605,7 @@ def dashboard_candidato():
     # Agora busca vagas disponíveis que o candidato ainda não se candidatou
     cursor.execute(
         '''
-        SELECT v.id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido, 
+        SELECT v.id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido,
                e.nome as empresa_nome, v.diferenciais, v.tipo_vaga, v.endereco_vaga,
                CASE WHEN cvf.id IS NOT NULL THEN 1 ELSE 0 END as is_favorita
         FROM vagas v
@@ -505,7 +620,7 @@ def dashboard_candidato():
     # Buscar vagas favoritas (com e sem candidatura)
     cursor.execute(
         '''
-        SELECT v.id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido, 
+        SELECT v.id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido,
                e.nome as empresa_nome, v.diferenciais, v.tipo_vaga, v.endereco_vaga,
                CASE WHEN ca.id IS NOT NULL THEN 1 ELSE 0 END as ja_candidatou,
                ca.score, ca.posicao
@@ -527,7 +642,8 @@ def dashboard_candidato():
     conn.close()
 
     # Calcula score para vagas disponíveis
-    avaliador = criar_avaliador(MODO_IA)
+    config = get_config()
+    avaliador = get_avaliador(config['MODO_IA'])
     vagas_com_score = []
     for vaga in vagas_disponiveis:
         score = avaliador.calcular_score(
@@ -572,7 +688,7 @@ def dashboard_candidato():
 
     # Ordena pelas melhores recomendações
     vagas_com_score.sort(key=lambda x: x[9], reverse=True)
-    top_vagas = vagas_com_score[:TOP_JOBS]
+    top_vagas = vagas_com_score[:config['TOP_JOBS']]
 
     return render_template('dashboard_candidato.html',
                            vagas_recomendadas=top_vagas,
@@ -633,8 +749,9 @@ def candidatar(vaga_id):
         return redirect(url_for('login_candidato'))
 
     from utils.helpers import processar_candidatura
+    config = get_config()
     resultado = processar_candidatura(session['candidato_id'], vaga_id,
-                                      MODO_IA)
+                                      config['MODO_IA'])
 
     # Processar mensagens para garantir que estão em formato correto
     for mensagem in resultado['mensagens']:
@@ -651,7 +768,7 @@ def api_candidatos_vaga(vaga_id):
     if 'empresa_id' not in session:
         return jsonify({'error': 'Não autorizado'}), 401
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     cursor.execute(
@@ -691,30 +808,33 @@ def encerrar_vaga():
     if not vaga_id or not acao:
         return jsonify({'error': 'Dados incompletos'}), 400
 
-    conn = sqlite3.connect('recrutamento.db')
+    # Usar nova conexão com timeout maior e WAL mode
+    conn = sqlite3.connect('recrutamento.db', timeout=60.0)
+    conn.execute('PRAGMA journal_mode=WAL')
+    conn.execute('PRAGMA busy_timeout=60000')
+    conn.execute('PRAGMA synchronous=NORMAL')
     cursor = conn.cursor()
 
-    # Verificar se a vaga pertence à empresa
-    cursor.execute('SELECT titulo FROM vagas WHERE id = ? AND empresa_id = ?',
-                   (vaga_id, session['empresa_id']))
-    vaga_info = cursor.fetchone()
-    if not vaga_info:
-        conn.close()
-        return jsonify({'error': 'Vaga não encontrada'}), 404
-
-    vaga_titulo = vaga_info[0]
-
     try:
+        # Verificar se a vaga pertence à empresa
+        cursor.execute('SELECT titulo FROM vagas WHERE id = ? AND empresa_id = ?',
+                       (vaga_id, session['empresa_id']))
+        vaga_info = cursor.fetchone()
+        if not vaga_info:
+            return jsonify({'error': 'Vaga não encontrada'}), 404
+
+        vaga_titulo = vaga_info[0]
+
         # Buscar candidatos da vaga
-        cursor.execute(
-            'SELECT candidato_id FROM candidaturas WHERE vaga_id = ?',
-            (vaga_id, ))
+        cursor.execute('SELECT candidato_id FROM candidaturas WHERE vaga_id = ?',
+                       (vaga_id, ))
         todos_candidatos = [row[0] for row in cursor.fetchall()]
 
         if acao == 'contratar':
             if not candidato_id:
                 return jsonify({'error': 'Candidato não selecionado'}), 400
 
+            # Verificar se o candidato se candidatou
             cursor.execute(
                 'SELECT id FROM candidaturas WHERE candidato_id = ? AND vaga_id = ?',
                 (candidato_id, vaga_id))
@@ -723,7 +843,8 @@ def encerrar_vaga():
                     {'error': 'Candidato não se candidatou a esta vaga'}), 400
 
             # Verificar se o candidato existe
-            cursor.execute('SELECT nome FROM candidatos WHERE id = ?', (candidato_id,))
+            cursor.execute('SELECT nome FROM candidatos WHERE id = ?',
+                           (candidato_id, ))
             candidato_info = cursor.fetchone()
 
             if not candidato_info:
@@ -731,41 +852,66 @@ def encerrar_vaga():
 
             # Atualizar vaga como concluída
             cursor.execute(
-                '''UPDATE vagas 
-                   SET status = "Concluída", candidato_selecionado_id = ? 
+                '''UPDATE vagas
+                   SET status = "Concluída", candidato_selecionado_id = ?
                    WHERE id = ?''', (candidato_id, vaga_id))
 
-            # Notificar candidato contratado
-            notification_system.notificar_contratacao(candidato_id, vaga_id,
-                                                      session['empresa_id'],
-                                                      mensagem_personalizada)
+            conn.commit()  # Commit imediato
+
+            # Notificar candidato contratado em nova conexão
+            print(f"📋 Lista de todos os candidatos: {todos_candidatos}")
+            print(f"🎯 Candidato selecionado: {candidato_id}")
+
+            try:
+                sucesso_contratacao = notification_system.notificar_contratacao(
+                    candidato_id, vaga_id, session['empresa_id'], mensagem_personalizada)
+                print(f"✅ Notificação de contratação enviada: {sucesso_contratacao}")
+            except Exception as e:
+                print(f"❌ Erro ao notificar contratação: {e}")
 
             # Notificar outros candidatos
-            for cid in todos_candidatos:
-                if cid != candidato_id:
-                    msg = f"A vaga '{vaga_titulo}' foi concluída. Outro candidato foi selecionado."
-                    notification_system.criar_notificacao(
-                        cid, msg, vaga_id, session['empresa_id'],
-                        'vaga_concluida')
+            outros_candidatos = [cid for cid in todos_candidatos if cid != candidato_id]
+            print(f"📢 Notificando outros {len(outros_candidatos)} candidatos")
 
-                    cursor.execute('SELECT email FROM candidatos WHERE id = ?',
-                                   (cid, ))
-                    email_result = cursor.fetchone()
+            for cid in outros_candidatos:
+                print(f"🔔 Processando notificação para candidato {cid}")
+                try:
+                    msg = f"A vaga '{vaga_titulo}' foi concluída. Outro candidato foi selecionado."
+                    sucesso_notif = notification_system.criar_notificacao(
+                        cid, msg, vaga_id, session['empresa_id'], 'vaga_concluida')
+                    print(f"📝 Notificação criada para candidato {cid}: {sucesso_notif}")
+
+                    # Buscar email em nova conexão
+                    conn_email = sqlite3.connect('recrutamento.db', timeout=30.0)
+                    cursor_email = conn_email.cursor()
+                    cursor_email.execute('SELECT email FROM candidatos WHERE id = ?', (cid, ))
+                    email_result = cursor_email.fetchone()
+                    conn_email.close()
+
                     if email_result:
                         notification_system.enviar_email(
-                            email_result[0], f"Vaga Concluída - {vaga_titulo}",
-                            msg)
+                            email_result[0], f"Vaga Concluída - {vaga_titulo}", msg)
+                        print(f"📧 Email enviado para candidato {cid}")
+                    else:
+                        print(f"⚠️ Email não encontrado para candidato {cid}")
+                except Exception as e:
+                    print(f"❌ Erro ao notificar candidato {cid}: {e}")
 
             response = {
                 'success': True,
-                'message': 'Candidato contratado com sucesso!'
+                'message': f'Candidato {candidato_info[0]} contratado com sucesso!'
             }
 
         elif acao == 'congelar':
-            cursor.execute(
-                'UPDATE vagas SET status = "Congelada" WHERE id = ?',
-                (vaga_id, ))
-            notification_system.notificar_vaga_congelada(vaga_id)
+            cursor.execute('UPDATE vagas SET status = "Congelada" WHERE id = ?',
+                           (vaga_id, ))
+            conn.commit()  # Commit imediato
+
+            try:
+                notification_system.notificar_vaga_congelada(vaga_id)
+            except Exception as e:
+                print(f"Erro ao notificar congelamento: {e}")
+
             response = {
                 'success': True,
                 'message': 'Vaga congelada com sucesso!'
@@ -773,12 +919,16 @@ def encerrar_vaga():
 
         elif acao == 'excluir':
             # Notificar antes de excluir
-            notification_system.notificar_vaga_excluida(vaga_id)
+            try:
+                notification_system.notificar_vaga_excluida(vaga_id)
+            except Exception as e:
+                print(f"Erro ao notificar exclusão: {e}")
 
             # Excluir candidaturas e vaga
-            cursor.execute('DELETE FROM candidaturas WHERE vaga_id = ?',
-                           (vaga_id, ))
+            cursor.execute('DELETE FROM candidaturas WHERE vaga_id = ?', (vaga_id, ))
             cursor.execute('DELETE FROM vagas WHERE id = ?', (vaga_id, ))
+            conn.commit()
+
             response = {
                 'success': True,
                 'message': 'Vaga excluída com sucesso!'
@@ -787,21 +937,28 @@ def encerrar_vaga():
         elif acao == 'reativar':
             cursor.execute('UPDATE vagas SET status = "Ativa" WHERE id = ?',
                            (vaga_id, ))
+            conn.commit()  # Commit imediato
 
             # Notificar candidatos sobre reativação
             for cid in todos_candidatos:
-                msg = f"Boa notícia! A vaga '{vaga_titulo}' foi reativada. Sua candidatura continua válida e o processo seletivo foi retomado."
-                notification_system.criar_notificacao(cid, msg, vaga_id,
-                                                      session['empresa_id'],
-                                                      'vaga_reativada')
+                try:
+                    msg = f"Boa notícia! A vaga '{vaga_titulo}' foi reativada. Sua candidatura continua válida e o processo seletivo foi retomado."
+                    notification_system.criar_notificacao(cid, msg, vaga_id,
+                                                          session['empresa_id'],
+                                                          'vaga_reativada')
 
-                cursor.execute('SELECT email FROM candidatos WHERE id = ?',
-                               (cid, ))
-                email_result = cursor.fetchone()
-                if email_result:
-                    notification_system.enviar_email(
-                        email_result[0], f"Vaga Reativada - {vaga_titulo}",
-                        msg)
+                    # Buscar email em nova conexão
+                    conn_email = sqlite3.connect('recrutamento.db', timeout=30.0)
+                    cursor_email = conn_email.cursor()
+                    cursor_email.execute('SELECT email FROM candidatos WHERE id = ?', (cid, ))
+                    email_result = cursor_email.fetchone()
+                    conn_email.close()
+
+                    if email_result:
+                        notification_system.enviar_email(
+                            email_result[0], f"Vaga Reativada - {vaga_titulo}", msg)
+                except Exception as e:
+                    print(f"Erro ao notificar reativação para candidato {cid}: {e}")
 
             response = {
                 'success': True,
@@ -811,15 +968,30 @@ def encerrar_vaga():
         else:
             return jsonify({'error': 'Ação inválida'}), 400
 
-        conn.commit()
         return jsonify(response)
 
+    except sqlite3.OperationalError as e:
+        if 'database is locked' in str(e):
+            # Tentar novamente após delay
+            import time
+            time.sleep(1)
+            try:
+                conn.rollback()
+                return jsonify({'error': 'Sistema ocupado, tente novamente'}), 503
+            except:
+                pass
+        conn.rollback()
+        print(f"Erro de banco ao encerrar vaga: {e}")
+        return jsonify({'error': f'Erro de banco: {str(e)}'}), 500
     except Exception as e:
         conn.rollback()
         print(f"Erro ao encerrar vaga: {e}")
         return jsonify({'error': f'Erro ao processar ação: {str(e)}'}), 500
     finally:
-        conn.close()
+        try:
+            conn.close()
+        except:
+            pass
 
 
 @app.route('/editar_perfil_candidato', methods=['GET', 'POST'])
@@ -827,7 +999,7 @@ def editar_perfil_candidato():
     if 'candidato_id' not in session:
         return redirect(url_for('login_candidato'))
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     if request.method == 'POST':
@@ -841,7 +1013,7 @@ def editar_perfil_candidato():
 
         cursor.execute(
             '''
-            UPDATE candidatos 
+            UPDATE candidatos
             SET nome = ?, telefone = ?, linkedin = ?, pretensao_salarial = ?,
                 experiencia = ?, competencias = ?, resumo_profissional = ?
             WHERE id = ?
@@ -856,7 +1028,7 @@ def editar_perfil_candidato():
 
     cursor.execute(
         '''
-        SELECT nome, telefone, linkedin, pretensao_salarial, 
+        SELECT nome, telefone, linkedin, pretensao_salarial,
                experiencia, competencias, resumo_profissional
         FROM candidatos WHERE id = ?
     ''', (session['candidato_id'], ))
@@ -873,7 +1045,7 @@ def editar_vaga(vaga_id):
         flash('Acesso negado', 'error')
         return redirect(url_for('login_empresa'))
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     if request.method == 'POST':
@@ -888,8 +1060,7 @@ def editar_vaga(vaga_id):
         categoria_id = request.form.get('categoria_id') or None
         nova_categoria = request.form.get('nova_categoria', '').strip()
         urgencia_contratacao = request.form.get('urgencia_contratacao', '')
-        data_congelamento_agendado = request.form.get(
-            'data_congelamento_agendado') or None
+        data_congelamento_agendado = request.form.get('data_congelamento_agendado') or None
         usar_endereco_empresa = 'usar_endereco_empresa' in request.form
 
         # Campos de localização
@@ -901,9 +1072,8 @@ def editar_vaga(vaga_id):
         try:
             # Se nova categoria foi informada, criar/buscar categoria
             if nova_categoria and (not categoria_id or categoria_id == 'nova'):
-                cursor.execute(
-                    'INSERT OR IGNORE INTO categorias (nome) VALUES (?)',
-                    (nova_categoria, ))
+                cursor.execute('INSERT OR IGNORE INTO categorias (nome) VALUES (?)',
+                               (nova_categoria, ))
                 cursor.execute('SELECT id FROM categorias WHERE nome = ?',
                                (nova_categoria, ))
                 categoria_result = cursor.fetchone()
@@ -912,22 +1082,18 @@ def editar_vaga(vaga_id):
 
             # Se usar endereço da empresa, buscar dados da empresa
             if usar_endereco_empresa:
-                cursor.execute(
-                    'SELECT endereco, cidade, estado, cep FROM empresas WHERE id = ?',
-                    (session['empresa_id'], ))
+                cursor.execute('SELECT endereco, cidade, estado, cep FROM empresas WHERE id = ?',
+                               (session['empresa_id'], ))
                 endereco_empresa = cursor.fetchone()
                 if endereco_empresa:
-                    localizacao_endereco = endereco_empresa[
-                        0] or localizacao_endereco
-                    localizacao_cidade = endereco_empresa[
-                        1] or localizacao_cidade
-                    localizacao_estado = endereco_empresa[
-                        2] or localizacao_estado
+                    localizacao_endereco = endereco_empresa[0] or localizacao_endereco
+                    localizacao_cidade = endereco_empresa[1] or localizacao_cidade
+                    localizacao_estado = endereco_empresa[2] or localizacao_estado
                     localizacao_cep = endereco_empresa[3] or localizacao_cep
 
             cursor.execute(
                 '''
-                UPDATE vagas 
+                UPDATE vagas
                 SET titulo = ?, descricao = ?, requisitos = ?, salario_oferecido = ?, tipo_vaga = ?, diferenciais = ?,
                     categoria_id = ?, urgencia_contratacao = ?, data_congelamento_agendado = ?, usar_endereco_empresa = ?,
                     localizacao_endereco = ?, localizacao_cidade = ?, localizacao_estado = ?, localizacao_cep = ?
@@ -987,7 +1153,7 @@ def detalhes_vaga(vaga_id):
     if 'candidato_id' not in session:
         return redirect(url_for('login_candidato'))
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     # Buscar dados da vaga e empresa
@@ -1008,7 +1174,7 @@ def detalhes_vaga(vaga_id):
     # Verificar se já se candidatou
     cursor.execute(
         '''
-        SELECT id, score FROM candidaturas 
+        SELECT id, score FROM candidaturas
         WHERE candidato_id = ? AND vaga_id = ?
     ''', (session['candidato_id'], vaga_id))
     candidatura = cursor.fetchone()
@@ -1052,8 +1218,8 @@ def detalhes_vaga(vaga_id):
     score = None
 
     if candidato_data:
-        from avaliador import criar_avaliador
-        avaliador = criar_avaliador(MODO_IA)
+        config = get_config()
+        avaliador = get_avaliador(config['MODO_IA'])
 
         score = candidatura[1] if candidatura else avaliador.calcular_score(
             candidato_data[0], vaga['requisitos'], candidato_data[2],
@@ -1072,7 +1238,7 @@ def minhas_candidaturas():
     if 'candidato_id' not in session:
         return redirect(url_for('login_candidato'))
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     cursor.execute(
@@ -1085,7 +1251,7 @@ def minhas_candidaturas():
         JOIN empresas e ON v.empresa_id = e.id
         WHERE ca.candidato_id = ?
         ORDER BY ca.data_candidatura DESC
-    ''', (session['candidato_id'], ))
+        ''', (session['candidato_id'], ))
 
     candidaturas = cursor.fetchall()
     conn.close()
@@ -1099,7 +1265,7 @@ def baixar_curriculo(candidato_id):
     if 'empresa_id' not in session:
         return redirect(url_for('login_empresa'))
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     # Verificar se a empresa tem acesso ao candidato (através de candidatura)
@@ -1156,7 +1322,7 @@ def relatorio_empresa():
     empresa_id = session['empresa_id']
 
     # Buscar vagas da empresa para o filtro
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
         'SELECT id, titulo FROM vagas WHERE empresa_id = ? ORDER BY titulo',
@@ -1235,7 +1401,7 @@ def cancelar_candidatura():
     data = request.get_json()
     vaga_id = data.get('vaga_id')
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     # Verificar se a candidatura existe
@@ -1260,7 +1426,7 @@ def cancelar_candidatura():
         SET posicao = (
             SELECT COUNT(*) + 1
             FROM candidaturas c2
-            WHERE c2.vaga_id = candidaturas.vaga_id 
+            WHERE c2.vaga_id = candidaturas.vaga_id
             AND c2.score > candidaturas.score
         )
         WHERE vaga_id = ?
@@ -1277,66 +1443,12 @@ def reativar_vaga_route(vaga_id):
     if 'empresa_id' not in session:
         return jsonify({'error': 'Não autorizado'}), 401
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('UPDATE vagas SET status = "Ativa" WHERE id = ?',
                    (vaga_id, ))
     conn.commit()
     conn.close()
-    return redirect(url_for('dashboard_empresa'))
-
-
-@app.route('/duplicar_vaga/<int:vaga_id>')
-def duplicar_vaga(vaga_id):
-    """Duplicar uma vaga existente"""
-    if 'empresa_id' not in session:
-        flash('Acesso negado', 'error')
-        return redirect(url_for('login_empresa'))
-
-    conn = sqlite3.connect('recrutamento.db')
-    cursor = conn.cursor()
-
-    try:
-        # Buscar dados da vaga original
-        cursor.execute(
-            '''
-            SELECT titulo, descricao, requisitos, salario_oferecido, tipo_vaga, diferenciais,
-                   categoria_id, urgencia_contratacao, usar_endereco_empresa,
-                   localizacao_endereco, localizacao_cidade, localizacao_estado, localizacao_cep
-            FROM vagas 
-            WHERE id = ? AND empresa_id = ?
-        ''', (vaga_id, session['empresa_id']))
-
-        vaga_original = cursor.fetchone()
-
-        if not vaga_original:
-            flash('Vaga não encontrada', 'error')
-            return redirect(url_for('dashboard_empresa'))
-
-        # Criar nova vaga com dados duplicados
-        cursor.execute(
-            '''
-            INSERT INTO vagas (titulo, descricao, requisitos, salario_oferecido, tipo_vaga, diferenciais,
-                             empresa_id, data_criacao, status, categoria_id, urgencia_contratacao, 
-                             usar_endereco_empresa, localizacao_endereco, localizacao_cidade, 
-                             localizacao_estado, localizacao_cep)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Ativa', ?, ?, ?, ?, ?, ?, ?)
-        ''', (f"[CÓPIA] {vaga_original[0]}", vaga_original[1],
-              vaga_original[2], vaga_original[3],
-              vaga_original[4], vaga_original[5], session['empresa_id'],
-              datetime.now().strftime('%Y-%m-%d %H:%M:%S'), vaga_original[6],
-              vaga_original[7], vaga_original[8], vaga_original[9],
-              vaga_original[10], vaga_original[11], vaga_original[12]))
-
-        conn.commit()
-        flash('Vaga duplicada com sucesso!', 'success')
-
-    except Exception as e:
-        flash(f'Erro ao duplicar vaga: {str(e)}', 'error')
-        print(f"Erro detalhado: {e}")
-    finally:
-        conn.close()
-
     return redirect(url_for('dashboard_empresa'))
 
 
@@ -1346,73 +1458,260 @@ def api_notificacoes():
     if 'candidato_id' not in session:
         return jsonify({'notificacoes': []})
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Verificar se a coluna tipo existe, se não, criar
-    cursor.execute("PRAGMA table_info(notificacoes)")
-    columns = [column[1] for column in cursor.fetchall()]
+    try:
+        # Verificar e criar colunas necessárias (executar apenas uma vez)
+        cursor.execute("PRAGMA table_info(notificacoes)")
+        columns = [column[1] for column in cursor.fetchall()]
 
-    if 'tipo' not in columns:
-        cursor.execute('ALTER TABLE notificacoes ADD COLUMN tipo TEXT DEFAULT "geral"')
-        conn.commit()
+        if 'tipo' not in columns:
+            cursor.execute('ALTER TABLE notificacoes ADD COLUMN tipo TEXT DEFAULT "geral"')
+            conn.commit()
 
-    if 'titulo' not in columns:
-        cursor.execute('ALTER TABLE notificacoes ADD COLUMN titulo TEXT DEFAULT ""')
-        conn.commit()
+        if 'titulo' not in columns:
+            cursor.execute('ALTER TABLE notificacoes ADD COLUMN titulo TEXT DEFAULT ""')
+            conn.commit()
 
-    cursor.execute('''
-        SELECT n.id, n.candidato_id, n.tipo, n.mensagem, n.lida, 
-               COALESCE(n.data_envio, datetime('now')) as data_criacao,
-               n.vaga_id, n.empresa_id
-        FROM notificacoes n
-        WHERE n.candidato_id = ?
-        ORDER BY n.lida ASC, COALESCE(n.data_envio, datetime('now')) DESC
-    ''', (session['candidato_id'],))
+        # Buscar notificações
+        cursor.execute(
+            '''
+            SELECT n.id, n.candidato_id, COALESCE(n.tipo, 'geral') as tipo,
+                   n.mensagem, COALESCE(n.lida, 0) as lida,
+                   COALESCE(n.data_envio, datetime('now')) as data_criacao,
+                   n.vaga_id, n.empresa_id, v.titulo as vaga_titulo, e.nome as empresa_nome
+            FROM notificacoes n
+            LEFT JOIN vagas v ON n.vaga_id = v.id
+            LEFT JOIN empresas e ON n.empresa_id = e.id
+            WHERE n.candidato_id = ?
+            ORDER BY n.lida ASC, COALESCE(n.data_envio, datetime('now')) DESC
+            LIMIT 50
+        ''', (session['candidato_id'], ))
 
-    # Mapeamento de emojis por tipo
-    emojis_tipo = {
-        'contratacao': '🎉',
-        'vaga_congelada': '❄️',
-        'candidatura': '📋',
-        'vaga_nova': '✨',
-        'alteracao_vaga': '🔔',
-        'vaga_excluida': '❌',
-        'geral': '📢'
-    }
+        emojis_tipo = {
+            'contratacao': '🎉', 'vaga_congelada': '❄️', 'candidatura': '📋',
+            'vaga_nova': '✨', 'alteracao_vaga': '🔔', 'vaga_excluida': '❌',
+            'vaga_concluida': '✅', 'vaga_reativada': '🔄', 'geral': '📢'
+        }
 
-    notificacoes = []
-    from datetime import datetime, timedelta
+        notificacoes = []
+        for row in cursor.fetchall():
+            try:
+                data_str = row[5]
+                if 'T' in data_str:
+                    data_criacao = datetime.fromisoformat(data_str.replace('Z', '+00:00'))
+                else:
+                    data_criacao = datetime.strptime(data_str, '%Y-%m-%d %H:%M:%S')
+            except (ValueError, TypeError):
+                data_criacao = datetime.now()
 
-    for row in cursor.fetchall():
-        # Verificar se é notificação de contratação recente (30 dias)
-        data_criacao = datetime.strptime(row[5], '%Y-%m-%d %H:%M:%S')
-        dias_passados = (datetime.now() - data_criacao).days
-        is_contratacao_recente = row[2] == 'contratacao' and dias_passados <= 30
+            dias_passados = (datetime.now() - data_criacao).days
+            is_contratacao_recente = row[2] == 'contratacao' and dias_passados <= 30
 
-        # Gerar emoji baseado no conteúdo da mensagem se não tiver tipo específico
-        emoji = emojis_tipo.get(row[2], '📢')
-        if '🎉' in row[3] or 'PARABÉNS' in row[3]:
-            emoji = '🎉'
-        elif '❄️' in row[3] or 'congelada' in row[3]:
-            emoji = '❄️'
-        elif '❌' in row[3] or 'excluída' in row[3]:
-            emoji = '❌'
-        elif '📝' in row[3] or 'atualizada' in row[3]:
-            emoji = '🔔'
+            emoji = emojis_tipo.get(row[2], '📢')
+            mensagem = row[3] or ''
 
-        notificacoes.append({
-            'id': row[0],
-            'tipo': row[2],
-            'mensagem': row[3],
-            'data_criacao': row[5],
-            'lida': bool(row[4]),
-            'emoji': emoji,
-            'is_fixada': is_contratacao_recente
+            # Override emoji baseado no conteúdo
+            if any(palavra in mensagem.upper() for palavra in ['PARABÉNS', 'CONTRATADO', 'SELECIONADO']):
+                emoji = '🎉'
+            elif 'congelada' in mensagem.lower():
+                emoji = '❄️'
+            elif any(palavra in mensagem.lower() for palavra in ['excluída', 'cancelada']):
+                emoji = '❌'
+            elif any(palavra in mensagem.lower() for palavra in ['atualizada', 'alterada']):
+                emoji = '🔔'
+            elif any(palavra in mensagem.lower() for palavra in ['reativada', 'retomada']):
+                emoji = '🔄'
+
+            # Construir título da notificação
+            vaga_titulo = row[8]
+            empresa_nome = row[9]
+            if vaga_titulo and empresa_nome:
+                titulo = f"{vaga_titulo} - {empresa_nome}"
+            else:
+                titulo = mensagem.split('\n')[0][:50] if mensagem else 'Notificação'
+
+            notificacoes.append({
+                'id': row[0],
+                'tipo': row[2],
+                'mensagem': mensagem,
+                'data_criacao': data_criacao.strftime('%Y-%m-%d %H:%M:%S'),
+                'lida': bool(row[4]),
+                'emoji': emoji,
+                'is_fixada': is_contratacao_recente,
+                'titulo': titulo
+            })
+
+        return jsonify({'notificacoes': notificacoes, 'total': len(notificacoes)})
+
+    except Exception as e:
+        print(f"Erro na API de notificações: {e}")
+        return jsonify({'notificacoes': [], 'error': str(e)}), 500
+    finally:
+        conn.close()
+
+
+@app.route('/api/notificacoes/marcar-todas', methods=['POST'])
+def marcar_todas_lidas():
+    """API para marcar todas as notificações como lidas"""
+    if 'candidato_id' not in session:
+        return jsonify({'status': 'erro', 'mensagem': 'Não autenticado'}), 401
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE notificacoes SET lida = 1 WHERE candidato_id = ?",
+                   (session['candidato_id'], ))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'status': 'ok'})
+
+
+# Rota removida - já existe implementação acima
+
+@app.route('/api/dicas-favoritas')
+def obter_dicas_favoritas():
+    candidato_id = session.get('candidato_id')
+    if not candidato_id:
+        return jsonify({'success': False, 'error': 'Não autorizado'}), 401
+
+    try:
+        conn = sqlite3.connect('recrutamento.db')
+        cursor = conn.cursor()
+
+        # Buscar vagas favoritas do candidato
+        cursor.execute('''
+            SELECT v.id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido, 
+                   v.tipo_vaga, e.nome as empresa_nome, f.data_adicao as data_favoritado
+            FROM candidato_vaga_favorita f
+            JOIN vagas v ON f.vaga_id = v.id
+            JOIN empresas e ON v.empresa_id = e.id
+            WHERE f.candidato_id = ? AND v.status = 'Ativa'
+            ORDER BY f.data_adicao DESC
+            LIMIT 10
+        ''', (candidato_id,))
+
+        vagas_favoritas = cursor.fetchall()
+
+        if not vagas_favoritas:
+            return jsonify({
+                'success': False, 
+                'message': 'Adicione vagas aos favoritos para receber dicas personalizadas'
+            })
+
+        # Buscar dados do candidato
+        cursor.execute('''
+            SELECT nome, email, competencias, experiencia, resumo_profissional, pretensao_salarial
+            FROM candidatos 
+            WHERE id = ?
+        ''', (candidato_id,))
+
+        candidato_data = cursor.fetchone()
+        if not candidato_data:
+            return jsonify({'success': False, 'error': 'Candidato não encontrado'}), 404
+
+        # Gerar dicas baseadas nas vagas favoritas
+        dicas = gerar_dicas_personalizadas(vagas_favoritas, candidato_data)
+
+        return jsonify({
+            'success': True,
+            'dicas': dicas,
+            'vagas_analisadas': len(vagas_favoritas)
         })
 
-    conn.close()
-    return jsonify({'notificacoes': notificacoes})
+    except Exception as e:
+        print(f"Erro ao gerar dicas favoritas: {e}")
+        return jsonify({'success': False, 'error': 'Erro interno'}), 500
+    finally:
+        conn.close()
+
+def gerar_dicas_personalizadas(vagas_favoritas, candidato_data):
+    """Gera dicas personalizadas baseadas nas vagas favoritas"""
+    dicas = []
+
+    nome, email, competencias, experiencia, resumo_prof, pretensao_salarial = candidato_data
+
+    # Analisar requisitos mais comuns
+    todos_requisitos = []
+    salarios = []
+    tipos_vaga = []
+
+    for vaga in vagas_favoritas:
+        vaga_id, titulo, descricao, requisitos, salario, tipo_vaga, empresa, data_fav = vaga
+        if requisitos:
+            todos_requisitos.extend(requisitos.lower().split())
+        salarios.append(salario)
+        tipos_vaga.append(tipo_vaga)
+
+    # Palavras-chave mais frequentes
+    palavras_freq = Counter(todos_requisitos)
+    skills_demandadas = [palavra for palavra, freq in palavras_freq.most_common(10) 
+                        if len(palavra) > 3 and palavra not in ['para', 'com', 'das', 'dos', 'uma', 'ser', 'sua', 'seus', 'mais', 'pelo', 'pela', 'como', 'este', 'esta', 'você']]
+
+    # Dica 1: Competências em alta
+    if skills_demandadas:
+        competencias_usuario = competencias.lower() if competencias else ''
+        skills_faltando = [skill for skill in skills_demandadas[:5] 
+                          if skill not in competencias_usuario]
+
+        if skills_faltando:
+            dicas.append({
+                'categoria': 'competencias',
+                'titulo': 'Competências em Alta Demanda',
+                'descricao': f'As vagas que você favoritou frequentemente mencionam: {", ".join(skills_faltando[:3])}. Considere desenvolver essas habilidades.',
+                'acao': f'Procure cursos online sobre "{skills_faltando[0]}" ou adicione projetos relacionados ao seu portfólio.'
+            })
+
+    # Dica 2: Faixa salarial
+    if salarios:
+        salario_medio = sum(salarios) / len(salarios)
+        if pretensao_salarial and pretensao_salarial < salario_medio * 0.8:
+            dicas.append({
+                'categoria': 'negociacao',
+                'titulo': 'Potencial de Negociação Salarial',
+                'descricao': f'As vagas favoritas oferecem em média R$ {salario_medio:,.2f}, enquanto sua pretensão é R$ {pretensao_salarial:,.2f}.',
+                'acao': 'Considere revisar sua pretensão salarial ou destacar mais suas qualificações para justificar um valor maior.'
+            })
+
+    # Dica 3: Modalidade de trabalho
+    if tipos_vaga:
+        tipo_mais_comum = max(set(tipos_vaga), key=tipos_vaga.count)
+        dica_modalidade = {
+            'categoria': 'preparacao',
+            'titulo': f'Preparação para Trabalho {tipo_mais_comum}',
+            'descricao': f'A maioria das suas vagas favoritas é do tipo {tipo_mais_comum}. Prepare-se adequadamente para essa modalidade.',
+            'acao': ''
+        }
+        if tipo_mais_comum == "Remoto":
+            dica_modalidade['acao'] = 'Configure um ambiente de trabalho adequado em casa, com boa conexão e ergonomia.'
+        elif tipo_mais_comum == "Presencial":
+            dica_modalidade['acao'] = 'Prepare-se para deslocamentos, horários presenciais e interações no escritório.'
+        elif tipo_mais_comum == "Híbrido":
+            dica_modalidade['acao'] = 'Organize-se para alternar entre home office e escritório, gerenciando bem seu tempo.'
+        
+        dicas.append(dica_modalidade)
+
+    # Dica 4: Perfil profissional
+    if not resumo_prof or len(resumo_prof) < 100:
+        dicas.append({
+            'categoria': 'perfil',
+            'titulo': 'Melhore seu Resumo Profissional',
+            'descricao': 'Um resumo profissional bem estruturado pode aumentar suas chances de ser notado.',
+            'acao': 'Escreva um resumo de 2-3 parágrafos destacando suas principais conquistas, habilidades e objetivos profissionais.'
+        })
+
+    # Dica 5: Networking
+    empresas_favoritas = list(set([vaga[6] for vaga in vagas_favoritas]))
+    if len(empresas_favoritas) > 2:
+        dicas.append({
+            'categoria': 'networking',
+            'titulo': 'Oportunidades de Networking',
+            'descricao': f'Você demonstrou interesse em empresas como: {", ".join(empresas_favoritas[:3])}.',
+            'acao': 'Pesquise profissionais dessas empresas no LinkedIn e tente estabelecer conexões relevantes.'
+        })
+
+    return dicas
 
 
 @app.route('/api/notificacoes/marcar-lida', methods=['POST'])
@@ -1427,13 +1726,13 @@ def marcar_notificacao_lida():
     if not notificacao_id:
         return jsonify({'error': 'ID da notificação é obrigatório'}), 400
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     cursor.execute(
         '''
-        UPDATE notificacoes 
-        SET lida = 1 
+        UPDATE notificacoes
+        SET lida = 1
         WHERE id = ? AND candidato_id = ?
     ''', (notificacao_id, session['candidato_id']))
 
@@ -1443,19 +1742,19 @@ def marcar_notificacao_lida():
     return jsonify({'success': True})
 
 
-@app.route('/api/notificacoes/marcar-todas-lidas', methods=['POST'])
+@app.route('/api/notificacoes/marcar-todas-lidas', methods=['PUT'])
 def marcar_todas_notificacoes_lidas():
     """API para marcar todas as notificações como lidas"""
     if 'candidato_id' not in session:
         return jsonify({'success': False, 'message': 'Acesso negado'})
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     cursor.execute(
         '''
-        UPDATE notificacoes 
-        SET lida = 1 
+        UPDATE notificacoes
+        SET lida = 1
         WHERE candidato_id = ?
     ''', (session['candidato_id'], ))
 
@@ -1465,17 +1764,91 @@ def marcar_todas_notificacoes_lidas():
     return jsonify({'success': True})
 
 
-@app.route('/api/notificacoes/<int:notificacao_id>/apagar', methods=['DELETE'])
-def apagar_notificacao(notificacao_id):
+@app.route('/api/notificacoes/<int:notificacao_id>/lida', methods=['PUT'])
+def marcar_notificacao_individual_lida(notificacao_id):
+    """API para marcar uma notificação específica como lida"""
     if 'candidato_id' not in session:
-        return jsonify({'error': 'Não autorizado'}), 401
+        return jsonify({'success': False, 'message': 'Acesso negado'})
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     cursor.execute(
         '''
-        DELETE FROM notificacoes 
+        UPDATE notificacoes
+        SET lida = 1
+        WHERE id = ? AND candidato_id = ?
+    ''', (notificacao_id, session['candidato_id']))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/notificacoes/limpar-todas', methods=['DELETE'])
+def limpar_todas_notificacoes():
+    """API para limpar todas as notificações"""
+    if 'candidato_id' not in session:
+        return jsonify({'success': False, 'message': 'Acesso negado'})
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('DELETE FROM notificacoes WHERE candidato_id = ?',
+                   (session['candidato_id'], ))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True})
+
+
+@app.route('/api/notificacoes/demo', methods=['POST'])
+def criar_notificacoes_demo():
+    """API para criar notificações de demonstração"""
+    if 'candidato_id' not in session:
+        return jsonify({'success': False, 'message': 'Acesso negado'})
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Criar notificações de demo
+    notificacoes_demo = [
+        ('🎉 Parabéns! Você foi selecionado para a vaga de Desenvolvedor Python na TechCorp!', 'contratacao'),
+        ('📋 Nova candidatura registrada para vaga de Data Scientist', 'candidatura'),
+        ('✨ Nova vaga disponível que pode interessar: Analista de Sistemas', 'vaga_nova'),
+        ('🔔 A vaga de Frontend Developer foi atualizada com novos requisitos', 'alteracao_vaga'),
+        ('❄️ A vaga de DevOps Engineer foi temporariamente congelada', 'vaga_congelada'),
+    ]
+
+    for mensagem, tipo in notificacoes_demo:
+        cursor.execute(
+            '''
+            INSERT INTO notificacoes (candidato_id, mensagem, tipo, lida, data_envio)
+            VALUES (?, ?, ?, 0, datetime('now'))
+        ''', (session['candidato_id'], mensagem, tipo))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'message': 'Notificações de demo criadas!'
+    })
+
+
+@app.route('/api/notificacoes/<int:notificacao_id>/apagar', methods=['DELETE'])
+def apagar_notificacao(notificacao_id):
+    """API para apagar uma notificação específica"""
+    if 'candidato_id' not in session:
+        return jsonify({'error': 'Não autorizado'}), 401
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        '''
+        DELETE FROM notificacoes
         WHERE id = ? AND candidato_id = ?
     ''', (notificacao_id, session['candidato_id']))
 
@@ -1488,15 +1861,16 @@ def apagar_notificacao(notificacao_id):
 
 @app.route('/api/notificacoes/apagar-todas', methods=['DELETE'])
 def apagar_todas_notificacoes():
+    """API para apagar todas as notificações"""
     if 'candidato_id' not in session:
         return jsonify({'error': 'Não autorizado'}), 401
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     cursor.execute(
         '''
-        DELETE FROM notificacoes 
+        DELETE FROM notificacoes
         WHERE candidato_id = ?
     ''', (session['candidato_id'], ))
 
@@ -1505,6 +1879,137 @@ def apagar_todas_notificacoes():
     conn.close()
 
     return jsonify({'success': True, 'deleted_count': count})
+
+
+@app.route('/debug/candidatos')
+def debug_candidatos():
+    """Rota de debug para listar todos os candidatos"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute('SELECT id, nome, email FROM candidatos ORDER BY id')
+        candidatos = cursor.fetchall()
+
+        result = "<h2>Lista de Candidatos:</h2><ul>"
+        for candidato in candidatos:
+            result += f"<li>ID: {candidato[0]} - Nome: {candidato[1]} - Email: {candidato[2]}</li>"
+        result += "</ul>"
+
+        # Contar notificações por candidato
+        result += "<h2>Notificações por Candidato:</h2><ul>"
+        cursor.execute('''
+            SELECT n.candidato_id, COUNT(*) as total, 
+                   SUM(CASE WHEN n.lida = 0 THEN 1 ELSE 0 END) as nao_lidas,
+                   c.nome
+            FROM notificacoes n
+            JOIN candidatos c ON n.candidato_id = c.id
+            GROUP BY n.candidato_id, c.nome
+            ORDER BY n.candidato_id
+        ''')
+
+        notif_stats = cursor.fetchall()
+        for stat in notif_stats:
+            result += f"<li>Candidato {stat[0]} ({stat[3]}): {stat[1]} total, {stat[2]} não lidas</li>"
+        result += "</ul>"
+
+        return result
+
+    except Exception as e:
+        return f"Erro: {str(e)}"
+    finally:
+        conn.close()
+
+
+@app.route('/debug/testar-notificacao/<int:candidato_id>')
+def debug_testar_notificacao(candidato_id):
+    """Rota de debug para testar notificação em candidato específico"""
+    try:
+        mensagem = f"🧪 Teste de notificação para candidato {candidato_id} - {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
+
+        sucesso = notification_system.criar_notificacao(
+            candidato_id, mensagem, None, None, 'teste')
+
+        return jsonify({
+            'candidato_id': candidato_id,
+            'sucesso': sucesso,
+            'mensagem': mensagem,
+            'timestamp': datetime.now().isoformat()
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e), 'candidato_id': candidato_id})
+
+
+@app.route('/debug/notificacoes-sistema')
+def debug_notificacoes_sistema_route():
+    """Rota de debug para analisar sistema de notificações"""
+    try:
+        from utils.notifications import debug_notificacoes_sistema
+        debug_notificacoes_sistema()
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Dados para retorno
+        cursor.execute('SELECT id, nome, email FROM candidatos ORDER BY id')
+        candidatos = cursor.fetchall()
+
+        cursor.execute('''
+            SELECT n.candidato_id, COUNT(*) as total, 
+                   SUM(CASE WHEN n.lida = 0 THEN 1 ELSE 0 END) as nao_lidas,
+                   c.nome
+            FROM notificacoes n
+            JOIN candidatos c ON n.candidato_id = c.id
+            GROUP BY n.candidato_id, c.nome
+            ORDER BY n.candidato_id
+        ''')
+        stats = cursor.fetchall()
+
+        conn.close()
+
+        return jsonify({
+            'candidatos': [{'id': c[0], 'nome': c[1], 'email': c[2]} for c in candidatos],
+            'estatisticas': [{'candidato_id': s[0], 'total': s[1], 'nao_lidas': s[2], 'nome': s[3]} for s in stats],
+            'total_candidatos': len(candidatos),
+            'candidatos_com_notificacoes': len(stats)
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
+
+@app.route('/debug/testar-todas-notificacoes')
+def debug_testar_todas_notificacoes():
+    """Rota para testar notificações em todos os candidatos"""
+    try:
+        from utils.notifications import testar_notificacao_para_todos
+        sucesso = testar_notificacao_para_todos()
+
+        return jsonify({
+            'success': sucesso,
+            'message': 'Teste de notificações concluído',
+            'timestamp': datetime.now().isoformat()
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
+
+
+@app.route('/api/notificacoes/nao-lidas')
+def api_notificacoes_nao_lidas():
+    """API para contar notifications não lidas"""
+    if 'candidato_id' not in session:
+        return jsonify({'count': 0})
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM notificacoes WHERE candidato_id = ? AND lida = 0",
+                   (session['candidato_id'],))
+    count = cursor.fetchone()[0]
+
+    return jsonify({'count': count})
 
 
 @app.route('/politica-privacidade')
@@ -1526,7 +2031,7 @@ def get_endereco_empresa():
     if 'empresa_id' not in session:
         return jsonify({'error': 'Não autorizado'}), 401
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
@@ -1556,85 +2061,58 @@ def get_endereco_empresa():
 
 @app.route('/api/favoritar-vaga', methods=['POST'])
 def favoritar_vaga():
-    """API para candidato favoritar/desfavoritar vaga"""
+    """API para adicionar/remover vaga dos favoritos"""
     if 'candidato_id' not in session:
-        return jsonify({'success': False, 'message': 'Não autorizado'}), 401
+        return jsonify({'error': 'Não autorizado', 'favorited': False}), 401
 
     data = request.get_json()
-    vaga_id = data.get('vaga_id')
-    acao = data.get('acao', 'toggle')  # toggle, add, remove
+    if not data or 'vaga_id' not in data:
+        return jsonify({'error': 'ID da vaga é obrigatório', 'favorited': False}), 400
 
-    if not vaga_id:
-        return jsonify({
-            'success': False,
-            'message': 'Vaga ID obrigatório'
-        }), 400
+    candidato_id = session['candidato_id']
+    vaga_id = data['vaga_id']
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
-        candidato_id = session['candidato_id']
-
-        # Verificar se já está favoritada
+        # Verificar se já existe nos favoritos
         cursor.execute(
-            '''
-            SELECT id FROM candidato_vaga_favorita 
-            WHERE candidato_id = ? AND vaga_id = ?
-        ''', (candidato_id, vaga_id))
+            'SELECT id FROM candidato_vaga_favorita WHERE candidato_id = ? AND vaga_id = ?',
+            (candidato_id, vaga_id)
+        )
+        favorito_existente = cursor.fetchone()
 
-        ja_favoritada = cursor.fetchone() is not None
-
-        if acao == 'toggle' or (acao == 'add' and not ja_favoritada):
-            if ja_favoritada:
-                # Remover dos favoritos
-                cursor.execute(
-                    '''
-                    DELETE FROM candidato_vaga_favorita 
-                    WHERE candidato_id = ? AND vaga_id = ?
-                ''', (candidato_id, vaga_id))
-                conn.commit()
-                return jsonify({
-                    'success': True,
-                    'favorited': False,
-                    'message': 'Vaga removida dos favoritos'
-                })
-            else:
-                # Adicionar aos favoritos
-                cursor.execute(
-                    '''
-                    INSERT INTO candidato_vaga_favorita (candidato_id, vaga_id) 
-                    VALUES (?, ?)
-                ''', (candidato_id, vaga_id))
-                conn.commit()
-                return jsonify({
-                    'success': True,
-                    'favorited': True,
-                    'message': 'Vaga adicionada aos favoritos'
-                })
-
-        elif acao == 'remove' and ja_favoritada:
+        if favorito_existente:
+            # Remover dos favoritos
             cursor.execute(
-                '''
-                DELETE FROM candidato_vaga_favorita 
-                WHERE candidato_id = ? AND vaga_id = ?
-            ''', (candidato_id, vaga_id))
-            conn.commit()
-            return jsonify({
-                'success': True,
-                'favorited': False,
-                'message': 'Vaga removida dos favoritos'
-            })
+                'DELETE FROM candidato_vaga_favorita WHERE candidato_id = ? AND vaga_id = ?',
+                (candidato_id, vaga_id)
+            )
+            favorited = False
+            action = 'removida'
+        else:
+            # Adicionar aos favoritos
+            cursor.execute(
+                'INSERT INTO candidato_vaga_favorita (candidato_id, vaga_id, data_adicao) VALUES (?, ?, datetime("now"))',
+                (candidato_id, vaga_id)
+            )
+            favorited = True
+            action = 'adicionada'
 
+        conn.commit()
         return jsonify({
             'success': True,
-            'favorited': ja_favoritada,
-            'message': 'Nenhuma alteração necessária'
+            'favorited': favorited,
+            'message': f'Vaga {action} dos favoritos com sucesso!'
         })
 
     except Exception as e:
         conn.rollback()
-        return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
+        return jsonify({
+            'error': f'Erro ao atualizar favoritos: {str(e)}',
+            'favorited': False
+        }), 500
     finally:
         conn.close()
 
@@ -1645,13 +2123,12 @@ def api_vagas_empresa():
     if 'empresa_id' not in session:
         return jsonify({'error': 'Não autorizado'}), 401
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
-        cursor.execute(
-            'SELECT id, titulo, status FROM vagas WHERE empresa_id = ? ORDER BY titulo',
-            (session['empresa_id'], ))
+        cursor.execute('SELECT id, titulo, status FROM vagas WHERE empresa_id = ? ORDER BY titulo',
+                       (session['empresa_id'], ))
 
         vagas = []
         for row in cursor.fetchall():
@@ -1682,7 +2159,7 @@ def favoritar_candidato():
             'message': 'Candidato ID e Vaga ID obrigatórios'
         }), 400
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
@@ -1705,7 +2182,7 @@ def favoritar_candidato():
         # Verificar se já está favoritado
         cursor.execute(
             '''
-            SELECT id FROM empresa_candidato_favorito 
+            SELECT id FROM empresa_candidato_favorito
             WHERE empresa_id = ? AND candidato_id = ? AND vaga_id = ?
         ''', (empresa_id, candidato_id, vaga_id))
 
@@ -1716,7 +2193,7 @@ def favoritar_candidato():
                 # Remover dos favoritos
                 cursor.execute(
                     '''
-                    DELETE FROM empresa_candidato_favorito 
+                    DELETE FROM empresa_candidato_favorito
                     WHERE empresa_id = ? AND candidato_id = ? AND vaga_id = ?
                 ''', (empresa_id, candidato_id, vaga_id))
                 conn.commit()
@@ -1729,7 +2206,7 @@ def favoritar_candidato():
                 # Adicionar aos favoritos
                 cursor.execute(
                     '''
-                    INSERT INTO empresa_candidato_favorito (empresa_id, candidato_id, vaga_id) 
+                    INSERT INTO empresa_candidato_favorito (empresa_id, candidato_id, vaga_id)
                     VALUES (?, ?, ?)
                 ''', (empresa_id, candidato_id, vaga_id))
                 conn.commit()
@@ -1742,7 +2219,7 @@ def favoritar_candidato():
         elif acao == 'remove' and ja_favoritado:
             cursor.execute(
                 '''
-                DELETE FROM empresa_candidato_favorito 
+                DELETE FROM empresa_candidato_favorito
                 WHERE empresa_id = ? AND candidato_id = ? AND vaga_id = ?
             ''', (empresa_id, candidato_id, vaga_id))
             conn.commit()
@@ -1763,6 +2240,7 @@ def favoritar_candidato():
         return jsonify({'success': False, 'message': f'Erro: {str(e)}'}), 500
     finally:
         conn.close()
+
 
 
 @app.route('/api/candidatos-favoritos')
@@ -1869,7 +2347,7 @@ def api_score_detalhes(candidato_id, vaga_id):
     if 'empresa_id' not in session:
         return jsonify({'error': 'Não autorizado'}), 401
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
@@ -1889,34 +2367,53 @@ def api_score_detalhes(candidato_id, vaga_id):
         curriculo, pretensao_salarial, candidato_endereco, requisitos, salario_oferecido, diferenciais, tipo_vaga, vaga_endereco = resultado
 
         # Calcular score detalhado
-        from avaliador import criar_avaliador
-        avaliador = criar_avaliador(MODO_IA)
+        config = get_config()
+        avaliador = get_avaliador(config['MODO_IA'])
 
         # Usar o método local que retorna detalhes
         from avaliador.avaliador_local import AvaliadorLocal
         avaliador_local = AvaliadorLocal()
 
-        score_salarial = avaliador_local._calcular_score_salarial(pretensao_salarial, salario_oferecido)
-        score_requisitos = avaliador_local._calcular_score_requisitos_avancado(curriculo, requisitos)
-        score_experiencia = avaliador_local._calcular_score_experiencia(curriculo)
-        score_diferenciais = avaliador_local._calcular_score_diferenciais(curriculo, diferenciais)
-        score_localizacao = avaliador_local._calcular_score_localizacao(candidato_endereco, vaga_endereco, tipo_vaga)
-        score_formacao = avaliador_local._calcular_score_formacao(curriculo, requisitos)
+        score_salarial = avaliador_local._calcular_score_salarial(
+            pretensao_salarial, salario_oferecido)
+        score_requisitos = avaliador_local._calcular_score_requisitos_avancado(
+            curriculo, requisitos)
+        score_experiencia = avaliador_local._calcular_score_experiencia(
+            curriculo)
+        score_diferenciais = avaliador_local._calcular_score_diferenciais(
+            curriculo, diferenciais)
+        score_localizacao = avaliador_local._calcular_score_localizacao(
+            candidato_endereco, vaga_endereco, tipo_vaga)
+        score_formacao = avaliador_local._calcular_score_formacao(
+            curriculo, requisitos)
 
         # Gerar explicações
         detalhes = {
-            'salarial': round(score_salarial, 1),
-            'requisitos': round(score_requisitos, 1),
-            'experiencia': round(score_experiencia, 1),
-            'diferenciais': round(score_diferenciais, 1),
-            'localizacao': round(score_localizacao, 1),
-            'formacao': round(score_formacao, 1),
-            'explicacao_salarial': gerar_explicacao_salarial(pretensao_salarial, salario_oferecido),
-            'explicacao_requisitos': gerar_explicacao_requisitos(curriculo, requisitos),
-            'explicacao_experiencia': gerar_explicacao_experiencia(curriculo),
-            'explicacao_diferenciais': 'Baseado em certificações e habilidades extras identificadas',
-            'explicacao_localizacao': gerar_explicacao_localizacao(candidato_endereco, vaga_endereco, tipo_vaga),
-            'explicacao_formacao': gerar_explicacao_formacao(curriculo, requisitos)
+            'salarial':
+            round(score_salarial, 1),
+            'requisitos':
+            round(score_requisitos, 1),
+            'experiencia':
+            round(score_experiencia, 1),
+            'diferenciais':
+            round(score_diferenciais, 1),
+            'localizacao':
+            round(score_localizacao, 1),
+            'formacao':
+            round(score_formacao, 1),
+            'explicacao_salarial':
+            gerar_explicacao_salarial(pretensao_salarial, salario_oferecido),
+            'explicacao_requisitos':
+            gerar_explicacao_requisitos(curriculo, requisitos),
+            'explicacao_experiencia':
+            gerar_explicacao_experiencia(curriculo),
+            'explicacao_diferenciais':
+            'Baseado em certificações e habilidades extras identificadas',
+            'explicacao_localizacao':
+            gerar_explicacao_localizacao(candidato_endereco, vaga_endereco,
+                                         tipo_vaga),
+            'explicacao_formacao':
+            gerar_explicacao_formacao(curriculo, requisitos)
         }
 
         return jsonify(detalhes)
@@ -1950,7 +2447,8 @@ def gerar_explicacao_requisitos(curriculo, requisitos):
 
     tecnologias_vaga = avaliador._extrair_tecnologias(requisitos.lower())
     tecnologias_candidato = avaliador._extrair_tecnologias(curriculo.lower())
-    matches = len([tech for tech in tecnologias_vaga if tech in tecnologias_candidato])
+    matches = len(
+        [tech for tech in tecnologias_vaga if tech in tecnologias_candidato])
 
     if tecnologias_vaga:
         percentual = (matches / len(tecnologias_vaga)) * 100
@@ -1966,11 +2464,13 @@ def gerar_explicacao_experiencia(curriculo):
 
     curriculo_lower = curriculo.lower()
 
-    if any(palavra in curriculo_lower for palavra in ['senior', 'sênior', 'líder', 'lead']):
+    if any(palavra in curriculo_lower
+           for palavra in ['senior', 'sênior', 'líder', 'lead']):
         return "Perfil Senior identificado"
     elif any(palavra in curriculo_lower for palavra in ['pleno', 'analista']):
         return "Perfil Pleno identificado"
-    elif any(palavra in curriculo_lower for palavra in ['junior', 'júnior', 'estagiário']):
+    elif any(palavra in curriculo_lower
+             for palavra in ['junior', 'júnior', 'estagiário']):
         return "Perfil Junior identificado"
     else:
         return "Nível de experiência baseado no histórico profissional"
@@ -1984,7 +2484,8 @@ def gerar_explicacao_localizacao(candidato_endereco, vaga_endereco, tipo_vaga):
     if not candidato_endereco or not vaga_endereco:
         return "Dados de localização insuficientes"
 
-    if candidato_endereco.lower() in vaga_endereco.lower() or vaga_endereco.lower() in candidato_endereco.lower():
+    if candidato_endereco.lower() in vaga_endereco.lower(
+    ) or vaga_endereco.lower() in candidato_endereco.lower():
         return "Localização muito compatível"
     else:
         return f"Localização para vaga {tipo_vaga.lower()}"
@@ -1997,11 +2498,14 @@ def gerar_explicacao_formacao(curriculo, requisitos):
 
     curriculo_lower = curriculo.lower()
 
-    if any(form in curriculo_lower for form in ['mestrado', 'doutorado', 'phd']):
+    if any(form in curriculo_lower
+           for form in ['mestrado', 'doutorado', 'phd']):
         return "Pós-graduação stricto sensu identificada"
-    elif any(form in curriculo_lower for form in ['mba', 'especialização', 'pós-graduação']):
+    elif any(form in curriculo_lower
+             for form in ['mba', 'especialização', 'pós-graduação']):
         return "Pós-graduação lato sensu identificada"
-    elif any(form in curriculo_lower for form in ['graduação', 'bacharelado', 'licenciatura']):
+    elif any(form in curriculo_lower
+             for form in ['graduação', 'bacharelado', 'licenciatura']):
         return "Ensino superior completo"
     else:
         return "Formação baseada no perfil profissional"
@@ -2013,7 +2517,7 @@ def api_candidatos_geral():
     if 'empresa_id' not in session:
         return jsonify({'error': 'Não autorizado'}), 401
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
@@ -2035,9 +2539,12 @@ def api_candidatos_geral():
         columns = [column[1] for column in cursor.fetchall()]
 
         if 'data_cadastro' not in columns:
-            cursor.execute('ALTER TABLE candidatos ADD COLUMN data_cadastro TIMESTAMP')
+            cursor.execute(
+                'ALTER TABLE candidatos ADD COLUMN data_cadastro TIMESTAMP')
             # Atualizar registros existentes com data atual
-            cursor.execute('UPDATE candidatos SET data_cadastro = datetime("now") WHERE data_cadastro IS NULL')
+            cursor.execute(
+                'UPDATE candidatos SET data_cadastro = datetime("now") WHERE data_cadastro IS NULL'
+            )
 
         empresa_id = session['empresa_id']
 
@@ -2051,7 +2558,7 @@ def api_candidatos_geral():
             FROM candidatos c
             LEFT JOIN empresa_favorito_candidato_geral efcg ON efcg.candidato_id = c.id AND efcg.empresa_id = ?
             ORDER BY COALESCE(c.data_cadastro, datetime('now')) DESC
-        ''', (empresa_id,))
+        ''', (empresa_id, ))
 
         candidatos = []
         for row in cursor.fetchall():
@@ -2095,7 +2602,7 @@ def favoritar_candidato_geral():
             'message': 'Candidato ID obrigatório'
         }), 400
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
@@ -2115,7 +2622,8 @@ def favoritar_candidato_geral():
         empresa_id = session['empresa_id']
 
         # Verificar se o candidato existe
-        cursor.execute('SELECT id FROM candidatos WHERE id = ?', (candidato_id,))
+        cursor.execute('SELECT id FROM candidatos WHERE id = ?',
+                       (candidato_id, ))
         if not cursor.fetchone():
             return jsonify({
                 'success': False,
@@ -2125,7 +2633,7 @@ def favoritar_candidato_geral():
         # Verificar se já está favoritado
         cursor.execute(
             '''
-            SELECT id FROM empresa_favorito_candidato_geral 
+            SELECT id FROM empresa_favorito_candidato_geral
             WHERE empresa_id = ? AND candidato_id = ?
         ''', (empresa_id, candidato_id))
 
@@ -2136,7 +2644,7 @@ def favoritar_candidato_geral():
                 # Remover dos favoritos
                 cursor.execute(
                     '''
-                    DELETE FROM empresa_favorito_candidato_geral 
+                    DELETE FROM empresa_favorito_candidato_geral
                     WHERE empresa_id = ? AND candidato_id = ?
                 ''', (empresa_id, candidato_id))
                 conn.commit()
@@ -2149,7 +2657,7 @@ def favoritar_candidato_geral():
                 # Adicionar aos favoritos
                 cursor.execute(
                     '''
-                    INSERT INTO empresa_favorito_candidato_geral (empresa_id, candidato_id) 
+                    INSERT INTO empresa_favorito_candidato_geral (empresa_id, candidato_id)
                     VALUES (?, ?)
                 ''', (empresa_id, candidato_id))
                 conn.commit()
@@ -2162,7 +2670,7 @@ def favoritar_candidato_geral():
         elif acao == 'remove' and ja_favoritado:
             cursor.execute(
                 '''
-                DELETE FROM empresa_favorito_candidato_geral 
+                DELETE FROM empresa_favorito_candidato_geral
                 WHERE empresa_id = ? AND candidato_id = ?
             ''', (empresa_id, candidato_id))
             conn.commit()
@@ -2186,7 +2694,7 @@ def favoritar_candidato_geral():
         conn.close()
 
 
-@app.route('/empresa/candidatos-favoritos')
+@app.route("/empresa/candidatos-favoritos")
 def candidatos_favoritos():
     """Página para visualizar candidatos favoritos"""
     if 'empresa_id' not in session:
@@ -2194,58 +2702,20 @@ def candidatos_favoritos():
 
     return render_template('candidatos_favoritos.html')
 
-
-@app.route('/api/notificacoes/nao-lidas')
-def api_notificacoes_nao_lidas():
-    """API para contar notificações não lidas"""
-    if 'candidato_id' not in session:
-        return jsonify({'count': 0})
-
-    candidato_id = session['candidato_id']
-    count = contar_notificacoes_nao_lidas(candidato_id)
-
-    return jsonify({'count': count})
-
-
-@app.route('/api/notificacoes/<int:notificacao_id>/marcar-lida',
-           methods=['POST'])
-def api_marcar_notificacao_lida(notificacao_id):
-    """API para marcar notificação individual como lida"""
-    if 'candidato_id' not in session:
-        return jsonify({'success': False, 'message': 'Acesso negado'})
-
-    candidato_id = session['candidato_id']
-    sucesso = marcar_notificacao_como_lida(notificacao_id, candidato_id)
-
-    return jsonify({'success': sucesso})
-
-
-@app.route('/api/notificacoes/marcar-todas-lidas', methods=['POST'])
-def api_marcar_todas_lidas():
-    """API para marcar todas as notificações como lidas"""
-    if 'candidato_id' not in session:
-        return jsonify({'success': False, 'message': 'Acesso negado'})
-
-    candidato_id = session['candidato_id']
-    count = marcar_todas_notificacoes_como_lidas(candidato_id)
-
-    return jsonify({'success': True, 'count': count})
-
-
 @app.route('/api/todas-vagas')
 def api_todas_vagas():
     """API para buscar todas as vagas disponíveis para o candidato"""
     if 'candidato_id' not in session:
         return jsonify({'error': 'Não autorizado'}), 401
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
         # Buscar todas as vagas ativas
         cursor.execute(
             '''
-            SELECT v.id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido, 
+            SELECT v.id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido,
                    e.nome as empresa_nome, v.diferenciais, v.tipo_vaga, v.endereco_vaga,
                    CASE WHEN cvf.id IS NOT NULL THEN 1 ELSE 0 END as is_favorita,
                    CASE WHEN ca.id IS NOT NULL THEN 1 ELSE 0 END as ja_candidatou
@@ -2271,7 +2741,8 @@ def api_todas_vagas():
             return jsonify({'error': 'Candidato não encontrado'}), 404
 
         # Calcular scores
-        avaliador = criar_avaliador(MODO_IA)
+        config = get_config()
+        avaliador = get_avaliador(config['MODO_IA'])
         vagas_processadas = []
 
         for vaga in vagas_raw:
@@ -2282,18 +2753,30 @@ def api_todas_vagas():
                 vaga[8], vaga[7])
 
             vaga_processada = {
-                'id': int(vaga[0]),
-                'titulo': vaga[1],
-                'descricao': vaga[2],
-                'requisitos': vaga[3],
-                'salario_oferecido': float(vaga[4]) if vaga[4] else 0.0,
-                'empresa_nome': vaga[5],
-                'diferenciais': vaga[6] or '',
-                'tipo_vaga': vaga[7] or 'Presencial',
-                'endereco_vaga': vaga[8] or '',
-                'is_favorita': bool(vaga[9]),
-                'ja_candidatou': bool(vaga[10]),
-                'score': float(score)
+                'id':
+                int(vaga[0]),
+                'titulo':
+                vaga[1],
+                'descricao':
+                vaga[2],
+                'requisitos':
+                vaga[3],
+                'salario_oferecido':
+                float(vaga[4]) if vaga[4] else 0.0,
+                'empresa_nome':
+                vaga[5],
+                'diferenciais':
+                vaga[6] or '',
+                'tipo_vaga':
+                vaga[7] or 'Presencial',
+                'endereco_vaga':
+                vaga[8] or '',
+                'is_favorita':
+                bool(vaga[9]),
+                'ja_candidatou':
+                bool(vaga[10]),
+                'score':
+                float(score)
             }
             vagas_processadas.append(vaga_processada)
 
@@ -2312,7 +2795,7 @@ def api_busca_filtros():
     if 'candidato_id' not in session:
         return jsonify({'error': 'Não autorizado'}), 401
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
@@ -2325,9 +2808,9 @@ def api_busca_filtros():
 
         # Buscar localizações únicas das vagas ativas
         cursor.execute('''
-            SELECT DISTINCT localizacao_cidade, localizacao_estado 
-            FROM vagas 
-            WHERE status = 'Ativa' 
+            SELECT DISTINCT localizacao_cidade, localizacao_estado
+            FROM vagas
+            WHERE status = 'Ativa'
             AND (localizacao_cidade IS NOT NULL AND localizacao_cidade != '')
             ORDER BY localizacao_cidade
         ''')
@@ -2367,13 +2850,13 @@ def api_buscar_vagas():
     salary = request.args.get('salary', '').strip()
     job_type = request.args.get('type', '').strip()
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
         # Construir query base
         query_base = '''
-            SELECT v.id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido, 
+            SELECT v.id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido,
                    e.nome as empresa_nome, v.diferenciais, v.tipo_vaga, v.endereco_vaga,
                    CASE WHEN cvf.id IS NOT NULL THEN 1 ELSE 0 END as is_favorita,
                    CASE WHEN ca.id IS NOT NULL THEN 1 ELSE 0 END as ja_candidatou,
@@ -2435,7 +2918,8 @@ def api_buscar_vagas():
             return jsonify({'error': 'Candidato não encontrado'}), 404
 
         # Calcular scores
-        avaliador = criar_avaliador(MODO_IA)
+        config = get_config()
+        avaliador = get_avaliador(config['MODO_IA'])
         vagas_processadas = []
 
         for vaga in vagas_raw:
@@ -2491,19 +2975,6 @@ def api_buscar_vagas():
         conn.close()
 
 
-# This is the final code file with the requested changes.
-if __name__ == '__main__':
-    inicializar_banco()
-
-    # Iniciar scheduler em background
-    try:
-        iniciar_scheduler_background()
-        print("Sistema de agendamento iniciado com sucesso!")
-    except Exception as e:
-        print(f"Erro ao iniciar scheduler: {e}")
-
-    app.run(host='0.0.0.0', port=5000, debug=True)
-
 # =========================
 # ROTAS DO ASSISTENTE IA
 # =========================
@@ -2515,7 +2986,7 @@ def api_analisar_curriculo():
     if 'candidato_id' not in session:
         return jsonify({'error': 'Não autorizado'}), 401
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
@@ -2532,8 +3003,8 @@ def api_analisar_curriculo():
         curriculo_texto = resultado[0]
 
         # Analisar currículo com IA
-        analise = ia_assistant.analisar_curriculo(candidato_id,
-                                                  curriculo_texto)
+        analise = get_ia_assistant().analisar_curriculo(candidato_id,
+                                                         curriculo_texto)
 
         return jsonify(analise)
 
@@ -2549,7 +3020,7 @@ def api_recomendacoes_ia():
     if 'candidato_id' not in session:
         return jsonify({'error': 'Não autorizado'}), 401
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
@@ -2566,7 +3037,7 @@ def api_recomendacoes_ia():
         curriculo_texto = resultado[0]
 
         # Obter recomendações da IA
-        recomendacoes = ia_assistant.recomendar_vagas_personalizadas(
+        recomendacoes = get_ia_assistant().recomendar_vagas_personalizadas(
             candidato_id, curriculo_texto)
 
         return jsonify(recomendacoes)
@@ -2583,7 +3054,7 @@ def api_dicas_vaga_ia(vaga_id):
     if 'candidato_id' not in session:
         return jsonify({'error': 'Não autorizado'}), 401
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
@@ -2605,7 +3076,7 @@ def api_dicas_vaga_ia(vaga_id):
         curriculo_texto, requisitos_vaga, salario_vaga = resultado
 
         # Gerar dicas da IA
-        dicas = ia_assistant.gerar_dicas_melhoria_vaga(curriculo_texto,
+        dicas = get_ia_assistant().gerar_dicas_melhoria_vaga(curriculo_texto,
                                                        requisitos_vaga,
                                                        salario_vaga)
 
@@ -2623,7 +3094,7 @@ def api_enviar_recomendacoes_email():
     if 'candidato_id' not in session:
         return jsonify({'error': 'Não autorizado'}), 401
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
@@ -2641,9 +3112,9 @@ def api_enviar_recomendacoes_email():
         candidato_nome, candidato_email, curriculo_texto = resultado
 
         # Obter análise e recomendações
-        analise = ia_assistant.analisar_curriculo(candidato_id,
-                                                  curriculo_texto)
-        recomendacoes = ia_assistant.recomendar_vagas_personalizadas(
+        analise = get_ia_assistant().analisar_curriculo(candidato_id,
+                                                         curriculo_texto)
+        recomendacoes = get_ia_assistant().recomendar_vagas_personalizadas(
             candidato_id, curriculo_texto)
 
         # Gerar dicas gerais
@@ -2686,5 +3157,80 @@ def api_enviar_recomendacoes_email():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+
+
+if __name__ == '__main__':
+    inicializar_banco()
+
+    # Iniciar scheduler em background
+    try:
+        iniciar_scheduler_background()
+        print("Sistema de agendamento iniciado com sucesso!")
+    except Exception as e:
+        print(f"Erro ao iniciar scheduler: {e}")
+
+    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
+
+
+# =========================
+# API DE FAVORITOS
+# =========================
+
+@app.route('/api/favoritos/toggle', methods=['POST'])
+def api_toggle_favorito():
+    """API para adicionar/remover vaga dos favoritos"""
+    if 'candidato_id' not in session:
+        return jsonify({'error': 'Não autorizado', 'favorited': False}), 401
+
+    data = request.get_json()
+    if not data or 'vaga_id' not in data:
+        return jsonify({'error': 'ID da vaga é obrigatório', 'favorited': False}), 400
+
+    candidato_id = session['candidato_id']
+    vaga_id = data['vaga_id']
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        # Verificar se já existe nos favoritos
+        cursor.execute(
+            'SELECT id FROM candidato_vaga_favorita WHERE candidato_id = ? AND vaga_id = ?',
+            (candidato_id, vaga_id)
+        )
+        favorito_existente = cursor.fetchone()
+
+        if favorito_existente:
+            # Remover dos favoritos
+            cursor.execute(
+                'DELETE FROM candidato_vaga_favorita WHERE candidato_id = ? AND vaga_id = ?',
+                (candidato_id, vaga_id)
+            )
+            favorited = False
+            action = 'removida'
+        else:
+            # Adicionar aos favoritos
+            cursor.execute(
+                'INSERT INTO candidato_vaga_favorita (candidato_id, vaga_id, data_adicao) VALUES (?, ?, datetime("now"))',
+                (candidato_id, vaga_id)
+            )
+            favorited = True
+            action = 'adicionada'
+
+        conn.commit()
+        return jsonify({
+            'success': True,
+            'favorited': favorited,
+            'message': f'Vaga {action} dos favoritos com sucesso!'
+        })
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({
+            'error': f'Erro ao atualizar favoritos: {str(e)}',
+            'favorited': False
+        }), 500
     finally:
         conn.close()
