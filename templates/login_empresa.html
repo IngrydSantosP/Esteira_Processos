@@ -5,21 +5,34 @@
 {% block content %}
 <div class="flex items-center justify-center py-6 md:py-10 px-4">
   <div class="flex flex-col md:flex-row w-full max-w-4xl bg-white rounded-xl shadow-lg overflow-hidden">
-    
+
     <!-- Lado esquerdo: Login Empresa -->
     <div class="w-full md:w-1/2 p-6 md:p-8">
       <h2 class="text-2xl md:text-3xl font-bold text-[#7C71B2] text-center mb-4 md:mb-6">Login Empresa</h2>
       
-      <form method="POST" class="space-y-4">
+      <!-- Exibição de Erros -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="mb-4">
+            {% for category, message in messages %}
+              <div class="text-red-500 text-sm">{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST" class="space-y-4" id="loginEmpresaForm">
         <div>
           <label for="cnpj" class="sr-only">CNPJ</label>
           <input type="text" id="cnpj" name="cnpj" placeholder="CNPJ" required
-                 class="w-full px-4 py-2 rounded-full bg-[#E1D8EB] placeholder-[#7C71B2] text-sm focus:outline-none">
+                 class="w-full px-4 py-2 rounded-full bg-[#E1D8EB] placeholder-[#7C71B2] text-sm focus:outline-none"
+                 aria-label="CNPJ">
         </div>
         <div>
           <label for="senha" class="sr-only">Senha</label>
           <input type="password" id="senha" name="senha" placeholder="Senha" required
-                 class="w-full px-4 py-2 rounded-full bg-[#E1D8EB] placeholder-[#7C71B2] text-sm focus:outline-none">
+                 class="w-full px-4 py-2 rounded-full bg-[#E1D8EB] placeholder-[#7C71B2] text-sm focus:outline-none"
+                 aria-label="Senha">
         </div>
 
         <button type="submit" class="w-full bg-[#7C71B2] hover:bg-purple-600 text-white font-bold py-2 rounded-full transition">
@@ -47,4 +60,24 @@
 
   </div>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const cnpjInput = document.getElementById('cnpj');
+
+    // Máscara para CNPJ
+    cnpjInput.addEventListener('input', function(e) {
+      let value = e.target.value.replace(/\D/g, ''); // Remove tudo que não for número
+      if (value.length > 14) value = value.slice(0, 14); // Limita a 14 caracteres
+
+      // Formata conforme a máscara do CNPJ
+      if (value.length > 2) value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+      if (value.length > 6) value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+      if (value.length > 10) value = value.replace(/^(\d{2})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3/$4');
+      if (value.length > 14) value = value.replace(/^(\d{2})\.(\d{3})\.(\d{3})\/(\d{4})(\d)/, '$1.$2.$3/$4-$5');
+
+      e.target.value = value;
+    });
+  });
+</script>
 {% endblock %}

@@ -281,7 +281,6 @@ nav a:hover::after {
   text-align: center;
   position: relative;
   user-select: none;
-  flex-shrink: 0;
 }
 #jobs .card img {
   max-width: 130px;

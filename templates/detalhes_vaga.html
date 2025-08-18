@@ -30,7 +30,7 @@
                         <h1 class="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-4">{{ vaga.titulo }}</h1>
                         <div class="flex flex-wrap gap-4 mb-6">
                             <span class="flex items-center gap-2 bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 px-4 py-2 rounded-full font-semibold shadow-sm">
-                                <span class="text-lg">🏢</span> {{ empresa.nome }}
+                                <span class="text-lg">🏢</span> {{ vaga.titulo}}
                             </span>
                             <span class="flex items-center gap-2 bg-gradient-to-r from-green-100 to-emerald-200 text-green-800 px-4 py-2 rounded-full font-semibold shadow-sm">
                                 <span class="text-lg">💰</span> R$ {{ "{:,.2f}".format(vaga.salario_oferecido) }}
@@ -150,7 +150,7 @@
                         Sobre a Empresa
                     </h3>
                     <div class="text-gray-700">
-                        <p class="font-bold text-purple-600 mb-3 text-lg">{{ empresa.nome }}</p>
+                        <p class="font-bold text-purple-600 mb-3 text-lg">{{vaga.titulo}}</p>
                         <p class="text-gray-600 leading-relaxed">
                             Empresa focada em inovação e desenvolvimento de soluções tecnológicas modernas e escaláveis.
                         </p>

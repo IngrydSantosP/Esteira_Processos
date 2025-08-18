@@ -1,0 +1,764 @@
+
+<script>
+// Variáveis globais
+let notificacoesCache = [];
+let categoriasBusca = [];
+let localizacoesBusca = [];
+
+// Gerenciamento de seções
+function showSection(sectionName) {
+    // Esconder todas as seções
+    document.querySelectorAll('.content-section').forEach(section => {
+        section.classList.add('hidden');
+    });
+
+    // Mostrar seção selecionada
+    document.getElementById(`section-${sectionName}`).classList.remove('hidden');
+
+    // Atualizar botões
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('filter-active');
+        btn.classList.add('bg-gray-100', 'text-gray-700');
+    });
+
+    event.target.classList.add('filter-active');
+    event.target.classList.remove('bg-gray-100', 'text-gray-700');
+
+    // Carregar conteúdo específico se necessário
+    if (sectionName === 'todas') {
+        loadAllJobs();
+        loadSearchFilters();
+    }
+}
+
+// Sistema de notificações melhorado
+async function carregarNotificacoes() {
+    try {
+        const response = await fetch('/api/notificacoes');
+        if (response.ok) {
+            notificacoesCache = await response.json();
+            atualizarNotificacoes();
+        }
+    } catch (error) {
+        console.error('Erro ao carregar notificações:', error);
+    }
+}
+
+function atualizarNotificacoes() {
+    const badge = document.getElementById('badgeNotificacoes');
+    const lista = document.getElementById('listaNotificacoes');
+    const contador = document.getElementById('contadorNotificacoes');
+    const vazias = document.getElementById('notificacoesVazias');
+
+    const naoLidas = notificacoesCache.filter(n => !n.lida);
+    const total = notificacoesCache.length;
+
+    // Atualizar badge
+    if (naoLidas.length > 0) {
+        badge.textContent = naoLidas.length > 99 ? '99+' : naoLidas.length;
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
+    }
+
+    // Atualizar contador
+    if (contador) {
+        contador.textContent = `${total} notificação${total !== 1 ? 'ões' : ''} ${naoLidas.length > 0 ? `(${naoLidas.length} não lida${naoLidas.length !== 1 ? 's' : ''})` : ''}`;
+    }
+
+    // Se não há notificações, mostrar estado vazio
+    if (total === 0) {
+        if (vazias) vazias.classList.remove('hidden');
+        lista.innerHTML = '';
+        return;
+    }
+
+    // Esconder estado vazio e mostrar notificações
+    if (vazias) vazias.classList.add('hidden');
+
+    lista.innerHTML = notificacoesCache.slice(0, 15).map(n => {
+        const dataEnvio = new Date(n.data_envio);
+        const tempoRelativo = formatarTempoRelativo(dataEnvio);
+        const iconeNotificacao = getIconeNotificacao(n.tipo);
+
+        return `
+            <div class="notification-item border-b border-gray-100 last:border-b-0 ${!n.lida ? 'bg-gradient-to-r from-blue-50 to-purple-50 border-l-4 border-l-blue-500' : 'hover:bg-gray-50'} transition-all duration-200">
+                <div class="p-4">
+                    <div class="flex items-start gap-3">
+                        <div class="flex-shrink-0">
+                            <span class="text-2xl">${iconeNotificacao}</span>
+                            ${!n.lida ? '<div class="w-2 h-2 bg-blue-500 rounded-full mt-1 animate-pulse"></div>' : ''}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start mb-1">
+                                <h4 class="text-sm font-medium text-gray-900 ${!n.lida ? 'font-bold' : ''}">
+                                    ${n.vaga_titulo ? `Vaga: ${n.vaga_titulo}` : 'Notificação do Sistema'}
+                                </h4>
+                                <span class="text-xs text-gray-400 whitespace-nowrap ml-2">${tempoRelativo}</span>
+                            </div>
+                            <p class="text-sm text-gray-700 leading-relaxed mb-2">
+                                ${n.mensagem.length > 120 ? n.mensagem.substring(0, 120) + '...' : n.mensagem}
+                            </p>
+                            ${n.empresa_nome ? `<p class="text-xs text-purple-600 mb-2">📢 ${n.empresa_nome}</p>` : ''}
+                            <div class="flex gap-2">
+                                ${!n.lida ? `
+                                    <button onclick="marcarComoLida(${n.id})" 
+                                            class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-full transition-colors duration-200">
+                                        ✓ Marcar como lida
+                                    </button>
+                                ` : ''}
+                                <button onclick="apagarNotificacao(${n.id})" 
+                                        class="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-full transition-colors duration-200">
+                                    🗑️ Apagar
+                                </button>
+                                ${n.vaga_id ? `
+                                    <button onclick="verVaga(${n.vaga_id})" 
+                                            class="text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1 rounded-full transition-colors duration-200">
+                                        👁️ Ver Vaga
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function formatarTempoRelativo(data) {
+    const agora = new Date();
+    const diferenca = agora - data;
+    const minutos = Math.floor(diferenca / 60000);
+    const horas = Math.floor(diferenca / 3600000);
+    const dias = Math.floor(diferenca / 86400000);
+
+    if (minutos < 1) return 'Agora';
+    if (minutos < 60) return `${minutos}min`;
+    if (horas < 24) return `${horas}h`;
+    if (dias < 7) return `${dias}d`;
+    return data.toLocaleDateString('pt-BR');
+}
+
+function getIconeNotificacao(tipo) {
+    const icones = {
+        'contratacao': '🎉',
+        'vaga_alterada': '📝',
+        'vaga_congelada': '❄️',
+        'vaga_excluida': '❌',
+        'vaga_reativada': '🔄',
+        'geral': '📢'
+    };
+    return icones[tipo] || '📢';
+}
+
+function toggleNotificacoes() {
+    const painel = document.getElementById('painelNotificacoes');
+    painel.classList.toggle('hidden');
+    if (!painel.classList.contains('hidden')) {
+        carregarNotificacoes();
+    }
+}
+
+async function marcarComoLida(notificacaoId) {
+    try {
+        const response = await fetch('/api/notificacoes/marcar-lida', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: notificacaoId })
+        });
+        if (response.ok) {
+            carregarNotificacoes();
+        }
+    } catch (error) {
+        console.error('Erro ao marcar como lida:', error);
+    }
+}
+
+async function marcarTodasComoLidas() {
+    try {
+        const response = await fetch('/api/notificacoes/marcar-todas-lidas', { method: 'POST' });
+        if (response.ok) {
+            carregarNotificacoes();
+        }
+    } catch (error) {
+        console.error('Erro ao marcar todas como lidas:', error);
+    }
+}
+
+async function apagarNotificacao(notificacaoId) {
+    try {
+        const response = await fetch(`/api/notificacoes/${notificacaoId}/apagar`, { method: 'DELETE' });
+        if (response.ok) {
+            carregarNotificacoes();
+        }
+    } catch (error) {
+        console.error('Erro ao apagar notificação:', error);
+    }
+}
+
+async function apagarTodasNotificacoes() {
+    if (confirm('Tem certeza que deseja apagar todas as notificações?')) {
+        try {
+            const response = await fetch('/api/notificacoes/apagar-todas', { method: 'DELETE' });
+            if (response.ok) {
+                carregarNotificacoes();
+            }
+        } catch (error) {
+            console.error('Erro ao apagar todas as notificações:', error);
+        }
+    }
+}
+
+function verVaga(vagaId) {
+    window.location.href = `/vaga/${vagaId}`;
+}
+
+function verHistoricoCompleto() {
+    alert('Funcionalidade de histórico completo ainda não implementada.');
+}
+
+// Carregar filtros para busca
+async function loadSearchFilters() {
+    try {
+        const response = await fetch('/api/busca-filtros');
+        const data = await response.json();
+
+        categoriasBusca = data.categorias || [];
+        localizacoesBusca = data.localizacoes || [];
+
+        // Popular select de categorias
+        const categorySelect = document.getElementById('searchCategory');
+        categorySelect.innerHTML = '<option value="">Todas as categorias</option>';
+        categoriasBusca.forEach(cat => {
+            categorySelect.innerHTML += `<option value="${cat.id}">${cat.nome}</option>`;
+        });
+
+        // Popular select de localizações
+        const locationSelect = document.getElementById('searchLocation');
+        locationSelect.innerHTML = '<option value="">Todas as localizações</option>';
+        localizacoesBusca.forEach(loc => {
+            locationSelect.innerHTML += `<option value="${loc}">${loc}</option>`;
+        });
+    } catch (error) {
+        console.error('Erro ao carregar filtros:', error);
+    }
+}
+
+// Carregar todas as vagas
+async function loadAllJobs() {
+    const container = document.getElementById('todasVagasContainer');
+
+    try {
+        const response = await fetch('/api/todas-vagas');
+        const vagas = await response.json();
+
+        if (vagas.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
+                    <div class="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+                        <span class="text-4xl">🔍</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-600 mb-3">Nenhuma vaga disponível</h3>
+                    <p class="text-gray-500">No momento não há vagas ativas no sistema.</p>
+                </div>
+            `;
+            return;
+        }
+
+        renderVagas(vagas, container);
+    } catch (error) {
+        console.error('Erro ao carregar vagas:', error);
+        container.innerHTML = `
+            <div class="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
+                <div class="w-24 h-24 bg-red-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+                    <span class="text-4xl">❌</span>
+                </div>
+                <h3 class="text-xl font-bold text-gray-600 mb-3">Erro ao carregar vagas</h3>
+                <p class="text-gray-500">Tente novamente mais tarde.</p>
+            </div>
+        `;
+    }
+}
+
+// Realizar busca avançada
+async function realizarBusca() {
+    const filtros = {
+        keyword: document.getElementById('searchKeyword').value,
+        location: document.getElementById('searchLocation').value,
+        category: document.getElementById('searchCategory').value,
+        urgency: document.getElementById('searchUrgency').value,
+        salary: document.getElementById('searchSalary').value,
+        type: document.getElementById('searchType').value
+    };
+
+    const container = document.getElementById('todasVagasContainer');
+    container.innerHTML = `
+        <div class="text-center py-8">
+            <div class="animate-spin w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p class="text-gray-500">Buscando vagas...</p>
+        </div>
+    `;
+
+    try {
+        const queryParams = new URLSearchParams();
+        Object.keys(filtros).forEach(key => {
+            if (filtros[key]) {
+                queryParams.append(key, filtros[key]);
+            }
+        });
+
+        const response = await fetch(`/api/buscar-vagas?${queryParams}`);
+        const vagas = await response.json();
+
+        if (vagas.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
+                    <div class="w-24 h-24 bg-gray-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+                        <span class="text-4xl">😔</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-600 mb-3">Nenhuma vaga encontrada</h3>
+                    <p class="text-gray-500">Tente ajustar os filtros de busca.</p>
+                </div>
+            `;
+            return;
+        }
+
+        renderVagas(vagas, container, `${vagas.length} vaga(s) encontrada(s)`);
+    } catch (error) {
+        console.error('Erro na busca:', error);
+        container.innerHTML = `
+            <div class="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-100">
+                <div class="w-24 h-24 bg-red-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+                    <span class="text-4xl">❌</span>
+                </div>
+                <h3 class="text-xl font-bold text-gray-600 mb-3">Erro na busca</h3>
+                <p class="text-gray-500">Tente novamente mais tarde.</p>
+            </div>
+        `;
+    }
+}
+
+// Renderizar vagas
+function renderVagas(vagas, container, titulo = null) {
+    let html = '';
+
+    if (titulo) {
+        html += `
+            <div class="mb-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Resultados</h3>
+                <p class="text-gray-600">${titulo}</p>
+            </div>
+        `;
+    }
+
+    html += '<div class="grid gap-6">';
+
+    vagas.forEach(vaga => {
+        html += `
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-xl hover:border-purple-200 transition-all duration-300 transform hover:-translate-y-1 group">
+                <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-3">
+                            <h3 class="text-xl font-bold text-gray-800 group-hover:text-purple-600 transition-colors">
+                                ${vaga.titulo}
+                            </h3>
+                            ${vaga.is_favorita ? '<span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-medium">❤️ Favorita</span>' : ''}
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-600 mb-4">
+                            <div class="flex items-center gap-2">
+                                <span>🏢</span>
+                                <span>${vaga.empresa_nome}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span>💰</span>
+                                <span class="font-semibold text-green-600">R$ ${vaga.salario_oferecido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span>🏠</span>
+                                <span>${vaga.tipo_vaga || 'Presencial'}</span>
+                            </div>
+                            ${vaga.endereco_vaga ? `
+                            <div class="flex items-center gap-2">
+                                <span>📍</span>
+                                <span>${vaga.endereco_vaga}</span>
+                            </div>` : ''}
+                        </div>
+
+                        <p class="text-gray-600 line-clamp-2 mb-3">${vaga.descricao}</p>
+
+                        ${vaga.diferenciais ? `
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="text-blue-600">⭐</span>
+                                <span class="text-sm font-medium text-blue-800">Diferenciais:</span>
+                            </div>
+                            <p class="text-sm text-blue-700">${vaga.diferenciais}</p>
+                        </div>` : ''}
+                    </div>
+
+                    <div class="flex flex-col items-center gap-3 lg:w-32">
+                        <div class="text-center bg-gradient-to-r from-purple-500 to-blue-500 text-white px-4 py-3 rounded-xl shadow-md">
+                            <div class="text-lg font-bold">${vaga.score.toFixed(0)}%</div>
+                            <div class="text-xs opacity-90">match</div>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button onclick="toggleFavorite(${vaga.id}, this)" 
+                                    data-favorited="${vaga.is_favorita}" 
+                                    class="favorite-btn text-xl transition-all duration-300 hover:scale-125 ${vaga.is_favorita ? 'text-red-500' : 'text-gray-300'}">
+                                ${vaga.is_favorita ? '❤️' : '🤍'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-4 border-t border-gray-100">
+                    <a href="/vaga/${vaga.id}" 
+                       class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                        <span>👁️</span>
+                        Ver Detalhes
+                    </a>
+
+                    ${!vaga.ja_candidatou ? 
+                        `<a href="/candidatar/${vaga.id}" class="group/btn bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold px-6 py-3 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl flex items-center gap-2">
+                            <span class="transition-transform group-hover/btn:translate-x-1">🚀</span>
+                            Candidatar-se
+                        </a>` : 
+                        '<span class="bg-gray-100 text-gray-600 px-4 py-2 rounded-xl text-sm">✅ Já candidatado</span>'
+                    }
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// Limpar filtros de busca
+function limparFiltros() {
+    document.getElementById('searchKeyword').value = '';
+    document.getElementById('searchLocation').value = '';
+    document.getElementById('searchCategory').value = '';
+    document.getElementById('searchUrgency').value = '';
+    document.getElementById('searchSalary').value = '';
+    document.getElementById('searchType').value = '';
+    loadAllJobs();
+}
+
+// Sistema de favoritos
+async function toggleFavorite(vagaId, button) {
+    const isFavorited = button.dataset.favorited === 'true';
+
+    try {
+        button.classList.add('animate-pulse');
+
+        const response = await fetch('/api/favoritar-vaga', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                vaga_id: vagaId,
+                acao: 'toggle'
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            button.dataset.favorited = result.favorited;
+            button.textContent = result.favorited ? '❤️' : '🤍';
+            button.className = `favorite-btn text-xl transition-all duration-300 hover:scale-125 ${result.favorited ? 'text-red-500' : 'text-gray-300'}`;
+
+            showToast(result.message, 'success');
+        } else {
+            showToast(result.message || 'Erro ao favoritar vaga', 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao favoritar:', error);
+        showToast('Erro ao favoritar vaga', 'error');
+    } finally {
+        button.classList.remove('animate-pulse');
+    }
+}
+
+// Cancelar candidatura
+async function cancelarCandidatura(vagaId) {
+    if (confirm('🤔 Tem certeza que deseja cancelar sua candidatura para esta vaga?')) {
+        try {
+            const btn = event.target.closest('button');
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '<span class="animate-spin">⏳</span> Cancelando...';
+            btn.disabled = true;
+
+            const response = await fetch('/cancelar_candidatura', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    vaga_id: vagaId
+                })
+            });
+
+            if (response.ok) {
+                btn.innerHTML = '<span class="text-green-500">✅</span> Cancelada!';
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+                alert('❌ Erro ao cancelar candidatura');
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('❌ Erro ao cancelar candidatura');
+        }
+    }
+}
+
+// Funções do Assistente IA
+async function analisarCurriculo() {
+    const resultadosDiv = document.getElementById('resultadosIA');
+    const conteudoDiv = document.getElementById('conteudoIA');
+
+    resultadosDiv.classList.remove('hidden');
+    conteudoDiv.innerHTML = `
+        <div class="text-center py-8">
+            <div class="animate-spin w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p class="text-gray-500">Analisando seu currículo...</p>
+        </div>
+    `;
+
+    try {
+        const response = await fetch('/api/ia/analisar-curriculo');
+        const data = await response.json();
+
+        if (data.error) {
+            conteudoDiv.innerHTML = `
+                <div class="text-center py-8 text-red-500">
+                    <p>Erro: ${data.error}</p>
+                </div>
+            `;
+        } else {
+            mostrarAnaliseIA(data);
+        }
+    } catch (error) {
+        conteudoDiv.innerHTML = `
+            <div class="text-center py-8 text-red-500">
+                <p>Erro ao carregar análise</p>
+            </div>
+        `;
+    }
+}
+
+function mostrarAnaliseIA(analise) {
+    const conteudoDiv = document.getElementById('conteudoIA');
+
+    const tecnologias = analise.tecnologias_identificadas?.map(t => t.nome)?.join(', ') || 'Nenhuma identificada';
+    const pontosFortes = analise.pontos_fortes?.map(p => `<li class="text-green-600">✅ ${p}</li>`)?.join('') || '<li class="text-gray-500">Analisando...</li>';
+    const areasMelhoria = analise.areas_melhoria?.map(a => `<li class="text-orange-600">⚠️ ${a}</li>`)?.join('') || '<li class="text-gray-500">Nenhuma identificada</li>';
+
+    conteudoDiv.innerHTML = `
+        <h3 class="text-xl font-bold mb-6 text-gray-800">📊 Análise do seu Perfil</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <h4 class="font-semibold mb-3 text-purple-600">📊 Análise Geral</h4>
+                <div class="space-y-2">
+                    <p><strong>Nível:</strong> <span class="badge bg-blue-100 text-blue-800 px-2 py-1 rounded">${analise.nivel_senioridade || 'Analisando...'}</span></p>
+                    <p><strong>Score do Perfil:</strong> <span class="text-2xl font-bold text-green-600">${analise.score_geral || 0}/100</span></p>
+                    <p><strong>Tecnologias:</strong> ${tecnologias}</p>
+                </div>
+            </div>
+            <div>
+                <h4 class="font-semibold mb-3 text-green-600">✨ Pontos Fortes</h4>
+                <ul class="space-y-1">
+                    ${pontosFortes}
+                </ul>
+            </div>
+            <div class="md:col-span-2">
+                <h4 class="font-semibold mb-3 text-orange-600">🎯 Áreas de Melhoria</h4>
+                <ul class="space-y-1">
+                    ${areasMelhoria}
+                </ul>
+            </div>
+        </div>
+    `;
+}
+
+async function obterRecomendacoesIA() {
+    const resultadosDiv = document.getElementById('resultadosIA');
+    const conteudoDiv = document.getElementById('conteudoIA');
+
+    resultadosDiv.classList.remove('hidden');
+    conteudoDiv.innerHTML = `
+        <div class="text-center py-8">
+            <div class="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p class="text-gray-500">Obtendo recomendações personalizadas...</p>
+        </div>
+    `;
+
+    try {
+        const response = await fetch('/api/ia/recomendacoes-vagas');
+        const data = await response.json();
+
+        if (data.length === 0) {
+            conteudoDiv.innerHTML = `
+                <div class="text-center py-8">
+                    <p class="text-gray-500">Nenhuma recomendação disponível no momento</p>
+                </div>
+            `;
+        } else {
+            mostrarRecomendacoesIA(data);
+        }
+    } catch (error) {
+        conteudoDiv.innerHTML = `
+            <div class="text-center py-8 text-red-500">
+                <p>Erro ao obter recomendações</p>
+            </div>
+        `;
+    }
+}
+
+function mostrarRecomendacoesIA(recomendacoes) {
+    const conteudoDiv = document.getElementById('conteudoIA');
+
+    const recomendacoesHtml = recomendacoes.map(rec => `
+        <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div class="flex justify-between items-start mb-2">
+                <h3 class="font-semibold text-lg">${rec.titulo}</h3>
+                <span class="text-sm text-purple-600 font-bold">${rec.compatibilidade?.score?.toFixed(0) || 0}% compatível</span>
+            </div>
+            <p class="text-gray-600 mb-2">${rec.empresa}</p>
+            <div class="text-sm text-gray-500">
+                <p><strong>Motivos:</strong> ${rec.motivos?.join(', ') || 'N/A'}</p>
+                ${rec.urgencia === 'Imediata' ? '<span class="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">🔥 URGENTE</span>' : ''}
+            </div>
+            <a href="/candidatar/${rec.vaga_id}" class="mt-3 bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition-colors inline-block">
+                Candidatar-se
+            </a>
+        </div>
+    `).join('');
+
+    conteudoDiv.innerHTML = `
+        <h3 class="text-xl font-bold mb-6 text-gray-800">🎯 Vagas Recomendadas pela IA</h3>
+        <div class="space-y-4 max-h-64 overflow-y-auto">
+            ${recomendacoesHtml}
+        </div>
+    `;
+}
+
+async function obterDicasFavoritas() {
+    const resultadosDiv = document.getElementById('resultadosIA');
+    const conteudoDiv = document.getElementById('conteudoIA');
+
+    resultadosDiv.classList.remove('hidden');
+    conteudoDiv.innerHTML = `
+        <div class="text-center py-8">
+            <div class="animate-spin w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p class="text-gray-500">Analisando suas vagas favoritas...</p>
+        </div>
+    `;
+
+    // Simular análise das vagas favoritas
+    setTimeout(() => {
+        conteudoDiv.innerHTML = `
+            <h3 class="text-xl font-bold mb-6 text-gray-800">💡 Dicas para suas Vagas Favoritas</h3>
+            <div class="space-y-4">
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h4 class="font-semibold text-green-800 mb-2">✅ Pontos Fortes do seu Perfil</h4>
+                    <ul class="text-sm text-green-700 space-y-1">
+                        <li>• Experiência sólida na área</li>
+                        <li>• Competências técnicas alinhadas</li>
+                        <li>• Formação adequada para as posições</li>
+                    </ul>
+                </div>
+
+                <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <h4 class="font-semibold text-orange-800 mb-2">🎯 Áreas para Melhorar</h4>
+                    <ul class="text-sm text-orange-700 space-y-1">
+                        <li>• Adicione mais projetos práticos ao seu currículo</li>
+                        <li>• Destaque certificações relevantes</li>
+                        <li>• Inclua métricas de resultados alcançados</li>
+                    </ul>
+                </div>
+
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 class="font-semibold text-blue-800 mb-2">💡 Recomendações Específicas</h4>
+                    <ul class="text-sm text-blue-700 space-y-1">
+                        <li>• Personalize sua carta de apresentação</li>
+                        <li>• Atualize seu perfil no LinkedIn</li>
+                        <li>• Pratique entrevistas técnicas</li>
+                    </ul>
+                </div>
+            </div>
+        `;
+    }, 2000);
+}
+
+// Toast notifications
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-4 right-4 z-50 px-6 py-4 rounded-xl shadow-lg transform translate-y-full transition-all duration-300 ${
+        type === 'success' ? 'bg-green-500 text-white' :
+        type === 'error' ? 'bg-red-500 text-white' :
+        'bg-blue-500 text-white'
+    }`;
+    toast.textContent = message;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.remove('translate-y-full');
+    }, 100);
+
+    setTimeout(() => {
+        toast.classList.add('translate-y-full');
+        setTimeout(() => {
+            document.body.removeChild(toast);
+        }, 300);
+    }, 3000);
+}
+
+// Fechar painel ao clicar fora
+document.addEventListener('click', function(e) {
+    const painel = document.getElementById('painelNotificacoes');
+    const btn = document.getElementById('btnNotificacoes');
+
+    if (!painel.contains(e.target) && !btn.contains(e.target)) {
+        painel.classList.add('hidden');
+    }
+});
+
+// Inicialização
+document.addEventListener('DOMContentLoaded', function() {
+    carregarNotificacoes();
+
+    // Atualizar notificações periodicamente
+    setInterval(carregarNotificacoes, 30000);
+
+    // Animar cards ao aparecer na tela
+    const cards = document.querySelectorAll('.group');
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry, index) => {
+            if (entry.isIntersecting) {
+                setTimeout(() => {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }, index * 100);
+            }
+        });
+    });
+
+    cards.forEach(card => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        observer.observe(card);
+    });
+});
+</script>

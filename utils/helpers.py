@@ -209,12 +209,16 @@ def calcular_distancia_endereco(endereco1, endereco2):
 
 
 def processar_candidatura(candidato_id, vaga_id, modo_ia='local'):
-    """Processa uma candidatura completa"""
+    """Processar candidatura do candidato à vaga"""
     from avaliador import criar_avaliador
+    from utils.notifications import notification_system
 
     mensagens = []
 
-    conn = sqlite3.connect("recrutamento.db")
+    # Usar timeout e WAL mode para evitar locks
+    conn = sqlite3.connect('recrutamento.db', timeout=30.0)
+    conn.execute('PRAGMA journal_mode=WAL')
+    conn.execute('PRAGMA busy_timeout=30000')
     cursor = conn.cursor()
 
     try:
@@ -243,7 +247,7 @@ def processar_candidatura(candidato_id, vaga_id, modo_ia='local'):
 
         cursor.execute(
             """
-            SELECT requisitos, salario_oferecido, tipo_vaga, endereco_vaga, diferenciais
+            SELECT requisitos, salario_oferecido, tipo_vaga, endereco_vaga, diferenciais, titulo
             FROM vagas 
             WHERE id = ? AND (status IS NULL OR status = 'Ativa')
         """, (vaga_id, ))
@@ -306,9 +310,13 @@ def processar_candidatura(candidato_id, vaga_id, modo_ia='local'):
             """, (candidato_id, vaga_id))
             posicao = cursor.fetchone()[0]
 
+            # Criar notificação detalhada para o candidato
+            from utils.notifications import notification_system
+            notification_system.notificar_nova_candidatura(candidato_id, vaga_id, posicao, score)
+
             mensagens.append({
                 'texto':
-                f'Candidatura realizada com sucesso! Você está na posição {posicao} com score de {score:.1f}%',
+                f'Candidatura realizada com sucesso! Você está na posição {posicao} com score de {score:.1f}%. Verifique suas notificações para mais detalhes.',
                 'tipo': 'success'
             })
 

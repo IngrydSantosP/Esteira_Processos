@@ -27,5 +27,15 @@ const userSchema = new mongoose.Schema({
   competencias: [competenciaSchema],  // Agora usando o esquema de Competência
 });
 
+// Definindo o UserSchema com nomes consistentes
+const userSchema = new mongoose.Schema({
+  nome: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  senha: { type: String, required: true },
+  telefone: String,
+  linkedin: String,
+  pretensao_salarial: Number, 
+});
+
 // Exportando o modelo User
 module.exports = mongoose.model('User', userSchema);
