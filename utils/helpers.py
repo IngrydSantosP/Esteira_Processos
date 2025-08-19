@@ -1,24 +1,35 @@
-import sqlite3
+import mysql.connector
 from datetime import datetime
 import random
 
+def get_db_connection():
+    """Obtém conexão de banco no MySQL (XAMPP)"""
+    conn = mysql.connector.connect(
+        host="localhost",
+        user="root",          # ajuste conforme sua config
+        password="",          # senha (em branco no XAMPP por padrão)
+        database="recrutamentodb",
+        connection_timeout=60
+    )
+    return conn
+
 
 def inicializar_banco():
-    """Inicializa o banco de dados SQLite com todas as colunas necessárias"""
-    conn = sqlite3.connect("recrutamento.db")
+    """Inicializa o banco de dados MySQL com todas as tabelas necessárias"""
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     # Criar tabela de candidatos
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS candidatos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nome TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            senha_hash TEXT NOT NULL,
-            telefone TEXT,
-            linkedin TEXT,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            nome VARCHAR(255) NOT NULL,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            senha_hash VARCHAR(255) NOT NULL,
+            telefone VARCHAR(50),
+            linkedin VARCHAR(255),
             endereco_completo TEXT,
-            pretensao_salarial REAL,
+            pretensao_salarial DECIMAL(10,2),
             texto_curriculo TEXT,
             caminho_curriculo TEXT,
             experiencia TEXT,
@@ -30,28 +41,28 @@ def inicializar_banco():
     # Criar tabela de empresas
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS empresas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            cnpj TEXT UNIQUE NOT NULL,
-            nome TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            senha_hash TEXT NOT NULL
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            cnpj VARCHAR(50) UNIQUE NOT NULL,
+            nome VARCHAR(255) NOT NULL,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            senha_hash VARCHAR(255) NOT NULL
         )
     ''')
 
     # Criar tabela de vagas
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS vagas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            empresa_id INTEGER NOT NULL,
-            titulo TEXT NOT NULL,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            empresa_id INT NOT NULL,
+            titulo VARCHAR(255) NOT NULL,
             descricao TEXT NOT NULL,
             requisitos TEXT NOT NULL,
-            salario_oferecido REAL NOT NULL,
+            salario_oferecido DECIMAL(10,2) NOT NULL,
             data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            tipo_vaga TEXT DEFAULT 'Presencial',
+            tipo_vaga ENUM('Presencial','Remoto','Híbrido') DEFAULT 'Presencial',
             endereco_vaga TEXT,
-            status TEXT DEFAULT 'Ativa',
-            candidato_selecionado_id INTEGER,
+            status ENUM('Ativa','Inativa','Congelada') DEFAULT 'Ativa',
+            candidato_selecionado_id INT,
             diferenciais TEXT,
             FOREIGN KEY (empresa_id) REFERENCES empresas (id),
             FOREIGN KEY (candidato_selecionado_id) REFERENCES candidatos (id)
@@ -61,12 +72,12 @@ def inicializar_banco():
     # Criar tabela de candidaturas
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS candidaturas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            candidato_id INTEGER NOT NULL,
-            vaga_id INTEGER NOT NULL,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            candidato_id INT NOT NULL,
+            vaga_id INT NOT NULL,
             data_candidatura TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            score REAL DEFAULT 0,
-            posicao INTEGER DEFAULT 0,
+            score DECIMAL(5,2) DEFAULT 0,
+            posicao INT DEFAULT 0,
             FOREIGN KEY (candidato_id) REFERENCES candidatos (id),
             FOREIGN KEY (vaga_id) REFERENCES vagas (id)
         )
@@ -75,10 +86,10 @@ def inicializar_banco():
     # Criar tabela de notificações
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS notificacoes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            candidato_id INTEGER NOT NULL,
-            empresa_id INTEGER NOT NULL,
-            vaga_id INTEGER NOT NULL,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            candidato_id INT NOT NULL,
+            empresa_id INT NOT NULL,
+            vaga_id INT NOT NULL,
             mensagem TEXT NOT NULL,
             data_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             lida BOOLEAN DEFAULT FALSE,
@@ -88,108 +99,32 @@ def inicializar_banco():
         )
     ''')
 
-    # Tabela empresas
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS empresas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            cnpj TEXT UNIQUE NOT NULL,
-            nome TEXT NOT NULL,
-            email TEXT NOT NULL,
-            senha_hash TEXT NOT NULL
-        )
-    """)
-
-    # Tabela candidatos
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS candidatos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nome TEXT NOT NULL,
-            email TEXT NOT NULL,
-            senha_hash TEXT NOT NULL,
-            telefone TEXT,
-            linkedin TEXT,
-            endereco_completo TEXT,
-            pretensao_salarial REAL,
-            texto_curriculo TEXT,
-            experiencia TEXT,
-            competencias TEXT,
-            resumo_profissional TEXT,
-            caminho_curriculo TEXT
-        )
-    """)
-
-    # Tabela vagas com todas as novas colunas
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS vagas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            empresa_id INTEGER NOT NULL,
-            titulo TEXT NOT NULL,
-            descricao TEXT NOT NULL,
-            requisitos TEXT NOT NULL,
-            salario_oferecido REAL NOT NULL,
-            tipo_vaga TEXT DEFAULT 'Presencial',
-            endereco_vaga TEXT,
-            status TEXT DEFAULT 'Ativa',
-            candidato_selecionado_id INTEGER,
-            data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (empresa_id) REFERENCES empresas (id),
-            FOREIGN KEY (candidato_selecionado_id) REFERENCES candidatos (id)
-        )
-    """)
-
-    # Tabela candidaturas
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS candidaturas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            candidato_id INTEGER NOT NULL,
-            vaga_id INTEGER NOT NULL,
-            score REAL NOT NULL,
-            posicao INTEGER,
-            data_candidatura DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (candidato_id) REFERENCES candidatos (id),
-            FOREIGN KEY (vaga_id) REFERENCES vagas (id)
-        )
-    """)
-
-    # Adicionar colunas se não existirem (para bancos existentes)
-    colunas_adicionar = [('candidatos', 'endereco_completo', 'TEXT'),
-                         ('candidatos', 'caminho_curriculo', 'TEXT'),
-                         ('vagas', 'tipo_vaga', 'TEXT DEFAULT "Presencial"'),
-                         ('vagas', 'endereco_vaga', 'TEXT'),
-                         ('vagas', 'status', 'TEXT DEFAULT "Ativa"'),
-                         ('vagas', 'candidato_selecionado_id', 'INTEGER')]
-
-    for tabela, coluna, tipo in colunas_adicionar:
-        try:
-            cursor.execute(f'ALTER TABLE {tabela} ADD COLUMN {coluna} {tipo}')
-        except sqlite3.OperationalError:
-            pass  # Coluna já existe
-
     conn.commit()
     conn.close()
 
 
 def atualizar_posicoes_candidatura(vaga_id):
     """Atualiza as posições dos candidatos para uma vaga específica"""
-    conn = sqlite3.connect("recrutamento.db")
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     cursor.execute(
         """
         SELECT id, score FROM candidaturas 
-        WHERE vaga_id = ? 
+        WHERE vaga_id = %s 
         ORDER BY score DESC
-    """, (vaga_id, ))
-
+        """, (vaga_id,)
+    )
     candidaturas = cursor.fetchall()
 
     for posicao, (candidatura_id, score) in enumerate(candidaturas, 1):
         cursor.execute(
             """
             UPDATE candidaturas 
-            SET posicao = ? 
-            WHERE id = ?
-        """, (posicao, candidatura_id))
+            SET posicao = %s 
+            WHERE id = %s
+            """, (posicao, candidatura_id)
+        )
 
     conn.commit()
     conn.close()
@@ -197,14 +132,8 @@ def atualizar_posicoes_candidatura(vaga_id):
 
 def calcular_distancia_endereco(endereco1, endereco2):
     """Calcula distância entre dois endereços (implementação simplificada)"""
-    # Esta é uma implementação simplificada. Em um cenário real, seria necessário
-    # integrar com uma API de geolocalização (ex: Google Maps API, OpenStreetMap Nominatim)
-    # para converter endereços em coordenadas geográficas e calcular a distância real.
-    # Também seria importante padronizar a entrada de endereços no cadastro.
     if endereco1 and endereco2:
-        # Simula uma distância variável para demonstração
-        return random.uniform(
-            1.0, 50.0)  # Retorna uma distância aleatória entre 1 e 50 km
+        return random.uniform(1.0, 50.0)  # Simulação (1 a 50 km)
     return None
 
 
@@ -215,20 +144,17 @@ def processar_candidatura(candidato_id, vaga_id, modo_ia='local'):
 
     mensagens = []
 
-    # Usar timeout e WAL mode para evitar locks
-    conn = sqlite3.connect('recrutamento.db', timeout=30.0)
-    conn.execute('PRAGMA journal_mode=WAL')
-    conn.execute('PRAGMA busy_timeout=30000')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
-        # Verificar se já se candidatou
+        # Verificar se já existe candidatura
         cursor.execute(
             """
             SELECT id FROM candidaturas 
-            WHERE candidato_id = ? AND vaga_id = ?
-        """, (candidato_id, vaga_id))
-
+            WHERE candidato_id = %s AND vaga_id = %s
+            """, (candidato_id, vaga_id)
+        )
         if cursor.fetchone():
             mensagens.append({
                 'texto': 'Você já se candidatou para esta vaga',
@@ -236,21 +162,24 @@ def processar_candidatura(candidato_id, vaga_id, modo_ia='local'):
             })
             return {'sucesso': False, 'mensagens': mensagens}
 
-        # Buscar dados do candidato e da vaga
+        # Buscar dados do candidato
         cursor.execute(
             """
             SELECT pretensao_salarial, texto_curriculo, endereco_completo
             FROM candidatos 
-            WHERE id = ?
-        """, (candidato_id, ))
+            WHERE id = %s
+            """, (candidato_id,)
+        )
         candidato = cursor.fetchone()
 
+        # Buscar dados da vaga
         cursor.execute(
             """
             SELECT requisitos, salario_oferecido, tipo_vaga, endereco_vaga, diferenciais, titulo
             FROM vagas 
-            WHERE id = ? AND (status IS NULL OR status = 'Ativa')
-        """, (vaga_id, ))
+            WHERE id = %s AND (status IS NULL OR status = 'Ativa')
+            """, (vaga_id,)
+        )
         vaga = cursor.fetchone()
 
         if not vaga:
@@ -261,25 +190,22 @@ def processar_candidatura(candidato_id, vaga_id, modo_ia='local'):
             return {'sucesso': False, 'mensagens': mensagens}
 
         if candidato and vaga:
-            # Calcular score base com novos parâmetros
             avaliador = criar_avaliador(modo_ia)
             score = avaliador.calcular_score(
                 candidato[1],  # texto_curriculo
-                vaga[0],  # requisitos
+                vaga[0],       # requisitos
                 candidato[0],  # pretensao_salarial
-                vaga[1],  # salario_oferecido
-                vaga[4],  # diferenciais
+                vaga[1],       # salario_oferecido
+                vaga[4],       # diferenciais
                 candidato[2],  # endereco_completo
-                vaga[3],  # endereco_vaga
-                vaga[2]  # tipo_vaga
+                vaga[3],       # endereco_vaga
+                vaga[2]        # tipo_vaga
             )
 
-            # Ajustar score por proximidade geográfica (se aplicável)
-            if vaga[2] in ['Presencial', 'Híbrida'
-                           ] and candidato[2] and vaga[3]:
+            # Ajustar score pela distância
+            if vaga[2] in ['Presencial', 'Híbrido'] and candidato[2] and vaga[3]:
                 distancia = calcular_distancia_endereco(candidato[2], vaga[3])
                 if distancia:
-                    # Bonus por proximidade (até 10 pontos)
                     if distancia <= 5:
                         score += 10
                     elif distancia <= 15:
@@ -287,16 +213,15 @@ def processar_candidatura(candidato_id, vaga_id, modo_ia='local'):
                     elif distancia <= 30:
                         score += 2
 
-            # Garantir que o score não passe de 100
             score = min(score, 100)
 
             # Inserir candidatura
             cursor.execute(
                 """
                 INSERT INTO candidaturas (candidato_id, vaga_id, score)
-                VALUES (?, ?, ?)
-            """, (candidato_id, vaga_id, score))
-
+                VALUES (%s, %s, %s)
+                """, (candidato_id, vaga_id, score)
+            )
             conn.commit()
 
             # Atualizar posições
@@ -306,17 +231,19 @@ def processar_candidatura(candidato_id, vaga_id, modo_ia='local'):
             cursor.execute(
                 """
                 SELECT posicao FROM candidaturas 
-                WHERE candidato_id = ? AND vaga_id = ?
-            """, (candidato_id, vaga_id))
+                WHERE candidato_id = %s AND vaga_id = %s
+                """, (candidato_id, vaga_id)
+            )
             posicao = cursor.fetchone()[0]
 
-            # Criar notificação detalhada para o candidato
-            from utils.notifications import notification_system
-            notification_system.notificar_nova_candidatura(candidato_id, vaga_id, posicao, score)
+            # Criar notificação
+            notification_system.notificar_nova_candidatura(
+                candidato_id, vaga_id, posicao, score
+            )
 
             mensagens.append({
                 'texto':
-                f'Candidatura realizada com sucesso! Você está na posição {posicao} com score de {score:.1f}%. Verifique suas notificações para mais detalhes.',
+                f'Candidatura realizada com sucesso! Você está na posição {posicao} com score de {score:.1f}%.',
                 'tipo': 'success'
             })
 

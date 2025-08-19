@@ -1,4 +1,4 @@
-import sqlite3
+from db import get_db_connection
 from datetime import datetime
 import smtplib
 from email.message import EmailMessage
@@ -10,64 +10,71 @@ load_dotenv()
 
 
 def obter_notificacoes(candidato_id, apenas_nao_lidas=False):
-    conn = sqlite3.connect('recrutamento.db')
-    cursor = conn.cursor()
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)  # Para retornar resultados como dicionário
     try:
-        # Buscar notificações com dados completos de vaga e empresa
+        # Monta a query principal
         query = '''
-            SELECT n.id, n.candidato_id, COALESCE(n.tipo, 'geral') as tipo,
-                   n.mensagem, COALESCE(n.lida, 0) as lida,
-                   COALESCE(n.data_envio, datetime('now')) as data_envio,
-                   n.vaga_id, n.empresa_id,
-                   v.titulo as vaga_titulo, 
-                   e.nome as empresa_nome,
-                   v.tipo_vaga,
-                   v.salario_oferecido,
-                   DATE(COALESCE(n.data_envio, datetime('now'))) as data_formatada,
-                   CASE 
-                       WHEN n.tipo = 'contratacao' AND julianday('now') - julianday(COALESCE(n.data_envio, datetime('now'))) <= 30 THEN 1
-                       ELSE 0
-                   END as is_fixada
+            SELECT 
+                n.id, 
+                n.candidato_id, 
+                COALESCE(n.tipo, 'geral') AS tipo,
+                n.mensagem, 
+                COALESCE(n.lida, 0) AS lida,
+                COALESCE(n.data_envio, NOW()) AS data_envio,
+                n.vaga_id, 
+                n.empresa_id,
+                v.titulo AS vaga_titulo, 
+                e.nome AS empresa_nome,
+                v.tipo_vaga,
+                v.salario_oferecido,
+                DATE(COALESCE(n.data_envio, NOW())) AS data_formatada,
+                CASE 
+                    WHEN n.tipo = 'contratacao' AND DATEDIFF(NOW(), COALESCE(n.data_envio, NOW())) <= 30 THEN 1
+                    ELSE 0
+                END AS is_fixada
             FROM notificacoes n
             LEFT JOIN vagas v ON n.vaga_id = v.id
             LEFT JOIN empresas e ON n.empresa_id = e.id
-            WHERE n.candidato_id = ?
+            WHERE n.candidato_id = %s
         '''
+
         params = [candidato_id]
 
         if apenas_nao_lidas:
             query += ' AND n.lida = 0'
 
-        # Ordenar: fixadas primeiro, depois não lidas, depois por data
+        # Ordenação: fixadas primeiro, depois não lidas, depois por data
         query += '''
             ORDER BY 
-                CASE WHEN n.tipo = 'contratacao' AND julianday('now') - julianday(COALESCE(n.data_envio, datetime('now'))) <= 30 THEN 1 ELSE 0 END DESC,
+                CASE WHEN n.tipo = 'contratacao' AND DATEDIFF(NOW(), COALESCE(n.data_envio, NOW())) <= 30 THEN 1 ELSE 0 END DESC,
                 n.lida ASC, 
-                COALESCE(n.data_envio, datetime('now')) DESC
+                COALESCE(n.data_envio, NOW()) DESC
             LIMIT 50
         '''
 
         cursor.execute(query, params)
-        return cursor.fetchall()
+        resultados = cursor.fetchall()
+        return resultados
     finally:
+        cursor.close()
         conn.close()
-
 
 def obter_estatisticas(candidato_id):
     """Retorna estatísticas das notificações de um candidato"""
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
         # Total de notificações
         cursor.execute(
-            'SELECT COUNT(*) FROM notificacoes WHERE candidato_id = ?',
+            'SELECT COUNT(*) FROM notificacoes WHERE candidato_id = %s',
             (candidato_id, ))
         total = cursor.fetchone()[0] or 0
 
         # Notificações não lidas
         cursor.execute(
-            'SELECT COUNT(*) FROM notificacoes WHERE candidato_id = ? AND lida = 0',
+            'SELECT COUNT(*) FROM notificacoes WHERE candidato_id = %s AND lida = 0',
             (candidato_id, ))
         nao_lidas = cursor.fetchone()[0] or 0
 
@@ -79,7 +86,7 @@ def obter_estatisticas(candidato_id):
             '''
             SELECT tipo, COUNT(*) 
             FROM notificacoes 
-            WHERE candidato_id = ? 
+            WHERE candidato_id = %s 
             GROUP BY tipo
             ''', (candidato_id, ))
         por_tipo = {tipo: qtd for tipo, qtd in cursor.fetchall()}
@@ -211,14 +218,12 @@ class NotificationSystem:
         while tentativa < max_tentativas:
             try:
                 # Usar timeout maior e WAL mode para evitar locks
-                conn = sqlite3.connect('recrutamento.db', timeout=60.0)
-                conn.execute('PRAGMA journal_mode=WAL')
-                conn.execute('PRAGMA busy_timeout=60000')
-                conn.execute('PRAGMA synchronous=NORMAL')
+                conn = get_db_connection()
+                cursor.execute("SET SESSION innodb_lock_wait_timeout = 60;")
                 cursor = conn.cursor()
 
                 # Verificar se o candidato existe com validação mais robusta
-                cursor.execute('SELECT id, nome FROM candidatos WHERE id = ?', (candidato_id,))
+                cursor.execute('SELECT id, nome FROM candidatos WHERE id = %s', (candidato_id,))
                 candidato_existe = cursor.fetchone()
                 if not candidato_existe:
                     print(f"❌ Candidato {candidato_id} não encontrado no banco")
@@ -228,7 +233,7 @@ class NotificationSystem:
                 print(f"✅ Candidato encontrado: {candidato_existe[1]} (ID: {candidato_id})")
 
                 # Verificar se as colunas existem
-                cursor.execute("PRAGMA table_info(notificacoes)")
+                cursor.execute("SELECT * FROM notificacoes")
                 columns = [column[1] for column in cursor.fetchall()]
 
                 if 'tipo' not in columns:
@@ -245,7 +250,7 @@ class NotificationSystem:
 
                 # Se empresa_id não foi fornecido, buscar pela vaga_id
                 if not empresa_id and vaga_id:
-                    cursor.execute('SELECT empresa_id FROM vagas WHERE id = ?',
+                    cursor.execute('SELECT empresa_id FROM vagas WHERE id = %s',
                                    (vaga_id, ))
                     result = cursor.fetchone()
                     if result:
@@ -265,7 +270,7 @@ class NotificationSystem:
                 cursor.execute(
                     '''
                     INSERT INTO notificacoes (candidato_id, mensagem, vaga_id, empresa_id, tipo, titulo, data_envio, lida)
-                    VALUES (?, ?, ?, ?, ?, ?, datetime('now'), 0)
+                    VALUES (%s, %s, %s, %s, %s, %s, datetime('now'), 0)
                 ''', (candidato_id, mensagem, vaga_id, empresa_id, tipo, titulo))
 
                 conn.commit()
@@ -314,13 +319,13 @@ class NotificationSystem:
             
         print(f"🎯 Iniciando notificação de contratação para candidato {candidato_id}")
         
-        conn = sqlite3.connect('recrutamento.db', timeout=60.0)
-        conn.execute('PRAGMA journal_mode=WAL')
+        conn = get_db_connection
+        cursor.execute("SET SESSION innodb_lock_wait_timeout = 60;")
         cursor = conn.cursor()
 
         try:
             # Verificar se o candidato existe com mais detalhes
-            cursor.execute('SELECT id, nome, email FROM candidatos WHERE id = ?', (candidato_id,))
+            cursor.execute('SELECT id, nome, email FROM candidatos WHERE id = %s', (candidato_id,))
             candidato_info = cursor.fetchone()
             if not candidato_info:
                 print(f"❌ Candidato {candidato_id} não encontrado no banco")
@@ -334,12 +339,12 @@ class NotificationSystem:
                 '''
                 SELECT c.nome, c.email, v.titulo, e.nome, ca.posicao, ca.score,
                        v.salario_oferecido, v.tipo_vaga, v.descricao,
-                       (SELECT COUNT(*) FROM candidaturas WHERE vaga_id = ?) as total_candidatos
+                       (SELECT COUNT(*) FROM candidaturas WHERE vaga_id = %s) as total_candidatos
                 FROM candidatos c
                 JOIN candidaturas ca ON c.id = ca.candidato_id
                 JOIN vagas v ON ca.vaga_id = v.id
                 JOIN empresas e ON v.empresa_id = e.id
-                WHERE c.id = ? AND v.id = ? AND e.id = ?
+                WHERE c.id = %s AND v.id = %s AND e.id = %s
             ''', (vaga_id, candidato_id, vaga_id, empresa_id))
 
             resultado = cursor.fetchone()
@@ -404,7 +409,7 @@ class NotificationSystem:
 
     def notificar_alteracao_vaga(self, vaga_id, tipo_alteracao='atualizada'):
         """Notifica candidatos sobre alterações na vaga"""
-        conn = sqlite3.connect('recrutamento.db')
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         try:
@@ -417,7 +422,7 @@ class NotificationSystem:
                 JOIN candidatos c ON ca.candidato_id = c.id
                 JOIN vagas v ON ca.vaga_id = v.id
                 JOIN empresas e ON v.empresa_id = e.id
-                WHERE ca.vaga_id = ? AND v.status = 'Ativa'
+                WHERE ca.vaga_id = %s AND v.status = 'Ativa'
             ''', (vaga_id, ))
 
             candidatos = cursor.fetchall()
@@ -472,7 +477,7 @@ Data da atualização: {datetime.now().strftime('%d/%m/%Y às %H:%M')}
 
     def notificar_vaga_congelada(self, vaga_id):
         """Notifica candidatos sobre congelamento de vaga"""
-        conn = sqlite3.connect('recrutamento.db')
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         try:
@@ -484,7 +489,7 @@ Data da atualização: {datetime.now().strftime('%d/%m/%Y às %H:%M')}
                 JOIN candidatos c ON ca.candidato_id = c.id
                 JOIN vagas v ON ca.vaga_id = v.id
                 JOIN empresas e ON v.empresa_id = e.id
-                WHERE ca.vaga_id = ?
+                WHERE ca.vaga_id = %s
             ''', (vaga_id, ))
 
             candidatos = cursor.fetchall()
@@ -532,17 +537,17 @@ Data da pausa: {datetime.now().strftime('%d/%m/%Y às %H:%M')}
     def notificar_nova_candidatura(self, candidato_id, vaga_id, posicao,
                                    score):
         """Notifica candidato sobre nova candidatura com informações úteis"""
-        conn = sqlite3.connect('recrutamento.db')
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         try:
             cursor.execute(
                 '''
                 SELECT c.nome, c.email, v.titulo, e.nome, v.salario_oferecido, v.tipo_vaga,
-                       (SELECT COUNT(*) FROM candidaturas WHERE vaga_id = ?) as total_candidatos,
+                       (SELECT COUNT(*) FROM candidaturas WHERE vaga_id = %s) as total_candidatos,
                        v.urgencia_contratacao, v.data_criacao
                 FROM candidatos c, vagas v, empresas e
-                WHERE c.id = ? AND v.id = ? AND e.id = v.empresa_id
+                WHERE c.id = %s AND v.id = %s AND e.id = v.empresa_id
             ''', (vaga_id, candidato_id, vaga_id))
 
             resultado = cursor.fetchone()
@@ -603,7 +608,7 @@ Boa sorte! 🍀"""
 
     def notificar_vaga_excluida(self, vaga_id):
         """Notifica candidatos sobre exclusão de vaga"""
-        conn = sqlite3.connect('recrutamento.db')
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         try:
@@ -614,7 +619,7 @@ Boa sorte! 🍀"""
                 JOIN candidatos c ON ca.candidato_id = c.id
                 JOIN vagas v ON ca.vaga_id = v.id
                 JOIN empresas e ON v.empresa_id = e.id
-                WHERE ca.vaga_id = ?
+                WHERE ca.vaga_id = %s
             ''', (vaga_id, ))
 
             candidatos = cursor.fetchall()
@@ -661,7 +666,7 @@ def notificar_alteracao_vaga(vaga_id, tipo_alteracao='atualizada'):
 
 def buscar_notificacoes_candidato(candidato_id, apenas_nao_lidas=False):
     """Busca notificações de um candidato"""
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
@@ -671,7 +676,7 @@ def buscar_notificacoes_candidato(candidato_id, apenas_nao_lidas=False):
             FROM notificacoes n
             LEFT JOIN vagas v ON n.vaga_id = v.id
             LEFT JOIN empresas e ON n.empresa_id = e.id
-            WHERE n.candidato_id = ?
+            WHERE n.candidato_id = %s
         '''
 
         if apenas_nao_lidas:
@@ -690,7 +695,7 @@ def buscar_notificacoes_candidato(candidato_id, apenas_nao_lidas=False):
 
 def marcar_notificacao_como_lida(notificacao_id, candidato_id):
     """Marca uma notificação como lida"""
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
@@ -698,7 +703,7 @@ def marcar_notificacao_como_lida(notificacao_id, candidato_id):
             '''
             UPDATE notificacoes 
             SET lida = 1 
-            WHERE id = ? AND candidato_id = ?
+            WHERE id = %s AND candidato_id = %s
         ''', (notificacao_id, candidato_id))
 
         conn.commit()
@@ -712,7 +717,7 @@ def marcar_notificacao_como_lida(notificacao_id, candidato_id):
 
 def marcar_todas_notificacoes_como_lidas(candidato_id):
     """Marca todas as notificações do candidato como lidas"""
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
@@ -720,7 +725,7 @@ def marcar_todas_notificacoes_como_lidas(candidato_id):
             '''
             UPDATE notificacoes 
             SET lida = 1 
-            WHERE candidato_id = ? AND lida = 0
+            WHERE candidato_id = %s AND lida = 0
         ''', (candidato_id, ))
 
         conn.commit()
@@ -734,14 +739,14 @@ def marcar_todas_notificacoes_como_lidas(candidato_id):
 
 def contar_notificacoes_nao_lidas(candidato_id):
     """Conta quantas notificações não lidas o candidato tem"""
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
         cursor.execute(
             '''
             SELECT COUNT(*) FROM notificacoes 
-            WHERE candidato_id = ? AND lida = 0
+            WHERE candidato_id = %s AND lida = 0
         ''', (candidato_id, ))
 
         resultado = cursor.fetchone()
@@ -755,7 +760,7 @@ def contar_notificacoes_nao_lidas(candidato_id):
 
 def obter_historico_notificacoes(candidato_id, limite=50):
     """Obtém o histórico completo de notificações do candidato"""
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
@@ -767,9 +772,9 @@ def obter_historico_notificacoes(candidato_id, limite=50):
             FROM notificacoes n
             LEFT JOIN vagas v ON n.vaga_id = v.id
             LEFT JOIN empresas e ON n.empresa_id = e.id
-            WHERE n.candidato_id = ?
+            WHERE n.candidato_id = %s
             ORDER BY n.data_envio DESC
-            LIMIT ?
+            LIMIT %s
         ''', (candidato_id, limite))
 
         return cursor.fetchall()
@@ -782,7 +787,7 @@ def obter_historico_notificacoes(candidato_id, limite=50):
 
 def debug_notificacoes_sistema():
     """Função de debug para verificar o sistema de notificações"""
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     try:
@@ -815,7 +820,7 @@ def debug_notificacoes_sistema():
             print("  • Nenhuma notificação encontrada")
             
         # Verificar estrutura da tabela
-        cursor.execute("PRAGMA table_info(notificacoes)")
+        cursor.execute("SELECT * FROM notificacoes")
         colunas = cursor.fetchall()
         print(f"\n📊 Estrutura da tabela notificacoes:")
         for coluna in colunas:
@@ -832,7 +837,7 @@ def debug_notificacoes_sistema():
 
 def testar_notificacao_para_todos():
     """Testa criação de notificação para todos os candidatos"""
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     try:

@@ -3,11 +3,10 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from utils.helpers import inicializar_banco, calcular_distancia_endereco
 from utils.resume_extractor import processar_upload_curriculo, finalizar_processamento_curriculo
 from avaliador import criar_avaliador
-import sqlite3
+import mysql.connector
 from werkzeug.security import generate_password_hash, check_password_hash
 import io
 import json
-import sqlite3
 import smtplib
 from email.message import EmailMessage
 from dotenv import load_dotenv
@@ -22,6 +21,7 @@ from scheduler import iniciar_scheduler_background
 from functools import lru_cache
 import threading
 from collections import Counter
+from datetime import datetime
 
 data_brasil = (datetime.utcnow() -
                timedelta(hours=3)).strftime('%Y-%m-%d %H:%M:%S')
@@ -33,17 +33,17 @@ app = Flask(__name__)
 # Cache para conexões de banco
 _db_connections = threading.local()
 
+
+
 def get_db_connection():
-    """Obtém conexão de banco otimizada para evitar locks"""
-    # Sempre criar nova conexão para evitar locks
-    conn = sqlite3.connect('recrutamento.db',
-                          timeout=60.0,
-                          check_same_thread=False)
-    conn.execute('PRAGMA journal_mode=WAL')
-    conn.execute('PRAGMA synchronous=NORMAL')
-    conn.execute('PRAGMA cache_size=10000')
-    conn.execute('PRAGMA temp_store=memory')
-    conn.execute('PRAGMA busy_timeout=60000')
+    """Obtém conexão de banco no MySQL (XAMPP)"""
+    conn = mysql.connector.connect(
+        host="localhost",
+        user="root",         # ajuste conforme sua config
+        password="",         # senha (em branco no XAMPP por padrão)
+        database="recrutamentodb",
+        connection_timeout=60  # timeout de 60s
+    )
     return conn
 
 # Cache de configuração
@@ -180,7 +180,7 @@ def detalhes_vaga_publico(vaga_id):
         SELECT v.*, e.nome as empresa_nome
         FROM vagas v
         JOIN empresas e ON v.empresa_id = e.id
-        WHERE v.id = ? AND v.status = 'Ativa'
+        WHERE v.id = %s AND v.status = 'Ativa'
     ''', (vaga_id, ))
     vaga_data = cursor.fetchone()
 
@@ -217,6 +217,7 @@ def detalhes_vaga_publico(vaga_id):
                            empresa=empresa)
 
 
+
 @app.route('/login_empresa', methods=['GET', 'POST'])
 def login_empresa():
     if request.method == 'POST':
@@ -227,19 +228,15 @@ def login_empresa():
             flash('Por favor, preencha todos os campos', 'error')
             return render_template('login_empresa.html')
 
-        cnpj_limpo = ''.join(filter(str.isdigit, cnpj))
-
-        if len(cnpj_limpo) != 14:
-            flash('CNPJ deve ter exatamente 14 dígitos', 'error')
-            return render_template('login_empresa.html')
-
         conn = get_db_connection()
         cursor = conn.cursor()
 
         try:
+            # consulta empresa pelo CNPJ (como está gravado no banco)
             cursor.execute(
-                'SELECT id, senha_hash FROM empresas WHERE cnpj = ?',
-                (cnpj_limpo, ))
+                'SELECT id, senha_hash FROM empresas WHERE cnpj = %s',
+                (cnpj,)
+            )
             empresa = cursor.fetchone()
 
             if empresa and check_password_hash(empresa[1], senha):
@@ -250,10 +247,12 @@ def login_empresa():
                 return redirect(url_for('dashboard_empresa'))
             else:
                 flash('CNPJ ou senha incorretos', 'error')
+
         except Exception as e:
             print(f"Erro no login: {e}")
             flash('Erro interno do sistema. Tente novamente.', 'error')
         finally:
+            cursor.close()
             conn.close()
 
     return render_template('login_empresa.html')
@@ -276,16 +275,20 @@ def cadastro_empresa():
 
         try:
             cursor.execute(
-                '''INSERT INTO empresas (nome, email, senha_hash, cnpj, endereco, cidade, estado, cep)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+                '''
+                INSERT INTO empresas (nome, email, senha_hash, cnpj, endereco, cidade, estado, cep)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                ''',
                 (nome, email, generate_password_hash(senha), cnpj, endereco,
-                 cidade, estado, cep))
+                 cidade, estado, cep)
+            )
             conn.commit()
             flash('Empresa cadastrada com sucesso!', 'success')
             return redirect(url_for('login_empresa'))
-        except sqlite3.IntegrityError:
-            flash('Email já cadastrado', 'error')
+        except mysql.connector.IntegrityError:
+            flash('Email ou CNPJ já cadastrados', 'error')
         finally:
+            cursor.close()
             conn.close()
 
     return render_template('cadastro_empresa.html')
@@ -301,7 +304,7 @@ def login_candidato():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        cursor.execute('SELECT id, senha_hash FROM candidatos WHERE email = ?',
+        cursor.execute('SELECT id, senha_hash FROM candidatos WHERE email = %s',
                        (email, ))
         candidato = cursor.fetchone()
 
@@ -332,13 +335,13 @@ def cadastro_candidato():
         try:
             cursor.execute(
                 '''INSERT INTO candidatos (nome, email, senha_hash, telefone, linkedin, endereco_completo, pretensao_salarial)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                   VALUES (%s, %s, %s, %s, %s, %s, %s)''',
                 (nome, email, generate_password_hash(senha), telefone,
                  linkedin, endereco_completo, pretensao_salarial))
             conn.commit()
             flash('Candidato cadastrado com sucesso!', 'success')
             return redirect(url_for('login_candidato'))
-        except sqlite3.IntegrityError:
+        except mysql.connector.IntegrityError:
             flash('Email já cadastrado', 'error')
         finally:
             conn.close()
@@ -380,28 +383,36 @@ def dashboard_empresa():
         FROM vagas v
         LEFT JOIN CandidatoStats cs ON v.id = cs.vaga_id
         LEFT JOIN candidatos c ON v.candidato_selecionado_id = c.id
-        WHERE v.empresa_id = ?
+        WHERE v.empresa_id = %s
         ORDER BY v.data_criacao DESC
         ''', (session['empresa_id'], ))
 
     vagas_com_stats = cursor.fetchall()
+    conn.close()
 
     vagas_processadas = []
     for vaga in vagas_com_stats:
-        # Formatação de data otimizada
+        # Formatação de data segura
+        data_criacao = 'N/A'
         try:
-            if isinstance(vaga[6], str):
-                data_criacao = datetime.strptime(vaga[6], '%Y-%m-%d %H:%M:%S').strftime('%d/%m/%Y')
-            else: # Assume que é um timestamp numérico
-                data_criacao = datetime.utcfromtimestamp(vaga[6]).strftime('%d/%m/%Y') if vaga[6] else 'N/A'
-        except (ValueError, TypeError):
-            data_criacao = vaga[6][:10] if vaga[6] else 'N/A' # Fallback para string curta
+            valor_data = vaga[6]  # data_criacao
+            if isinstance(valor_data, datetime):
+                data_criacao = valor_data.strftime('%d/%m/%Y')
+            elif isinstance(valor_data, str):
+                try:
+                    data_criacao = datetime.strptime(valor_data, '%Y-%m-%d %H:%M:%S').strftime('%d/%m/%Y')
+                except ValueError:
+                    data_criacao = datetime.strptime(valor_data, '%Y-%m-%d').strftime('%d/%m/%Y')
+            elif isinstance(valor_data, (int, float)):
+                data_criacao = datetime.utcfromtimestamp(valor_data).strftime('%d/%m/%Y')
+        except Exception:
+            data_criacao = 'N/A'
 
         # Conversão segura para inteiros
-        total_candidatos = int(vaga[12]) if vaga[12] is not None else 0
-        candidatos_80_plus = int(vaga[13]) if vaga[13] is not None else 0
-        candidatos_60_79 = int(vaga[14]) if vaga[14] is not None else 0
-        candidatos_abaixo_60 = int(vaga[15]) if vaga[15] is not None else 0
+        total_candidatos = int(vaga[12] or 0)
+        candidatos_80_plus = int(vaga[13] or 0)
+        candidatos_60_79 = int(vaga[14] or 0)
+        candidatos_abaixo_60 = int(vaga[15] or 0)
 
         vaga_dict = {
             'id': vaga[0],
@@ -410,10 +421,10 @@ def dashboard_empresa():
             'descricao': vaga[3],
             'requisitos': vaga[4],
             'salario_oferecido': vaga[5],
-            'diferenciais': vaga[11] if vaga[11] else '',
-            'tipo_vaga': vaga[7] if vaga[7] else 'Presencial',
-            'endereco_vaga': vaga[8] if vaga[8] else '',
-            'status': vaga[9] if vaga[9] else 'Ativa',
+            'diferenciais': vaga[11] or '',
+            'tipo_vaga': vaga[7] or 'Presencial',
+            'endereco_vaga': vaga[8] or '',
+            'status': vaga[9] or 'Ativa',
             'candidato_selecionado_id': vaga[10],
             'data_criacao': data_criacao,
             'total_candidatos': total_candidatos,
@@ -421,9 +432,14 @@ def dashboard_empresa():
             'candidatos_60_79': candidatos_60_79,
             'candidatos_abaixo_60': candidatos_abaixo_60,
             'candidato_contratado': {
-                'nome': vaga[16] if len(vaga) > 16 and vaga[16] else None
-            } if vaga[9] == 'Concluída' and len(vaga) > 16 and vaga[16] else None,
-            'feedback_ia': gerar_feedback_ia_vaga_cached(total_candidatos, candidatos_80_plus, candidatos_60_79, candidatos_abaixo_60)
+                'nome': vaga[16]
+            } if vaga[9] == 'Concluída' and vaga[16] else None,
+            'feedback_ia': gerar_feedback_ia_vaga_cached(
+                total_candidatos,
+                candidatos_80_plus,
+                candidatos_60_79,
+                candidatos_abaixo_60
+            )
         }
         vagas_processadas.append(vaga_dict)
 
@@ -443,14 +459,12 @@ def criar_vaga():
         tipo_vaga = request.form['tipo_vaga']
         diferenciais = request.form.get('diferenciais', '')
 
-        # Novos campos
         categoria_id = request.form.get('categoria_id') or None
         nova_categoria = request.form.get('nova_categoria', '').strip()
         urgencia_contratacao = request.form.get('urgencia_contratacao', '')
         data_congelamento_agendado = request.form.get('data_congelamento_agendado') or None
         usar_endereco_empresa = 'usar_endereco_empresa' in request.form
 
-        # Campos de localização
         localizacao_endereco = request.form.get('localizacao_endereco', '')
         localizacao_cidade = request.form.get('localizacao_cidade', '')
         localizacao_estado = request.form.get('localizacao_estado', '')
@@ -462,17 +476,15 @@ def criar_vaga():
         try:
             # Criar nova categoria, se aplicável
             if nova_categoria and (not categoria_id or categoria_id == 'nova'):
-                cursor.execute('INSERT OR IGNORE INTO categorias (nome) VALUES (?)',
-                               (nova_categoria, ))
-                cursor.execute('SELECT id FROM categorias WHERE nome = ?',
-                               (nova_categoria, ))
+                cursor.execute('INSERT IGNORE INTO categorias (nome) VALUES (%s)', (nova_categoria,))
+                cursor.execute('SELECT id FROM categorias WHERE nome = %s', (nova_categoria,))
                 categoria_result = cursor.fetchone()
                 if categoria_result:
                     categoria_id = categoria_result[0]
 
             # Buscar endereço da empresa, se solicitado
             if usar_endereco_empresa:
-                cursor.execute('SELECT endereco, cidade, estado, cep FROM empresas WHERE id = ?',
+                cursor.execute('SELECT endereco, cidade, estado, cep FROM empresas WHERE id = %s',
                                (session['empresa_id'], ))
                 endereco_empresa = cursor.fetchone()
                 if endereco_empresa:
@@ -500,13 +512,15 @@ def criar_vaga():
                     empresa_id, data_criacao, status, categoria_id, urgencia_contratacao,
                     data_congelamento_agendado, usar_endereco_empresa, localizacao_endereco,
                     localizacao_cidade, localizacao_estado, localizacao_cep
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Ativa', ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (titulo, descricao, requisitos, salario_oferecido, tipo_vaga,
-                  diferenciais, session['empresa_id'],
-                  datetime.now().strftime('%Y-%m-%d %H:%M:%S'), categoria_id,
-                  urgencia_contratacao, data_congelamento_agendado,
-                  int(usar_endereco_empresa), localizacao_endereco,
-                  localizacao_cidade, localizacao_estado, localizacao_cep))
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'Ativa', %s, %s, %s, %s, %s, %s, %s, %s)
+                ''',
+                (titulo, descricao, requisitos, salario_oferecido, tipo_vaga,
+                 diferenciais, session['empresa_id'],
+                 datetime.now(), categoria_id,
+                 urgencia_contratacao, data_congelamento_agendado,
+                 int(usar_endereco_empresa), localizacao_endereco,
+                 localizacao_cidade, localizacao_estado, localizacao_cep)
+            )
 
             conn.commit()
             flash('Vaga criada com sucesso!', 'success')
@@ -525,9 +539,12 @@ def criar_vaga():
     categorias = [{'id': row[0], 'nome': row[1]} for row in cursor.fetchall()]
     conn.close()
 
-    hoje = datetime.now().strftime('%Y-%m-%d')  # usado no min do input de data
+    hoje = datetime.now().strftime('%Y-%m-%d')
 
     return render_template('criar_vaga.html', categorias=categorias, hoje=hoje)
+
+
+
 
 
 @app.route('/candidatos_vaga/<int:vaga_id>')
@@ -542,12 +559,12 @@ def candidatos_vaga(vaga_id):
         '''SELECT c.nome, c.email, c.telefone, c.linkedin, ca.score, ca.posicao, c.id, c.endereco_completo
            FROM candidaturas ca
            JOIN candidatos c ON ca.candidato_id = c.id
-           WHERE ca.vaga_id = ?
+           WHERE ca.vaga_id = %s
            ORDER BY ca.score DESC''', (vaga_id, ))
 
     candidatos = cursor.fetchall()
 
-    cursor.execute('SELECT titulo FROM vagas WHERE id = ?', (vaga_id, ))
+    cursor.execute('SELECT titulo FROM vagas WHERE id = %s', (vaga_id, ))
     vaga = cursor.fetchone()
     conn.close()
 
@@ -566,7 +583,7 @@ def dashboard_candidato():
     cursor = conn.cursor()
 
     # Verifica se o candidato já enviou currículo
-    cursor.execute('SELECT texto_curriculo FROM candidatos WHERE id = ?',
+    cursor.execute('SELECT texto_curriculo FROM candidatos WHERE id = %s',
                    (session['candidato_id'], ))
     candidato = cursor.fetchone()
 
@@ -582,8 +599,8 @@ def dashboard_candidato():
         FROM candidaturas ca
         JOIN vagas v ON ca.vaga_id = v.id
         JOIN empresas e ON v.empresa_id = e.id
-        LEFT JOIN candidato_vaga_favorita cvf ON cvf.candidato_id = ? AND cvf.vaga_id = v.id
-        WHERE ca.candidato_id = ? AND v.status = 'Ativa'
+        LEFT JOIN candidato_vaga_favorita cvf ON cvf.candidato_id = %s AND cvf.vaga_id = v.id
+        WHERE ca.candidato_id = %s AND v.status = 'Ativa'
         ORDER BY ca.score DESC
         ''', (session['candidato_id'], session['candidato_id']))
     vagas_candidatadas_raw = cursor.fetchall()
@@ -610,9 +627,9 @@ def dashboard_candidato():
                CASE WHEN cvf.id IS NOT NULL THEN 1 ELSE 0 END as is_favorita
         FROM vagas v
         JOIN empresas e ON v.empresa_id = e.id
-        LEFT JOIN candidato_vaga_favorita cvf ON cvf.candidato_id = ? AND cvf.vaga_id = v.id
+        LEFT JOIN candidato_vaga_favorita cvf ON cvf.candidato_id = %s AND cvf.vaga_id = v.id
         WHERE v.id NOT IN (
-            SELECT vaga_id FROM candidaturas WHERE candidato_id = ?
+            SELECT vaga_id FROM candidaturas WHERE candidato_id = %s
         ) AND v.status = 'Ativa'
         ''', (session['candidato_id'], session['candidato_id']))
     vagas_disponiveis = cursor.fetchall()
@@ -627,15 +644,15 @@ def dashboard_candidato():
         FROM candidato_vaga_favorita cvf
         JOIN vagas v ON cvf.vaga_id = v.id
         JOIN empresas e ON v.empresa_id = e.id
-        LEFT JOIN candidaturas ca ON ca.candidato_id = ? AND ca.vaga_id = v.id
-        WHERE cvf.candidato_id = ? AND v.status = 'Ativa'
+        LEFT JOIN candidaturas ca ON ca.candidato_id = %s AND ca.vaga_id = v.id
+        WHERE cvf.candidato_id = %s AND v.status = 'Ativa'
         ORDER BY cvf.data_criacao DESC
         ''', (session['candidato_id'], session['candidato_id']))
     vagas_favoritas = cursor.fetchall()
 
     # Informações do candidato
     cursor.execute(
-        'SELECT pretensao_salarial, texto_curriculo, endereco_completo FROM candidatos WHERE id = ?',
+        'SELECT pretensao_salarial, texto_curriculo, endereco_completo FROM candidatos WHERE id = %s',
         (session['candidato_id'], ))
     candidato_info = cursor.fetchone()
 
@@ -776,7 +793,7 @@ def api_candidatos_vaga(vaga_id):
            FROM candidaturas ca
            JOIN candidatos c ON ca.candidato_id = c.id
            JOIN vagas v ON ca.vaga_id = v.id
-           WHERE ca.vaga_id = ? AND v.empresa_id = ?
+           WHERE ca.vaga_id = %s AND v.empresa_id = %s
            ORDER BY ca.score DESC''', (vaga_id, session['empresa_id']))
 
     candidatos = cursor.fetchall()
@@ -809,7 +826,7 @@ def encerrar_vaga():
         return jsonify({'error': 'Dados incompletos'}), 400
 
     # Usar nova conexão com timeout maior e WAL mode
-    conn = sqlite3.connect('recrutamento.db', timeout=60.0)
+    conn = mysql.connect('recrutamentodb', timeout=60.0)
     conn.execute('PRAGMA journal_mode=WAL')
     conn.execute('PRAGMA busy_timeout=60000')
     conn.execute('PRAGMA synchronous=NORMAL')
@@ -817,7 +834,7 @@ def encerrar_vaga():
 
     try:
         # Verificar se a vaga pertence à empresa
-        cursor.execute('SELECT titulo FROM vagas WHERE id = ? AND empresa_id = ?',
+        cursor.execute('SELECT titulo FROM vagas WHERE id = %s AND empresa_id = %s',
                        (vaga_id, session['empresa_id']))
         vaga_info = cursor.fetchone()
         if not vaga_info:
@@ -826,7 +843,7 @@ def encerrar_vaga():
         vaga_titulo = vaga_info[0]
 
         # Buscar candidatos da vaga
-        cursor.execute('SELECT candidato_id FROM candidaturas WHERE vaga_id = ?',
+        cursor.execute('SELECT candidato_id FROM candidaturas WHERE vaga_id = %s',
                        (vaga_id, ))
         todos_candidatos = [row[0] for row in cursor.fetchall()]
 
@@ -836,14 +853,14 @@ def encerrar_vaga():
 
             # Verificar se o candidato se candidatou
             cursor.execute(
-                'SELECT id FROM candidaturas WHERE candidato_id = ? AND vaga_id = ?',
+                'SELECT id FROM candidaturas WHERE candidato_id = %s AND vaga_id = %s',
                 (candidato_id, vaga_id))
             if not cursor.fetchone():
                 return jsonify(
                     {'error': 'Candidato não se candidatou a esta vaga'}), 400
 
             # Verificar se o candidato existe
-            cursor.execute('SELECT nome FROM candidatos WHERE id = ?',
+            cursor.execute('SELECT nome FROM candidatos WHERE id = %s',
                            (candidato_id, ))
             candidato_info = cursor.fetchone()
 
@@ -853,8 +870,8 @@ def encerrar_vaga():
             # Atualizar vaga como concluída
             cursor.execute(
                 '''UPDATE vagas
-                   SET status = "Concluída", candidato_selecionado_id = ?
-                   WHERE id = ?''', (candidato_id, vaga_id))
+                   SET status = "Concluída", candidato_selecionado_id = %s
+                   WHERE id = %s''', (candidato_id, vaga_id))
 
             conn.commit()  # Commit imediato
 
@@ -882,9 +899,9 @@ def encerrar_vaga():
                     print(f"📝 Notificação criada para candidato {cid}: {sucesso_notif}")
 
                     # Buscar email em nova conexão
-                    conn_email = sqlite3.connect('recrutamento.db', timeout=30.0)
+                    conn_email = mysql.connect('recrutamentodb', timeout=30.0)
                     cursor_email = conn_email.cursor()
-                    cursor_email.execute('SELECT email FROM candidatos WHERE id = ?', (cid, ))
+                    cursor_email.execute('SELECT email FROM candidatos WHERE id = %s', (cid, ))
                     email_result = cursor_email.fetchone()
                     conn_email.close()
 
@@ -903,7 +920,7 @@ def encerrar_vaga():
             }
 
         elif acao == 'congelar':
-            cursor.execute('UPDATE vagas SET status = "Congelada" WHERE id = ?',
+            cursor.execute('UPDATE vagas SET status = "Congelada" WHERE id = %s',
                            (vaga_id, ))
             conn.commit()  # Commit imediato
 
@@ -925,8 +942,8 @@ def encerrar_vaga():
                 print(f"Erro ao notificar exclusão: {e}")
 
             # Excluir candidaturas e vaga
-            cursor.execute('DELETE FROM candidaturas WHERE vaga_id = ?', (vaga_id, ))
-            cursor.execute('DELETE FROM vagas WHERE id = ?', (vaga_id, ))
+            cursor.execute('DELETE FROM candidaturas WHERE vaga_id = %s', (vaga_id, ))
+            cursor.execute('DELETE FROM vagas WHERE id = %s', (vaga_id, ))
             conn.commit()
 
             response = {
@@ -935,7 +952,7 @@ def encerrar_vaga():
             }
 
         elif acao == 'reativar':
-            cursor.execute('UPDATE vagas SET status = "Ativa" WHERE id = ?',
+            cursor.execute('UPDATE vagas SET status = "Ativa" WHERE id = %s',
                            (vaga_id, ))
             conn.commit()  # Commit imediato
 
@@ -948,9 +965,9 @@ def encerrar_vaga():
                                                           'vaga_reativada')
 
                     # Buscar email em nova conexão
-                    conn_email = sqlite3.connect('recrutamento.db', timeout=30.0)
+                    conn_email = mysql.connect('recrutamentodb', timeout=30.0)
                     cursor_email = conn_email.cursor()
-                    cursor_email.execute('SELECT email FROM candidatos WHERE id = ?', (cid, ))
+                    cursor_email.execute('SELECT email FROM candidatos WHERE id = %s', (cid, ))
                     email_result = cursor_email.fetchone()
                     conn_email.close()
 
@@ -970,7 +987,7 @@ def encerrar_vaga():
 
         return jsonify(response)
 
-    except sqlite3.OperationalError as e:
+    except mysql.OperationalError as e:
         if 'database is locked' in str(e):
             # Tentar novamente após delay
             import time
@@ -1014,9 +1031,9 @@ def editar_perfil_candidato():
         cursor.execute(
             '''
             UPDATE candidatos
-            SET nome = ?, telefone = ?, linkedin = ?, pretensao_salarial = ?,
-                experiencia = ?, competencias = ?, resumo_profissional = ?
-            WHERE id = ?
+            SET nome =  %s, telefone =  %s, linkedin =  %s, pretensao_salarial =  %s,
+                experiencia =  %s, competencias =  %s, resumo_profissional =  %s
+            WHERE id =  %s
         ''', (nome, telefone, linkedin, pretensao_salarial, experiencia,
               competencias, resumo_profissional, session['candidato_id']))
 
@@ -1030,14 +1047,13 @@ def editar_perfil_candidato():
         '''
         SELECT nome, telefone, linkedin, pretensao_salarial,
                experiencia, competencias, resumo_profissional
-        FROM candidatos WHERE id = ?
+        FROM candidatos WHERE id =  %s
     ''', (session['candidato_id'], ))
 
     candidato = cursor.fetchone()
     conn.close()
 
     return render_template('editar_perfil_candidato.html', candidato=candidato)
-
 
 @app.route('/editar_vaga/<int:vaga_id>', methods=['GET', 'POST'])
 def editar_vaga(vaga_id):
@@ -1072,9 +1088,9 @@ def editar_vaga(vaga_id):
         try:
             # Se nova categoria foi informada, criar/buscar categoria
             if nova_categoria and (not categoria_id or categoria_id == 'nova'):
-                cursor.execute('INSERT OR IGNORE INTO categorias (nome) VALUES (?)',
+                cursor.execute('INSERT OR IGNORE INTO categorias (nome) VALUES (%s)',
                                (nova_categoria, ))
-                cursor.execute('SELECT id FROM categorias WHERE nome = ?',
+                cursor.execute('SELECT id FROM categorias WHERE nome = %s',
                                (nova_categoria, ))
                 categoria_result = cursor.fetchone()
                 if categoria_result:
@@ -1082,7 +1098,7 @@ def editar_vaga(vaga_id):
 
             # Se usar endereço da empresa, buscar dados da empresa
             if usar_endereco_empresa:
-                cursor.execute('SELECT endereco, cidade, estado, cep FROM empresas WHERE id = ?',
+                cursor.execute('SELECT endereco, cidade, estado, cep FROM empresas WHERE id = %s',
                                (session['empresa_id'], ))
                 endereco_empresa = cursor.fetchone()
                 if endereco_empresa:
@@ -1094,10 +1110,10 @@ def editar_vaga(vaga_id):
             cursor.execute(
                 '''
                 UPDATE vagas
-                SET titulo = ?, descricao = ?, requisitos = ?, salario_oferecido = ?, tipo_vaga = ?, diferenciais = ?,
-                    categoria_id = ?, urgencia_contratacao = ?, data_congelamento_agendado = ?, usar_endereco_empresa = ?,
-                    localizacao_endereco = ?, localizacao_cidade = ?, localizacao_estado = ?, localizacao_cep = ?
-                WHERE id = ?
+                SET titulo = %s, descricao = %s, requisitos = %s, salario_oferecido = %s, tipo_vaga = %s, diferenciais = %s,
+                    categoria_id = %s, urgencia_contratacao = %s, data_congelamento_agendado = %s, usar_endereco_empresa = %s,
+                    localizacao_endereco = %s, localizacao_cidade = %s, localizacao_estado = %s, localizacao_cep = %s
+                WHERE id = %s
             ''', (titulo, descricao, requisitos, salario_oferecido, tipo_vaga,
                   diferenciais, categoria_id, urgencia_contratacao,
                   data_congelamento_agendado, usar_endereco_empresa,
@@ -1123,7 +1139,7 @@ def editar_vaga(vaga_id):
         SELECT v.*, c.nome as categoria_nome
         FROM vagas v
         LEFT JOIN categorias c ON v.categoria_id = c.id
-        WHERE v.id = ?
+        WHERE v.id = %s
     ''', (vaga_id, ))
     vaga_completa = cursor.fetchone()
 
@@ -1162,7 +1178,7 @@ def detalhes_vaga(vaga_id):
         SELECT v.*, e.nome as empresa_nome
         FROM vagas v
         JOIN empresas e ON v.empresa_id = e.id
-        WHERE v.id = ? AND v.status = 'Ativa'
+        WHERE v.id = %s AND v.status = 'Ativa'
     ''', (vaga_id, ))
 
     vaga_data = cursor.fetchone()
@@ -1175,7 +1191,7 @@ def detalhes_vaga(vaga_id):
     cursor.execute(
         '''
         SELECT id, score FROM candidaturas
-        WHERE candidato_id = ? AND vaga_id = ?
+        WHERE candidato_id = %s AND vaga_id = %s
     ''', (session['candidato_id'], vaga_id))
     candidatura = cursor.fetchone()
 
@@ -1183,7 +1199,7 @@ def detalhes_vaga(vaga_id):
     cursor.execute(
         '''
         SELECT texto_curriculo, endereco_completo, pretensao_salarial
-        FROM candidatos WHERE id = ?
+        FROM candidatos WHERE id = %s
     ''', (session['candidato_id'], ))
     candidato_data = cursor.fetchone()
 
@@ -1249,7 +1265,7 @@ def minhas_candidaturas():
         FROM candidaturas ca
         JOIN vagas v ON ca.vaga_id = v.id
         JOIN empresas e ON v.empresa_id = e.id
-        WHERE ca.candidato_id = ?
+        WHERE ca.candidato_id = %s
         ORDER BY ca.data_candidatura DESC
         ''', (session['candidato_id'], ))
 
@@ -1273,7 +1289,7 @@ def baixar_curriculo(candidato_id):
         '''
         SELECT COUNT(*) FROM candidaturas ca
         JOIN vagas v ON ca.vaga_id = v.id
-        WHERE ca.candidato_id = ? AND v.empresa_id = ?
+        WHERE ca.candidato_id = %s AND v.empresa_id = %s
     ''', (candidato_id, session['empresa_id']))
 
     if cursor.fetchone()[0] == 0:
@@ -1284,7 +1300,7 @@ def baixar_curriculo(candidato_id):
     cursor.execute(
         '''
         SELECT nome, caminho_curriculo
-        FROM candidatos WHERE id = ?
+        FROM candidatos WHERE id = %s
     ''', (candidato_id, ))
 
     candidato = cursor.fetchone()
@@ -1325,7 +1341,7 @@ def relatorio_empresa():
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        'SELECT id, titulo FROM vagas WHERE empresa_id = ? ORDER BY titulo',
+        'SELECT id, titulo FROM vagas WHERE empresa_id = %s ORDER BY titulo',
         (empresa_id, ))
     vagas_disponiveis = cursor.fetchall()
     conn.close()
@@ -1406,7 +1422,7 @@ def cancelar_candidatura():
 
     # Verificar se a candidatura existe
     cursor.execute(
-        'SELECT id FROM candidaturas WHERE candidato_id = ? AND vaga_id = ?',
+        'SELECT id FROM candidaturas WHERE candidato_id = %s AND vaga_id = %s',
         (session['candidato_id'], vaga_id))
     candidatura = cursor.fetchone()
 
@@ -1416,7 +1432,7 @@ def cancelar_candidatura():
 
     # Remover candidatura
     cursor.execute(
-        'DELETE FROM candidaturas WHERE candidato_id = ? AND vaga_id = ?',
+        'DELETE FROM candidaturas WHERE candidato_id = %s AND vaga_id = %s',
         (session['candidato_id'], vaga_id))
 
     # Recalcular posições dos candidatos restantes
@@ -1429,7 +1445,7 @@ def cancelar_candidatura():
             WHERE c2.vaga_id = candidaturas.vaga_id
             AND c2.score > candidaturas.score
         )
-        WHERE vaga_id = ?
+        WHERE vaga_id = %s
     ''', (vaga_id, ))
 
     conn.commit()
@@ -1445,7 +1461,7 @@ def reativar_vaga_route(vaga_id):
 
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('UPDATE vagas SET status = "Ativa" WHERE id = ?',
+    cursor.execute('UPDATE vagas SET status = "Ativa" WHERE id = %s',
                    (vaga_id, ))
     conn.commit()
     conn.close()
@@ -1484,7 +1500,7 @@ def api_notificacoes():
             FROM notificacoes n
             LEFT JOIN vagas v ON n.vaga_id = v.id
             LEFT JOIN empresas e ON n.empresa_id = e.id
-            WHERE n.candidato_id = ?
+            WHERE n.candidato_id = %s
             ORDER BY n.lida ASC, COALESCE(n.data_envio, datetime('now')) DESC
             LIMIT 50
         ''', (session['candidato_id'], ))
@@ -1560,7 +1576,7 @@ def marcar_todas_lidas():
 
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("UPDATE notificacoes SET lida = 1 WHERE candidato_id = ?",
+    cursor.execute("UPDATE notificacoes SET lida = 1 WHERE candidato_id = %s",
                    (session['candidato_id'], ))
     conn.commit()
     conn.close()
@@ -1577,7 +1593,7 @@ def obter_dicas_favoritas():
         return jsonify({'success': False, 'error': 'Não autorizado'}), 401
 
     try:
-        conn = sqlite3.connect('recrutamento.db')
+        conn = mysql.connect('recrutamentodb')
         cursor = conn.cursor()
 
         # Buscar vagas favoritas do candidato
@@ -1587,7 +1603,7 @@ def obter_dicas_favoritas():
             FROM candidato_vaga_favorita f
             JOIN vagas v ON f.vaga_id = v.id
             JOIN empresas e ON v.empresa_id = e.id
-            WHERE f.candidato_id = ? AND v.status = 'Ativa'
+            WHERE f.candidato_id = %s AND v.status = 'Ativa'
             ORDER BY f.data_adicao DESC
             LIMIT 10
         ''', (candidato_id,))
@@ -1604,7 +1620,7 @@ def obter_dicas_favoritas():
         cursor.execute('''
             SELECT nome, email, competencias, experiencia, resumo_profissional, pretensao_salarial
             FROM candidatos 
-            WHERE id = ?
+            WHERE id = %s
         ''', (candidato_id,))
 
         candidato_data = cursor.fetchone()
@@ -1733,7 +1749,7 @@ def marcar_notificacao_lida():
         '''
         UPDATE notificacoes
         SET lida = 1
-        WHERE id = ? AND candidato_id = ?
+        WHERE id = %s AND candidato_id = %s
     ''', (notificacao_id, session['candidato_id']))
 
     conn.commit()
@@ -1755,7 +1771,7 @@ def marcar_todas_notificacoes_lidas():
         '''
         UPDATE notificacoes
         SET lida = 1
-        WHERE candidato_id = ?
+        WHERE candidato_id = %s
     ''', (session['candidato_id'], ))
 
     conn.commit()
@@ -1777,7 +1793,7 @@ def marcar_notificacao_individual_lida(notificacao_id):
         '''
         UPDATE notificacoes
         SET lida = 1
-        WHERE id = ? AND candidato_id = ?
+        WHERE id = %s AND candidato_id = %s
     ''', (notificacao_id, session['candidato_id']))
 
     conn.commit()
@@ -1795,7 +1811,7 @@ def limpar_todas_notificacoes():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute('DELETE FROM notificacoes WHERE candidato_id = ?',
+    cursor.execute('DELETE FROM notificacoes WHERE candidato_id = %s',
                    (session['candidato_id'], ))
     conn.commit()
     conn.close()
@@ -1825,7 +1841,7 @@ def criar_notificacoes_demo():
         cursor.execute(
             '''
             INSERT INTO notificacoes (candidato_id, mensagem, tipo, lida, data_envio)
-            VALUES (?, ?, ?, 0, datetime('now'))
+            VALUES (%s, %s, %s, 0, datetime('now'))
         ''', (session['candidato_id'], mensagem, tipo))
 
     conn.commit()
@@ -1849,7 +1865,7 @@ def apagar_notificacao(notificacao_id):
     cursor.execute(
         '''
         DELETE FROM notificacoes
-        WHERE id = ? AND candidato_id = ?
+        WHERE id = %s AND candidato_id = %s
     ''', (notificacao_id, session['candidato_id']))
 
     conn.commit()
@@ -1871,7 +1887,7 @@ def apagar_todas_notificacoes():
     cursor.execute(
         '''
         DELETE FROM notificacoes
-        WHERE candidato_id = ?
+        WHERE candidato_id = %s
     ''', (session['candidato_id'], ))
 
     conn.commit()
@@ -2005,7 +2021,7 @@ def api_notificacoes_nao_lidas():
 
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM notificacoes WHERE candidato_id = ? AND lida = 0",
+    cursor.execute("SELECT COUNT(*) FROM notificacoes WHERE candidato_id = %s AND lida = 0",
                    (session['candidato_id'],))
     count = cursor.fetchone()[0]
 
@@ -2036,7 +2052,7 @@ def get_endereco_empresa():
 
     try:
         cursor.execute(
-            'SELECT endereco, cidade, estado, cep FROM empresas WHERE id = ?',
+            'SELECT endereco, cidade, estado, cep FROM empresas WHERE id = %s',
             (session['empresa_id'], ))
         empresa = cursor.fetchone()
 
@@ -2078,7 +2094,7 @@ def favoritar_vaga():
     try:
         # Verificar se já existe nos favoritos
         cursor.execute(
-            'SELECT id FROM candidato_vaga_favorita WHERE candidato_id = ? AND vaga_id = ?',
+            'SELECT id FROM candidato_vaga_favorita WHERE candidato_id = %s AND vaga_id = %s',
             (candidato_id, vaga_id)
         )
         favorito_existente = cursor.fetchone()
@@ -2086,7 +2102,7 @@ def favoritar_vaga():
         if favorito_existente:
             # Remover dos favoritos
             cursor.execute(
-                'DELETE FROM candidato_vaga_favorita WHERE candidato_id = ? AND vaga_id = ?',
+                'DELETE FROM candidato_vaga_favorita WHERE candidato_id = %s AND vaga_id = %s',
                 (candidato_id, vaga_id)
             )
             favorited = False
@@ -2094,7 +2110,7 @@ def favoritar_vaga():
         else:
             # Adicionar aos favoritos
             cursor.execute(
-                'INSERT INTO candidato_vaga_favorita (candidato_id, vaga_id, data_adicao) VALUES (?, ?, datetime("now"))',
+                'INSERT INTO candidato_vaga_favorita (candidato_id, vaga_id, data_adicao) VALUES (%s, %s, datetime("now"))',
                 (candidato_id, vaga_id)
             )
             favorited = True
@@ -2127,7 +2143,7 @@ def api_vagas_empresa():
     cursor = conn.cursor()
 
     try:
-        cursor.execute('SELECT id, titulo, status FROM vagas WHERE empresa_id = ? ORDER BY titulo',
+        cursor.execute('SELECT id, titulo, status FROM vagas WHERE empresa_id = %s ORDER BY titulo',
                        (session['empresa_id'], ))
 
         vagas = []
@@ -2170,7 +2186,7 @@ def favoritar_candidato():
             '''
             SELECT c.vaga_id FROM candidaturas c
             JOIN vagas v ON c.vaga_id = v.id
-            WHERE c.candidato_id = ? AND v.empresa_id = ? AND c.vaga_id = ?
+            WHERE c.candidato_id = %s AND v.empresa_id = %s AND c.vaga_id = %s
         ''', (candidato_id, empresa_id, vaga_id))
 
         if not cursor.fetchone():
@@ -2183,7 +2199,7 @@ def favoritar_candidato():
         cursor.execute(
             '''
             SELECT id FROM empresa_candidato_favorito
-            WHERE empresa_id = ? AND candidato_id = ? AND vaga_id = ?
+            WHERE empresa_id = %s AND candidato_id = %s AND vaga_id = %s
         ''', (empresa_id, candidato_id, vaga_id))
 
         ja_favoritado = cursor.fetchone() is not None
@@ -2194,7 +2210,7 @@ def favoritar_candidato():
                 cursor.execute(
                     '''
                     DELETE FROM empresa_candidato_favorito
-                    WHERE empresa_id = ? AND candidato_id = ? AND vaga_id = ?
+                    WHERE empresa_id = %s AND candidato_id = %s AND vaga_id = %s
                 ''', (empresa_id, candidato_id, vaga_id))
                 conn.commit()
                 return jsonify({
@@ -2207,7 +2223,7 @@ def favoritar_candidato():
                 cursor.execute(
                     '''
                     INSERT INTO empresa_candidato_favorito (empresa_id, candidato_id, vaga_id)
-                    VALUES (?, ?, ?)
+                    VALUES (%s, %s, %s)
                 ''', (empresa_id, candidato_id, vaga_id))
                 conn.commit()
                 return jsonify({
@@ -2220,7 +2236,7 @@ def favoritar_candidato():
             cursor.execute(
                 '''
                 DELETE FROM empresa_candidato_favorito
-                WHERE empresa_id = ? AND candidato_id = ? AND vaga_id = ?
+                WHERE empresa_id = %s AND candidato_id = %s AND vaga_id = %s
             ''', (empresa_id, candidato_id, vaga_id))
             conn.commit()
             return jsonify({
@@ -2249,7 +2265,7 @@ def api_candidatos_favoritos():
     if 'empresa_id' not in session:
         return jsonify({'error': 'Não autorizado'}), 401
 
-    conn = sqlite3.connect('recrutamento.db')
+    conn = mysql.connect('recrutamentodb')
     cursor = conn.cursor()
 
     try:
@@ -2291,7 +2307,7 @@ def api_candidatos_favoritos():
                    efcg.data_criacao as data_favorito
             FROM empresa_favorito_candidato_geral efcg
             JOIN candidatos c ON efcg.candidato_id = c.id
-            WHERE efcg.empresa_id = ?
+            WHERE efcg.empresa_id = %s
 
             UNION
 
@@ -2303,7 +2319,7 @@ def api_candidatos_favoritos():
             JOIN candidatos c ON ecf.candidato_id = c.id
             JOIN vagas v ON ecf.vaga_id = v.id
             LEFT JOIN candidaturas ca ON ca.candidato_id = c.id AND ca.vaga_id = v.id
-            WHERE ecf.empresa_id = ?
+            WHERE ecf.empresa_id = %s
 
             ORDER BY data_favorito DESC
         ''', (empresa_id, empresa_id))
@@ -2357,7 +2373,7 @@ def api_score_detalhes(candidato_id, vaga_id):
             SELECT c.texto_curriculo, c.pretensao_salarial, c.endereco_completo,
                    v.requisitos, v.salario_oferecido, v.diferenciais, v.tipo_vaga, v.endereco_vaga
             FROM candidatos c, vagas v
-            WHERE c.id = ? AND v.id = ? AND v.empresa_id = ?
+            WHERE c.id = %s AND v.id = %s AND v.empresa_id = %s
         ''', (candidato_id, vaga_id, session['empresa_id']))
 
         resultado = cursor.fetchone()
@@ -2556,7 +2572,7 @@ def api_candidatos_geral():
                    CASE WHEN c.texto_curriculo IS NOT NULL AND c.texto_curriculo != '' THEN 1 ELSE 0 END as tem_curriculo,
                    CASE WHEN efcg.candidato_id IS NOT NULL THEN 1 ELSE 0 END as is_favorito
             FROM candidatos c
-            LEFT JOIN empresa_favorito_candidato_geral efcg ON efcg.candidato_id = c.id AND efcg.empresa_id = ?
+            LEFT JOIN empresa_favorito_candidato_geral efcg ON efcg.candidato_id = c.id AND efcg.empresa_id = %s
             ORDER BY COALESCE(c.data_cadastro, datetime('now')) DESC
         ''', (empresa_id, ))
 
@@ -2622,7 +2638,7 @@ def favoritar_candidato_geral():
         empresa_id = session['empresa_id']
 
         # Verificar se o candidato existe
-        cursor.execute('SELECT id FROM candidatos WHERE id = ?',
+        cursor.execute('SELECT id FROM candidatos WHERE id = %s',
                        (candidato_id, ))
         if not cursor.fetchone():
             return jsonify({
@@ -2634,7 +2650,7 @@ def favoritar_candidato_geral():
         cursor.execute(
             '''
             SELECT id FROM empresa_favorito_candidato_geral
-            WHERE empresa_id = ? AND candidato_id = ?
+            WHERE empresa_id = %s AND candidato_id = %s
         ''', (empresa_id, candidato_id))
 
         ja_favoritado = cursor.fetchone() is not None
@@ -2645,7 +2661,7 @@ def favoritar_candidato_geral():
                 cursor.execute(
                     '''
                     DELETE FROM empresa_favorito_candidato_geral
-                    WHERE empresa_id = ? AND candidato_id = ?
+                    WHERE empresa_id = %s AND candidato_id = %s
                 ''', (empresa_id, candidato_id))
                 conn.commit()
                 return jsonify({
@@ -2658,7 +2674,7 @@ def favoritar_candidato_geral():
                 cursor.execute(
                     '''
                     INSERT INTO empresa_favorito_candidato_geral (empresa_id, candidato_id)
-                    VALUES (?, ?)
+                    VALUES (%s, %s)
                 ''', (empresa_id, candidato_id))
                 conn.commit()
                 return jsonify({
@@ -2671,7 +2687,7 @@ def favoritar_candidato_geral():
             cursor.execute(
                 '''
                 DELETE FROM empresa_favorito_candidato_geral
-                WHERE empresa_id = ? AND candidato_id = ?
+                WHERE empresa_id = %s AND candidato_id = %s
             ''', (empresa_id, candidato_id))
             conn.commit()
             return jsonify({
@@ -2721,8 +2737,8 @@ def api_todas_vagas():
                    CASE WHEN ca.id IS NOT NULL THEN 1 ELSE 0 END as ja_candidatou
             FROM vagas v
             JOIN empresas e ON v.empresa_id = e.id
-            LEFT JOIN candidato_vaga_favorita cvf ON cvf.candidato_id = ? AND cvf.vaga_id = v.id
-            LEFT JOIN candidaturas ca ON ca.candidato_id = ? AND ca.vaga_id = v.id
+            LEFT JOIN candidato_vaga_favorita cvf ON cvf.candidato_id = %s AND cvf.vaga_id = v.id
+            LEFT JOIN candidaturas ca ON ca.candidato_id = %s AND ca.vaga_id = v.id
             WHERE v.status = 'Ativa'
             ORDER BY v.data_criacao DESC
         ''', (session['candidato_id'], session['candidato_id']))
@@ -2731,7 +2747,7 @@ def api_todas_vagas():
 
         # Buscar informações do candidato para calcular scores
         cursor.execute(
-            'SELECT pretensao_salarial, texto_curriculo, endereco_completo FROM candidatos WHERE id = ?',
+            'SELECT pretensao_salarial, texto_curriculo, endereco_completo FROM candidatos WHERE id = %s',
             (session['candidato_id'], ))
         candidato_info = cursor.fetchone()
 
@@ -2864,8 +2880,8 @@ def api_buscar_vagas():
                    c.nome as categoria_nome
             FROM vagas v
             JOIN empresas e ON v.empresa_id = e.id
-            LEFT JOIN candidato_vaga_favorita cvf ON cvf.candidato_id = ? AND cvf.vaga_id = v.id
-            LEFT JOIN candidaturas ca ON ca.candidato_id = ? AND ca.vaga_id = v.id
+            LEFT JOIN candidato_vaga_favorita cvf ON cvf.candidato_id = %s AND cvf.vaga_id = v.id
+            LEFT JOIN candidaturas ca ON ca.candidato_id = %s AND ca.vaga_id = v.id
             LEFT JOIN categorias c ON v.categoria_id = c.id
             WHERE v.status = 'Ativa'
         '''
@@ -2874,33 +2890,33 @@ def api_buscar_vagas():
 
         # Adicionar filtros
         if keyword:
-            query_base += ' AND (v.titulo LIKE ? OR v.descricao LIKE ? OR v.requisitos LIKE ?)'
+            query_base += ' AND (v.titulo LIKE %s OR v.descricao LIKE %s OR v.requisitos LIKE %s)'
             keyword_param = f'%{keyword}%'
             params.extend([keyword_param, keyword_param, keyword_param])
 
         if location:
-            query_base += ' AND (v.localizacao_cidade LIKE ? OR v.localizacao_estado LIKE ?)'
+            query_base += ' AND (v.localizacao_cidade LIKE %s OR v.localizacao_estado LIKE %s)'
             location_param = f'%{location}%'
             params.extend([location_param, location_param])
 
         if category:
-            query_base += ' AND v.categoria_id = ?'
+            query_base += ' AND v.categoria_id = %s'
             params.append(category)
 
         if urgency:
-            query_base += ' AND v.urgencia_contratacao = ?'
+            query_base += ' AND v.urgencia_contratacao = %s'
             params.append(urgency)
 
         if salary:
             try:
                 salary_value = float(salary)
-                query_base += ' AND v.salario_oferecido >= ?'
+                query_base += ' AND v.salario_oferecido >= %s'
                 params.append(salary_value)
             except ValueError:
                 pass
 
         if job_type:
-            query_base += ' AND v.tipo_vaga = ?'
+            query_base += ' AND v.tipo_vaga = %s'
             params.append(job_type)
 
         query_base += ' ORDER BY v.data_criacao DESC'
@@ -2910,7 +2926,7 @@ def api_buscar_vagas():
 
         # Buscar informações do candidato para calcular scores
         cursor.execute(
-            'SELECT pretensao_salarial, texto_curriculo, endereco_completo FROM candidatos WHERE id = ?',
+            'SELECT pretensao_salarial, texto_curriculo, endereco_completo FROM candidatos WHERE id = %s',
             (session['candidato_id'], ))
         candidato_info = cursor.fetchone()
 
@@ -2993,7 +3009,7 @@ def api_analisar_curriculo():
         candidato_id = session['candidato_id']
 
         # Buscar currículo do candidato
-        cursor.execute('SELECT texto_curriculo FROM candidatos WHERE id = ?',
+        cursor.execute('SELECT texto_curriculo FROM candidatos WHERE id = %s',
                        (candidato_id, ))
         resultado = cursor.fetchone()
 
@@ -3027,7 +3043,7 @@ def api_recomendacoes_ia():
         candidato_id = session['candidato_id']
 
         # Buscar currículo do candidato
-        cursor.execute('SELECT texto_curriculo FROM candidatos WHERE id = ?',
+        cursor.execute('SELECT texto_curriculo FROM candidatos WHERE id = %s',
                        (candidato_id, ))
         resultado = cursor.fetchone()
 
@@ -3065,7 +3081,7 @@ def api_dicas_vaga_ia(vaga_id):
             '''
             SELECT c.texto_curriculo, v.requisitos, v.salario_oferecido
             FROM candidatos c, vagas v
-            WHERE c.id = ? AND v.id = ? AND v.status = 'Ativa'
+            WHERE c.id = %s AND v.id = %s AND v.status = 'Ativa'
         ''', (candidato_id, vaga_id))
 
         resultado = cursor.fetchone()
@@ -3102,7 +3118,7 @@ def api_enviar_recomendacoes_email():
 
         # Buscar dados do candidato
         cursor.execute(
-            'SELECT nome, email, texto_curriculo FROM candidatos WHERE id = ?',
+            'SELECT nome, email, texto_curriculo FROM candidatos WHERE id = %s',
             (candidato_id, ))
         resultado = cursor.fetchone()
 
@@ -3197,7 +3213,7 @@ def api_toggle_favorito():
     try:
         # Verificar se já existe nos favoritos
         cursor.execute(
-            'SELECT id FROM candidato_vaga_favorita WHERE candidato_id = ? AND vaga_id = ?',
+            'SELECT id FROM candidato_vaga_favorita WHERE candidato_id = %s AND vaga_id = %s',
             (candidato_id, vaga_id)
         )
         favorito_existente = cursor.fetchone()
@@ -3205,7 +3221,7 @@ def api_toggle_favorito():
         if favorito_existente:
             # Remover dos favoritos
             cursor.execute(
-                'DELETE FROM candidato_vaga_favorita WHERE candidato_id = ? AND vaga_id = ?',
+                'DELETE FROM candidato_vaga_favorita WHERE candidato_id = %s AND vaga_id = %s',
                 (candidato_id, vaga_id)
             )
             favorited = False
@@ -3213,7 +3229,7 @@ def api_toggle_favorito():
         else:
             # Adicionar aos favoritos
             cursor.execute(
-                'INSERT INTO candidato_vaga_favorita (candidato_id, vaga_id, data_adicao) VALUES (?, ?, datetime("now"))',
+                'INSERT INTO candidato_vaga_favorita (candidato_id, vaga_id, data_adicao) VALUES (%s, %s, datetime("now"))',
                 (candidato_id, vaga_id)
             )
             favorited = True
@@ -3234,3 +3250,7 @@ def api_toggle_favorito():
         }), 500
     finally:
         conn.close()
+
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=5000, use_reloader=False)
+
