@@ -218,7 +218,7 @@ def detalhes_vaga_publico(vaga_id):
 
 
 
-@app.route('/login_empresa', methods=['GET', 'POST'])
+@app.route('/empresa/login_empresa', methods=['GET', 'POST'])
 def login_empresa():
     if request.method == 'POST':
         cnpj = request.form.get('cnpj', '').strip()
@@ -226,7 +226,7 @@ def login_empresa():
 
         if not cnpj or not senha:
             flash('Por favor, preencha todos os campos', 'error')
-            return render_template('login_empresa.html')
+            return render_template('empresa/login_empresa.html')
 
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -255,10 +255,10 @@ def login_empresa():
             cursor.close()
             conn.close()
 
-    return render_template('login_empresa.html')
+    return render_template('empresa/login_empresa.html')
 
 
-@app.route('/cadastro_empresa', methods=['GET', 'POST'])
+@app.route('/empresa/cadastro_empresa', methods=['GET', 'POST'])
 def cadastro_empresa():
     if request.method == 'POST':
         nome = request.form['nome']
@@ -291,10 +291,10 @@ def cadastro_empresa():
             cursor.close()
             conn.close()
 
-    return render_template('cadastro_empresa.html')
+    return render_template('empresa/cadastro_empresa.html')
 
 
-@app.route('/login_candidato', methods=['GET', 'POST'])
+@app.route('/candidato/login_candidato', methods=['GET', 'POST'])
 @app.route('/index.html', methods=['GET', 'POST'])
 def login_candidato():
     if request.method == 'POST':
@@ -315,10 +315,10 @@ def login_candidato():
         else:
             flash('Email ou senha incorretos', 'error')
 
-    return render_template('login_candidato.html')
+    return render_template('candidato/login_candidato.html')
 
 
-@app.route('/cadastro_candidato', methods=['GET', 'POST'])
+@app.route('/candidato/cadastro_candidato', methods=['GET', 'POST'])
 def cadastro_candidato():
     if request.method == 'POST':
         nome = request.form['nome']
@@ -346,10 +346,10 @@ def cadastro_candidato():
         finally:
             conn.close()
 
-    return render_template('cadastro_candidato.html')
+    return render_template('candidato/cadastro_candidato.html')
 
 
-@app.route('/dashboard_empresa')
+@app.route('/empresa/dashboard_empresa')
 def dashboard_empresa():
     if 'empresa_id' not in session or session.get('tipo_usuario') != 'empresa':
         flash('Faça login para acessar esta página', 'error')
@@ -443,10 +443,10 @@ def dashboard_empresa():
         }
         vagas_processadas.append(vaga_dict)
 
-    return render_template('dashboard_empresa.html', vagas=vagas_processadas)
+    return render_template('empresa/dashboard_empresa.html', vagas=vagas_processadas)
 
 
-@app.route('/criar_vaga', methods=['GET', 'POST'])
+@app.route('/empresa/criar_vaga', methods=['GET', 'POST'])
 def criar_vaga():
     if 'empresa_id' not in session:
         return redirect(url_for('login_empresa'))
@@ -541,13 +541,13 @@ def criar_vaga():
 
     hoje = datetime.now().strftime('%Y-%m-%d')
 
-    return render_template('criar_vaga.html', categorias=categorias, hoje=hoje)
+    return render_template('empresa/criar_vaga.html', categorias=categorias, hoje=hoje)
 
 
 
 
 
-@app.route('/candidatos_vaga/<int:vaga_id>')
+@app.route('/candidato/candidatos_vaga/<int:vaga_id>')
 def candidatos_vaga(vaga_id):
     if 'empresa_id' not in session:
         return redirect(url_for('login_empresa'))
@@ -568,13 +568,13 @@ def candidatos_vaga(vaga_id):
     vaga = cursor.fetchone()
     conn.close()
 
-    return render_template('candidatos_vaga.html',
+    return render_template('candidato/candidatos_vaga.html',
                            candidatos=candidatos,
                            vaga_titulo=vaga[0] if vaga else '',
                            vaga_id=vaga_id)
 
 
-@app.route('/dashboard_candidato')
+@app.route('/candidato/dashboard_candidato')
 def dashboard_candidato():
     if 'candidato_id' not in session:
         return redirect(url_for('login_candidato'))
@@ -707,13 +707,13 @@ def dashboard_candidato():
     vagas_com_score.sort(key=lambda x: x[9], reverse=True)
     top_vagas = vagas_com_score[:config['TOP_JOBS']]
 
-    return render_template('dashboard_candidato.html',
+    return render_template('candidato/dashboard_candidato.html',
                            vagas_recomendadas=top_vagas,
                            vagas_candidatadas=vagas_candidatadas,
                            vagas_favoritas=vagas_favoritas_processadas)
 
 
-@app.route('/upload_curriculo', methods=['GET', 'POST'])
+@app.route('/candidato/upload_curriculo', methods=['GET', 'POST'])
 def upload_curriculo():
     if 'candidato_id' not in session:
         return redirect(url_for('login_candidato'))
@@ -736,10 +736,10 @@ def upload_curriculo():
         else:
             return redirect(request.url)
 
-    return render_template('upload_curriculo.html')
+    return render_template('candidato/upload_curriculo.html')
 
 
-@app.route('/finalizar_curriculo', methods=['POST'])
+@app.route('/candidato/finalizar_curriculo', methods=['POST'])
 def finalizar_curriculo():
     if 'candidato_id' not in session:
         return redirect(url_for('login_candidato'))
@@ -1011,7 +1011,7 @@ def encerrar_vaga():
             pass
 
 
-@app.route('/editar_perfil_candidato', methods=['GET', 'POST'])
+@app.route('/candidato/editar_perfil_candidato', methods=['GET', 'POST'])
 def editar_perfil_candidato():
     if 'candidato_id' not in session:
         return redirect(url_for('login_candidato'))
@@ -1053,9 +1053,9 @@ def editar_perfil_candidato():
     candidato = cursor.fetchone()
     conn.close()
 
-    return render_template('editar_perfil_candidato.html', candidato=candidato)
+    return render_template('candidato/editar_perfil_candidato.html', candidato=candidato)
 
-@app.route('/editar_vaga/<int:vaga_id>', methods=['GET', 'POST'])
+@app.route('/empresa/editar_vaga/<int:vaga_id>', methods=['GET', 'POST'])
 def editar_vaga(vaga_id):
     if 'empresa_id' not in session:
         flash('Acesso negado', 'error')
@@ -1157,7 +1157,7 @@ def editar_vaga(vaga_id):
 
     conn.close()
 
-    return render_template('editar_vaga.html',
+    return render_template('empresa/editar_vaga.html',
                            vaga=vaga,
                            categorias=categorias,
                            datetime=datetime,
@@ -1249,7 +1249,7 @@ def detalhes_vaga(vaga_id):
                            ja_candidatado=bool(candidatura))
 
 
-@app.route('/minhas_candidaturas')
+@app.route('/candidato/minhas_candidaturas')
 def minhas_candidaturas():
     if 'candidato_id' not in session:
         return redirect(url_for('login_candidato'))
@@ -1272,7 +1272,7 @@ def minhas_candidaturas():
     candidaturas = cursor.fetchall()
     conn.close()
 
-    return render_template('minhas_candidaturas.html',
+    return render_template('candidato/minhas_candidaturas.html',
                            candidaturas=candidaturas)
 
 
@@ -1349,7 +1349,7 @@ def relatorio_empresa():
     from utils.relatorio_generator import gerar_dados_graficos
     dados_graficos = gerar_dados_graficos(empresa_id)
 
-    return render_template('relatorio_empresa.html',
+    return render_template('empresa/relatorio_empresa.html',
                            vagas_disponiveis=vagas_disponiveis,
                            dados_graficos=json.dumps(dados_graficos))
 
@@ -1381,7 +1381,7 @@ def relatorio_completo():
 
     except Exception as e:
         flash(f'Erro ao gerar relatório: {str(e)}', 'error')
-        return redirect(url_for('relatorio_empresa'))
+        return redirect(url_for('/empresa/relatorio_empresa'))
 
 
 @app.route('/api/relatorio/graficos')
@@ -1465,8 +1465,14 @@ def reativar_vaga_route(vaga_id):
                    (vaga_id, ))
     conn.commit()
     conn.close()
-    return redirect(url_for('dashboard_empresa'))
+    return redirect(url_for('/empresa/dashboard_empresa'))
 
+
+
+
+from flask import jsonify, session
+import mysql.connector
+from datetime import datetime
 
 @app.route('/api/notificacoes')
 def api_notificacoes():
@@ -1474,13 +1480,19 @@ def api_notificacoes():
     if 'candidato_id' not in session:
         return jsonify({'notificacoes': []})
 
-    conn = get_db_connection()
+    # Conectar ao banco MySQL
+    conn = mysql.connector.connect(
+        host='localhost',  # ou o host do seu banco de dados
+        user='root',
+        password='',
+        database='recrutamentodb'
+    )
     cursor = conn.cursor()
 
     try:
         # Verificar e criar colunas necessárias (executar apenas uma vez)
-        cursor.execute("PRAGMA table_info(notificacoes)")
-        columns = [column[1] for column in cursor.fetchall()]
+        cursor.execute("SHOW COLUMNS FROM notificacoes")
+        columns = [column[0] for column in cursor.fetchall()]
 
         if 'tipo' not in columns:
             cursor.execute('ALTER TABLE notificacoes ADD COLUMN tipo TEXT DEFAULT "geral"')
@@ -1493,15 +1505,15 @@ def api_notificacoes():
         # Buscar notificações
         cursor.execute(
             '''
-            SELECT n.id, n.candidato_id, COALESCE(n.tipo, 'geral') as tipo,
-                   n.mensagem, COALESCE(n.lida, 0) as lida,
-                   COALESCE(n.data_envio, datetime('now')) as data_criacao,
+            SELECT n.id, n.candidato_id, IFNULL(n.tipo, 'geral') as tipo,
+                   n.mensagem, IFNULL(n.lida, 0) as lida,
+                   IFNULL(n.data_envio, NOW()) as data_criacao,
                    n.vaga_id, n.empresa_id, v.titulo as vaga_titulo, e.nome as empresa_nome
             FROM notificacoes n
             LEFT JOIN vagas v ON n.vaga_id = v.id
             LEFT JOIN empresas e ON n.empresa_id = e.id
             WHERE n.candidato_id = %s
-            ORDER BY n.lida ASC, COALESCE(n.data_envio, datetime('now')) DESC
+            ORDER BY n.lida ASC, IFNULL(n.data_envio, NOW()) DESC
             LIMIT 50
         ''', (session['candidato_id'], ))
 
@@ -1514,8 +1526,9 @@ def api_notificacoes():
         notificacoes = []
         for row in cursor.fetchall():
             try:
+                # Ajuste da data
                 data_str = row[5]
-                if 'T' in data_str:
+                if isinstance(data_str, str) and 'T' in data_str:
                     data_criacao = datetime.fromisoformat(data_str.replace('Z', '+00:00'))
                 else:
                     data_criacao = datetime.strptime(data_str, '%Y-%m-%d %H:%M:%S')
@@ -1565,7 +1578,10 @@ def api_notificacoes():
         print(f"Erro na API de notificações: {e}")
         return jsonify({'notificacoes': [], 'error': str(e)}), 500
     finally:
+        cursor.close()
         conn.close()
+    
+
 
 
 @app.route('/api/notificacoes/marcar-todas', methods=['POST'])
@@ -1819,13 +1835,22 @@ def limpar_todas_notificacoes():
     return jsonify({'success': True})
 
 
+
+
+
 @app.route('/api/notificacoes/demo', methods=['POST'])
 def criar_notificacoes_demo():
     """API para criar notificações de demonstração"""
     if 'candidato_id' not in session:
         return jsonify({'success': False, 'message': 'Acesso negado'})
 
-    conn = get_db_connection()
+    # Conectar ao banco MySQL
+    conn = mysql.connector.connect(
+        host='localhost',
+        user='root',
+        password='',
+        database='recrutamentodb'
+    )
     cursor = conn.cursor()
 
     # Criar notificações de demo
@@ -1838,19 +1863,22 @@ def criar_notificacoes_demo():
     ]
 
     for mensagem, tipo in notificacoes_demo:
+        # Remover o campo 'data_envio', pois o MySQL vai preencher automaticamente
         cursor.execute(
             '''
-            INSERT INTO notificacoes (candidato_id, mensagem, tipo, lida, data_envio)
-            VALUES (%s, %s, %s, 0, datetime('now'))
-        ''', (session['candidato_id'], mensagem, tipo))
+            INSERT INTO notificacoes (candidato_id, mensagem, tipo, lida, titulo)
+            VALUES (%s, %s, %s, 0, %s)
+        ''', (session['candidato_id'], mensagem, tipo, mensagem[:255]))  # Título: uma versão curta da mensagem
 
     conn.commit()
+    cursor.close()
     conn.close()
 
     return jsonify({
         'success': True,
         'message': 'Notificações de demo criadas!'
     })
+
 
 
 @app.route('/api/notificacoes/<int:notificacao_id>/apagar', methods=['DELETE'])
@@ -2348,13 +2376,13 @@ def api_candidatos_favoritos():
         conn.close()
 
 
-@app.route('/candidatos-geral')
+@app.route('/empresa/candidatos-geral')
 def candidatos_geral():
     """Página para visualizar todos os candidatos cadastrados"""
     if 'empresa_id' not in session:
         return redirect(url_for('login_empresa'))
 
-    return render_template('candidatos_geral.html')
+    return render_template('empresa/candidatos_geral.html')
 
 
 @app.route('/api/score-detalhes/<int:candidato_id>/<int:vaga_id>')
@@ -2716,7 +2744,7 @@ def candidatos_favoritos():
     if 'empresa_id' not in session:
         return redirect(url_for('login_empresa'))
 
-    return render_template('candidatos_favoritos.html')
+    return render_template('empresa/candidatos_favoritos.html')
 
 @app.route('/api/todas-vagas')
 def api_todas_vagas():

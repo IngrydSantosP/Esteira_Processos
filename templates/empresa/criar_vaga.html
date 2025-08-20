@@ -1,0 +1,643 @@
+
+{% extends "base.html" %}
+
+{% block title %}Criar Vaga{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
+    <!-- Header -->
+    <div class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
+                        <span class="text-white font-bold text-lg">➕</span>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                            Criar Nova Vaga
+                        </h1>
+                        <p class="text-gray-500 text-sm">Cadastre uma nova oportunidade de trabalho</p>
+                    </div>
+                </div>
+                <a href="{{ url_for('dashboard_empresa') }}"
+                   class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-xl transition-all duration-300 flex items-center gap-2">
+                    <span>⬅️</span>
+                    Voltar ao Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Progress Indicator Interativo -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
+            <div class="flex items-center justify-center space-x-4">
+                <div class="flex items-center cursor-pointer transition-all duration-300 hover:scale-105" onclick="mostrarSecao(1)" id="step-1">
+                    <div class="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg">1</div>
+                    <span class="ml-3 text-sm font-medium text-green-600">Informações Básicas</span>
+                </div>
+                <div class="w-12 h-1 bg-green-300 rounded-full" id="progress-1"></div>
+                <div class="flex items-center cursor-pointer transition-all duration-300 hover:scale-105" onclick="mostrarSecao(2)" id="step-2">
+                    <div class="w-10 h-10 bg-gray-300 text-gray-500 rounded-full flex items-center justify-center font-bold text-sm">2</div>
+                    <span class="ml-3 text-sm font-medium text-gray-500">Localização</span>
+                </div>
+                <div class="w-12 h-1 bg-gray-300 rounded-full" id="progress-2"></div>
+                <div class="flex items-center cursor-pointer transition-all duration-300 hover:scale-105" onclick="mostrarSecao(3)" id="step-3">
+                    <div class="w-10 h-10 bg-gray-300 text-gray-500 rounded-full flex items-center justify-center font-bold text-sm">3</div>
+                    <span class="ml-3 text-sm font-medium text-gray-500">Requisitos</span>
+                </div>
+            </div>
+        </div>
+
+        <form method="POST" class="space-y-8">
+            <!-- Seção 1: Informações Básicas -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-2xl flex items-center justify-center">
+                        <span class="text-3xl">📋</span>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800">Informações Básicas da Vaga</h2>
+                        <p class="text-gray-500">Configure os dados principais da vaga</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label for="titulo" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                            <span>💼</span> Título da Vaga *
+                        </label>
+                        <input type="text" id="titulo" name="titulo" required
+                               class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                               placeholder="Ex: Desenvolvedor Full Stack Sênior">
+                    </div>
+
+                    <div>
+                        <label for="salario_oferecido" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                            <span>💰</span> Salário Oferecido (R$) *
+                        </label>
+                        <input type="number" id="salario_oferecido" name="salario_oferecido" required step="0.01" min="0"
+                               class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                               placeholder="Ex: 8500.00">
+                    </div>
+
+                    <div>
+                        <label for="tipo_vaga" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                            <span>🏠</span> Modalidade de Trabalho *
+                        </label>
+                        <select id="tipo_vaga" name="tipo_vaga" required
+                                class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                onchange="toggleEnderecoField()">
+                            <option value="">Selecione a modalidade</option>
+                            <option value="Presencial">🏢 Presencial</option>
+                            <option value="Remoto">🏠 Remoto</option>
+                            <option value="Híbrida">🔄 Híbrida</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="categoria_id" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                            <span>🏷️</span> Categoria da Vaga
+                        </label>
+                        <select id="categoria_id" name="categoria_id"
+                                class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                onchange="toggleNovaCategoria()">
+                            <option value="">Selecione uma categoria</option>
+                            {% for categoria in categorias %}
+                            <option value="{{ categoria.id }}">{{ categoria.nome }}</option>
+                            {% endfor %}
+                            <option value="nova">✨ Adicionar nova categoria</option>
+                        </select>
+                    </div>
+
+                    <div id="nova_categoria_container" class="hidden">
+                        <label for="nova_categoria" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                            <span>✨</span> Nova Categoria
+                        </label>
+                        <input type="text" id="nova_categoria" name="nova_categoria"
+                               class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                               placeholder="Ex: Inteligência Artificial">
+                    </div>
+
+                    <div>
+                        <label for="urgencia_contratacao" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                            <span>⚡</span> Urgência da Contratação
+                        </label>
+                        <select id="urgencia_contratacao" name="urgencia_contratacao"
+                                class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                            <option value="">Selecione a urgência</option>
+                            <option value="Imediata">🚨 Imediata - Preciso contratar já!</option>
+                            <option value="Em até 30 dias">⏰ Em até 30 dias</option>
+                            <option value="Em até 60 dias">📅 Em até 60 dias</option>
+                            <option value="Sem urgência">🕐 Sem urgência definida</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="data_congelamento_agendado" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                            <span>⏰</span> Congelamento Agendado
+                        </label>
+                        <input type="date" id="data_congelamento_agendado" name="data_congelamento_agendado"
+                               class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                               min="{{ hoje }}">
+                        <p class="text-xs text-gray-600 mt-2 bg-blue-50 p-2 rounded-lg border border-blue-200">
+                            💡 <strong>Opcional:</strong> A vaga será automaticamente congelada na data selecionada
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção 2: Localização -->
+            <div id="endereco_container" class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hidden">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl flex items-center justify-center">
+                        <span class="text-3xl">📍</span>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800">Localização da Vaga</h2>
+                        <p class="text-gray-500">Configure onde a vaga será exercida</p>
+                    </div>
+                </div>
+
+                <div class="mb-6 bg-gray-50 rounded-xl p-4 border border-gray-200">
+                    <label class="flex items-center space-x-3 cursor-pointer">
+                        <input type="checkbox" id="usar_endereco_empresa" name="usar_endereco_empresa" 
+                               class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                               onchange="toggleEnderecoEmpresa()">
+                        <span class="text-sm font-semibold text-gray-700 flex items-center gap-1">
+                            <span>🏢</span> Usar endereço da empresa
+                        </span>
+                    </label>
+                </div>
+
+                <div id="campos_endereco_vaga">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-2">
+                            <label for="localizacao_endereco" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                                <span>🏠</span> Endereço Completo *
+                            </label>
+                            <input type="text" id="localizacao_endereco" name="localizacao_endereco"
+                                   class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                   placeholder="Ex: Av. Paulista, 1000, Conj. 101">
+                        </div>
+
+                        <div>
+                            <label for="localizacao_cidade" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                                <span>🌆</span> Cidade *
+                            </label>
+                            <input type="text" id="localizacao_cidade" name="localizacao_cidade"
+                                   class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                   placeholder="Ex: São Paulo">
+                        </div>
+
+                        <div>
+                            <label for="localizacao_estado" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                                <span>🗺️</span> Estado *
+                            </label>
+                            <select id="localizacao_estado" name="localizacao_estado"
+                                    class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">Selecione o estado</option>
+                                <option value="AC">Acre</option>
+                                <option value="AL">Alagoas</option>
+                                <option value="AP">Amapá</option>
+                                <option value="AM">Amazonas</option>
+                                <option value="BA">Bahia</option>
+                                <option value="CE">Ceará</option>
+                                <option value="DF">Distrito Federal</option>
+                                <option value="ES">Espírito Santo</option>
+                                <option value="GO">Goiás</option>
+                                <option value="MA">Maranhão</option>
+                                <option value="MT">Mato Grosso</option>
+                                <option value="MS">Mato Grosso do Sul</option>
+                                <option value="MG">Minas Gerais</option>
+                                <option value="PA">Pará</option>
+                                <option value="PB">Paraíba</option>
+                                <option value="PR">Paraná</option>
+                                <option value="PE">Pernambuco</option>
+                                <option value="PI">Piauí</option>
+                                <option value="RJ">Rio de Janeiro</option>
+                                <option value="RN">Rio Grande do Norte</option>
+                                <option value="RS">Rio Grande do Sul</option>
+                                <option value="RO">Rondônia</option>
+                                <option value="RR">Roraima</option>
+                                <option value="SC">Santa Catarina</option>
+                                <option value="SP">São Paulo</option>
+                                <option value="SE">Sergipe</option>
+                                <option value="TO">Tocantins</option>
+                            </select>
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label for="localizacao_cep" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                                <span>📮</span> CEP (Opcional)
+                            </label>
+                            <input type="text" id="localizacao_cep" name="localizacao_cep"
+                                   class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                   placeholder="Ex: 01310-100"
+                                   pattern="[0-9]{5}-?[0-9]{3}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                    <p class="text-sm text-amber-800 flex items-center gap-2">
+                        <span>⚠️</span>
+                        <strong>Importante:</strong> Endereço é obrigatório para vagas presenciais e híbridas
+                    </p>
+                </div>
+            </div>
+
+            <!-- Seção 3: Detalhes da Vaga -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-16 h-16 bg-gradient-to-br from-purple-100 to-pink-100 rounded-2xl flex items-center justify-center">
+                        <span class="text-3xl">📝</span>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800">Detalhes e Requisitos</h2>
+                        <p class="text-gray-500">Descreva a vaga e seus requisitos</p>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div>
+                        <label for="descricao" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                            <span>📄</span> Descrição Completa da Vaga *
+                        </label>
+                        <textarea id="descricao" name="descricao" required rows="5"
+                                  class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                                  placeholder="Descreva detalhadamente as responsabilidades, benefícios, ambiente de trabalho, oportunidades de crescimento..."></textarea>
+                        <div class="mt-1 text-xs text-gray-500 flex items-center gap-1">
+                            <span>💡</span> Seja específico para atrair candidatos qualificados
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="requisitos" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                            <span>⚡</span> Requisitos Obrigatórios *
+                        </label>
+                        <textarea id="requisitos" name="requisitos" required rows="5"
+                                  class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                                  placeholder="Liste todas as habilidades técnicas, experiências, certificações e qualificações obrigatórias..."></textarea>
+                        <div class="mt-1 text-xs text-gray-500 flex items-center gap-1">
+                            <span>🎯</span> Seja preciso nos requisitos essenciais
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="diferenciais" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                            <span>🌟</span> Diferenciais Desejáveis
+                            <span class="ml-2 bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">Confidencial</span>
+                        </label>
+                        <textarea id="diferenciais" name="diferenciais" rows="4"
+                                  class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                                  placeholder="Ex: Inglês fluente, certificações AWS, experiência com metodologias ágeis, conhecimento em Docker..."></textarea>
+                        <div class="mt-1 text-xs text-gray-500 bg-yellow-50 p-2 rounded-lg border border-yellow-200">
+                            <span>🔒</span> <strong>Apenas você verá:</strong> Essas informações ajudam no rankeamento automático dos candidatos
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navegação entre seções -->
+            <div class="flex justify-between items-center mb-6" id="sectionNavigation">
+                <button type="button" onclick="secaoAnterior()" id="btnAnterior"
+                        class="bg-gray-500 hover:bg-gray-600 text-white py-3 px-6 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center gap-2" 
+                        style="display: none;">
+                    <span>⬅️</span> Anterior
+                </button>
+                <div class="flex-1"></div>
+                <button type="button" onclick="proximaSecao()" id="btnProximo"
+                        class="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white py-3 px-6 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center gap-2">
+                    Próximo <span>➡️</span>
+                </button>
+            </div>
+
+            <!-- Botões de Ação (apenas na última seção) -->
+            <div class="flex flex-col sm:flex-row gap-4" id="actionButtons" style="display: none;">
+                <button type="submit"
+                        class="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white py-4 px-8 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center gap-3">
+                    <span class="text-xl">🚀</span>
+                    Criar Vaga Agora
+                </button>
+                <a href="{{ url_for('dashboard_empresa') }}"
+                   class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-4 px-8 rounded-xl font-semibold text-lg transition-all duration-300 text-center flex items-center justify-center gap-3 shadow-lg hover:shadow-xl">
+                    <span class="text-xl">❌</span>
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleEnderecoField() {
+    const tipoVaga = document.getElementById('tipo_vaga').value;
+    const enderecoContainer = document.getElementById('endereco_container');
+    const camposEndereco = document.querySelectorAll('#campos_endereco_vaga input, #campos_endereco_vaga select');
+
+    if (tipoVaga === 'Presencial' || tipoVaga === 'Híbrida') {
+        enderecoContainer.classList.remove('hidden');
+        camposEndereco.forEach(campo => {
+            if (campo.id !== 'localizacao_cep') {
+                campo.required = true;
+            }
+        });
+    } else {
+        enderecoContainer.classList.add('hidden');
+        camposEndereco.forEach(campo => {
+            campo.required = false;
+            campo.value = '';
+        });
+    }
+}
+
+function toggleNovaCategoria() {
+    const categoriaSelect = document.getElementById('categoria_id');
+    const novaContainer = document.getElementById('nova_categoria_container');
+    const novaInput = document.getElementById('nova_categoria');
+
+    if (categoriaSelect.value === 'nova') {
+        novaContainer.classList.remove('hidden');
+        novaInput.required = true;
+        novaInput.focus();
+    } else {
+        novaContainer.classList.add('hidden');
+        novaInput.required = false;
+        novaInput.value = '';
+    }
+}
+
+function toggleEnderecoEmpresa() {
+    const checkbox = document.getElementById('usar_endereco_empresa');
+    const camposEndereco = document.getElementById('campos_endereco_vaga');
+
+    if (checkbox.checked) {
+        // Buscar dados da empresa via AJAX
+        fetch('/empresa/endereco')
+            .then(response => response.json())
+            .then(data => {
+                if (data.endereco) {
+                    document.getElementById('localizacao_endereco').value = data.endereco || '';
+                    document.getElementById('localizacao_cidade').value = data.cidade || '';
+                    document.getElementById('localizacao_estado').value = data.estado || '';
+                    document.getElementById('localizacao_cep').value = data.cep || '';
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao buscar endereço da empresa:', error);
+            });
+
+        camposEndereco.style.opacity = '0.6';
+        camposEndereco.style.pointerEvents = 'none';
+    } else {
+        camposEndereco.style.opacity = '1';
+        camposEndereco.style.pointerEvents = 'auto';
+        // Limpar campos
+        document.getElementById('localizacao_endereco').value = '';
+        document.getElementById('localizacao_cidade').value = '';
+        document.getElementById('localizacao_estado').value = '';
+        document.getElementById('localizacao_cep').value = '';
+    }
+}
+
+// Validação no envio do formulário
+document.querySelector('form').addEventListener('submit', function(e) {
+    const tipoVaga = document.getElementById('tipo_vaga').value;
+    const endereco = document.getElementById('localizacao_endereco').value.trim();
+    const cidade = document.getElementById('localizacao_cidade').value.trim();
+    const estado = document.getElementById('localizacao_estado').value.trim();
+
+    // Validar se categoria foi selecionada ou nova categoria foi preenchida
+    const categoriaId = document.getElementById('categoria_id').value;
+    const novaCategoria = document.getElementById('nova_categoria').value.trim();
+
+    if (categoriaId === 'nova' && !novaCategoria) {
+        e.preventDefault();
+        alert('Por favor, digite o nome da nova categoria');
+        document.getElementById('nova_categoria').focus();
+        return;
+    }
+
+    // Validar endereço para vagas presenciais/híbridas
+    if ((tipoVaga === 'Presencial' || tipoVaga === 'Híbrida')) {
+        if (!endereco || !cidade || !estado) {
+            e.preventDefault();
+            alert('Endereço, cidade e estado são obrigatórios para vagas presenciais ou híbridas');
+            if (!endereco) document.getElementById('localizacao_endereco').focus();
+            else if (!cidade) document.getElementById('localizacao_cidade').focus();
+            else if (!estado) document.getElementById('localizacao_estado').focus();
+            return;
+        }
+    }
+
+    // Validar data de congelamento agendado (não pode ser no passado)
+    const dataCongelamento = document.getElementById('data_congelamento_agendado').value;
+    if (dataCongelamento) {
+        const hoje = new Date();
+        const dataEscolhida = new Date(dataCongelamento);
+
+        if (dataEscolhida <= hoje) {
+            e.preventDefault();
+            alert('A data de congelamento deve ser futura');
+            document.getElementById('data_congelamento_agendado').focus();
+            return;
+        }
+    }
+});
+
+// Máscara para CEP
+document.getElementById('localizacao_cep').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 8) {
+        value = value.replace(/(\d{5})(\d)/, '$1-$2');
+        e.target.value = value;
+    }
+});
+
+// JavaScript para seções interativas
+let currentStep = 1;
+const totalSteps = 3;
+
+function mostrarSecao(step) {
+    // Validar entrada
+    if (step < 1 || step > totalSteps) return;
+    
+    // Esconder todas as seções
+    for (let i = 1; i <= totalSteps; i++) {
+        const secao = document.getElementById(`secao-${i}`);
+        if (secao) {
+            secao.style.display = 'none';
+        }
+    }
+    
+    // Mostrar seção atual
+    const secaoAtual = document.getElementById(`secao-${step}`);
+    if (secaoAtual) {
+        secaoAtual.style.display = 'block';
+        secaoAtual.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    
+    // Atualizar indicadores de progresso
+    atualizarProgresso(step);
+    atualizarNavegacao(step);
+    currentStep = step;
+}
+
+function atualizarProgresso(activeStep) {
+    for (let i = 1; i <= totalSteps; i++) {
+        const stepEl = document.getElementById(`step-${i}`);
+        const progressEl = document.getElementById(`progress-${i}`);
+        
+        if (!stepEl) continue;
+        
+        const circle = stepEl.querySelector('div');
+        const label = stepEl.querySelector('span');
+        
+        if (i < activeStep) {
+            // Seção completada
+            circle.className = 'w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg';
+            label.className = 'ml-3 text-sm font-medium text-green-600';
+            if (progressEl) {
+                progressEl.className = 'w-12 h-1 bg-green-300 rounded-full';
+            }
+        } else if (i === activeStep) {
+            // Seção atual
+            if (i === 1) {
+                circle.className = 'w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg';
+                label.className = 'ml-3 text-sm font-medium text-green-600';
+            } else if (i === 2) {
+                circle.className = 'w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg';
+                label.className = 'ml-3 text-sm font-medium text-blue-600';
+            } else if (i === 3) {
+                circle.className = 'w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg';
+                label.className = 'ml-3 text-sm font-medium text-purple-600';
+            }
+            if (progressEl) {
+                progressEl.className = 'w-12 h-1 bg-gray-300 rounded-full';
+            }
+        } else {
+            // Seção futura
+            circle.className = 'w-10 h-10 bg-gray-300 text-gray-500 rounded-full flex items-center justify-center font-bold text-sm';
+            label.className = 'ml-3 text-sm font-medium text-gray-500';
+            if (progressEl) {
+                progressEl.className = 'w-12 h-1 bg-gray-300 rounded-full';
+            }
+        }
+    }
+}
+
+function atualizarNavegacao(step) {
+    const btnAnterior = document.getElementById('btnAnterior');
+    const btnProximo = document.getElementById('btnProximo');
+    const actionButtons = document.getElementById('actionButtons');
+    const sectionNavigation = document.getElementById('sectionNavigation');
+    
+    // Botão anterior
+    if (btnAnterior) {
+        btnAnterior.style.display = step > 1 ? 'flex' : 'none';
+    }
+    
+    // Botão próximo e botões de ação
+    if (step < totalSteps) {
+        if (btnProximo) btnProximo.style.display = 'flex';
+        if (actionButtons) actionButtons.style.display = 'none';
+        if (sectionNavigation) sectionNavigation.style.display = 'flex';
+    } else {
+        if (btnProximo) btnProximo.style.display = 'none';
+        if (actionButtons) actionButtons.style.display = 'flex';
+        if (sectionNavigation) sectionNavigation.style.display = 'none';
+    }
+}
+
+function proximaSecao() {
+    if (currentStep < totalSteps) {
+        // Validar seção atual antes de avançar
+        if (validarSecaoAtual()) {
+            mostrarSecao(currentStep + 1);
+        }
+    }
+}
+
+function secaoAnterior() {
+    if (currentStep > 1) {
+        mostrarSecao(currentStep - 1);
+    }
+}
+
+function validarSecaoAtual() {
+    const secaoAtual = document.getElementById(`secao-${currentStep}`);
+    if (!secaoAtual) return true;
+    
+    // Verificar campos obrigatórios da seção atual
+    const camposObrigatorios = secaoAtual.querySelectorAll('input[required], select[required], textarea[required]');
+    
+    for (let campo of camposObrigatorios) {
+        if (!campo.value.trim()) {
+            campo.focus();
+            campo.classList.add('border-red-500');
+            setTimeout(() => campo.classList.remove('border-red-500'), 3000);
+            
+            // Mostrar toast de erro
+            showToast('Por favor, preencha todos os campos obrigatórios desta seção.', 'error');
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-4 right-4 z-50 px-6 py-4 rounded-xl shadow-lg transform translate-y-full transition-all duration-300 ${
+        type === 'success' ? 'bg-green-500 text-white' :
+        type === 'error' ? 'bg-red-500 text-white' :
+        type === 'info' ? 'bg-blue-500 text-white' :
+        'bg-gray-500 text-white'
+    }`;
+    
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    setTimeout(() => toast.classList.remove('translate-y-full'), 100);
+    
+    setTimeout(() => {
+        toast.classList.add('translate-y-full');
+        setTimeout(() => {
+            if (toast.parentNode) toast.parentNode.removeChild(toast);
+        }, 300);
+    }, 3000);
+}
+
+// Inicializar seções interativas
+document.addEventListener('DOMContentLoaded', function() {
+    // Identificar seções do formulário
+    const formContainer = document.querySelector('form');
+    if (formContainer) {
+        const secoes = formContainer.querySelectorAll('.bg-white.rounded-2xl.p-6');
+        secoes.forEach((secao, index) => {
+            if (index < totalSteps) {
+                secao.id = `secao-${index + 1}`;
+                if (index > 0) {
+                    secao.style.display = 'none';
+                }
+            }
+        });
+    }
+    
+    mostrarSecao(1);
+    
+    // Navegação por teclado
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowRight' && currentStep < totalSteps) {
+            e.preventDefault();
+            proximaSecao();
+        } else if (e.key === 'ArrowLeft' && currentStep > 1) {
+            e.preventDefault();
+            secaoAnterior();
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,50 +1,49 @@
-from db import get_db_connection
+import mysql.connector
+from mysql.connector import Error
 from datetime import datetime
 import smtplib
 from email.message import EmailMessage
 import os
 from dotenv import load_dotenv
 from .email_templates import EmailTemplateManager
+from db import get_db_connection
 
 load_dotenv()
 
 
 def obter_notificacoes(candidato_id, apenas_nao_lidas=False):
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)  # Para retornar resultados como dicionário
+    if not conn:
+        return []
+    
+    cursor = conn.cursor()
     try:
-        # Monta a query principal
+        # Buscar notificações com dados completos de vaga e empresa
         query = '''
-            SELECT 
-                n.id, 
-                n.candidato_id, 
-                COALESCE(n.tipo, 'geral') AS tipo,
-                n.mensagem, 
-                COALESCE(n.lida, 0) AS lida,
-                COALESCE(n.data_envio, NOW()) AS data_envio,
-                n.vaga_id, 
-                n.empresa_id,
-                v.titulo AS vaga_titulo, 
-                e.nome AS empresa_nome,
-                v.tipo_vaga,
-                v.salario_oferecido,
-                DATE(COALESCE(n.data_envio, NOW())) AS data_formatada,
-                CASE 
-                    WHEN n.tipo = 'contratacao' AND DATEDIFF(NOW(), COALESCE(n.data_envio, NOW())) <= 30 THEN 1
-                    ELSE 0
-                END AS is_fixada
+            SELECT n.id, n.candidato_id, COALESCE(n.tipo, 'geral') as tipo,
+                   n.mensagem, COALESCE(n.lida, 0) as lida,
+                   COALESCE(n.data_envio, NOW()) as data_envio,
+                   n.vaga_id, n.empresa_id,
+                   v.titulo as vaga_titulo, 
+                   e.nome as empresa_nome,
+                   v.tipo_vaga,
+                   v.salario_oferecido,
+                   DATE(COALESCE(n.data_envio, NOW())) as data_formatada,
+                   CASE 
+                       WHEN n.tipo = 'contratacao' AND DATEDIFF(NOW(), COALESCE(n.data_envio, NOW())) <= 30 THEN 1
+                       ELSE 0
+                   END as is_fixada
             FROM notificacoes n
             LEFT JOIN vagas v ON n.vaga_id = v.id
             LEFT JOIN empresas e ON n.empresa_id = e.id
             WHERE n.candidato_id = %s
         '''
-
         params = [candidato_id]
 
         if apenas_nao_lidas:
             query += ' AND n.lida = 0'
 
-        # Ordenação: fixadas primeiro, depois não lidas, depois por data
+        # Ordenar: fixadas primeiro, depois não lidas, depois por data
         query += '''
             ORDER BY 
                 CASE WHEN n.tipo = 'contratacao' AND DATEDIFF(NOW(), COALESCE(n.data_envio, NOW())) <= 30 THEN 1 ELSE 0 END DESC,
@@ -54,15 +53,22 @@ def obter_notificacoes(candidato_id, apenas_nao_lidas=False):
         '''
 
         cursor.execute(query, params)
-        resultados = cursor.fetchall()
-        return resultados
+        return cursor.fetchall()
+    except Error as e:
+        print(f"Erro ao obter notificações: {e}")
+        return []
     finally:
-        cursor.close()
-        conn.close()
+        if conn.is_connected():
+            cursor.close()
+            conn.close()
+
 
 def obter_estatisticas(candidato_id):
     """Retorna estatísticas das notificações de um candidato"""
     conn = get_db_connection()
+    if not conn:
+        return {}
+    
     cursor = conn.cursor()
 
     try:
@@ -97,11 +103,13 @@ def obter_estatisticas(candidato_id):
             'nao_lidas': nao_lidas,
             'por_tipo': por_tipo
         }
-    except Exception as e:
+    except Error as e:
         print(f"Erro ao obter estatísticas de notificações: {e}")
         return {}
     finally:
-        conn.close()
+        if conn.is_connected():
+            cursor.close()
+            conn.close()
 
 
 class NotificationSystem:
@@ -217,9 +225,11 @@ class NotificationSystem:
         
         while tentativa < max_tentativas:
             try:
-                # Usar timeout maior e WAL mode para evitar locks
                 conn = get_db_connection()
-                cursor.execute("SET SESSION innodb_lock_wait_timeout = 60;")
+                if not conn:
+                    print("❌ Erro: Não foi possível conectar ao banco de dados")
+                    return False
+                
                 cursor = conn.cursor()
 
                 # Verificar se o candidato existe com validação mais robusta
@@ -232,19 +242,18 @@ class NotificationSystem:
                 
                 print(f"✅ Candidato encontrado: {candidato_existe[1]} (ID: {candidato_id})")
 
-                # Verificar se as colunas existem
-                cursor.execute("SELECT * FROM notificacoes")
-                columns = [column[1] for column in cursor.fetchall()]
-
-                if 'tipo' not in columns:
+                # Verificar se as colunas existem na tabela notificacoes
+                cursor.execute("SHOW COLUMNS FROM notificacoes LIKE 'tipo'")
+                if not cursor.fetchone():
                     cursor.execute(
-                        'ALTER TABLE notificacoes ADD COLUMN tipo TEXT DEFAULT "geral"'
+                        'ALTER TABLE notificacoes ADD COLUMN tipo VARCHAR(50) DEFAULT "geral"'
                     )
                     conn.commit()
 
-                if 'titulo' not in columns:
+                cursor.execute("SHOW COLUMNS FROM notificacoes LIKE 'titulo'")
+                if not cursor.fetchone():
                     cursor.execute(
-                        'ALTER TABLE notificacoes ADD COLUMN titulo TEXT DEFAULT ""'
+                        'ALTER TABLE notificacoes ADD COLUMN titulo VARCHAR(255) DEFAULT ""'
                     )
                     conn.commit()
 
@@ -270,17 +279,17 @@ class NotificationSystem:
                 cursor.execute(
                     '''
                     INSERT INTO notificacoes (candidato_id, mensagem, vaga_id, empresa_id, tipo, titulo, data_envio, lida)
-                    VALUES (%s, %s, %s, %s, %s, %s, datetime('now'), 0)
+                    VALUES (%s, %s, %s, %s, %s, %s, NOW(), 0)
                 ''', (candidato_id, mensagem, vaga_id, empresa_id, tipo, titulo))
 
                 conn.commit()
                 print(f"✅ Notificação criada com sucesso para candidato {candidato_id}")
                 return True
 
-            except sqlite3.OperationalError as e:
-                if 'database is locked' in str(e) and tentativa < max_tentativas - 1:
+            except Error as e:
+                if 'Lock wait timeout exceeded' in str(e) and tentativa < max_tentativas - 1:
                     tentativa += 1
-                    print(f"⏳ Database locked, tentativa {tentativa}/{max_tentativas}")
+                    print(f"⏳ Lock timeout, tentativa {tentativa}/{max_tentativas}")
                     import time
                     time.sleep(2 ** tentativa)  # Backoff exponencial
                     continue
@@ -291,7 +300,8 @@ class NotificationSystem:
                 return False
             finally:
                 try:
-                    if 'conn' in locals():
+                    if 'conn' in locals() and conn.is_connected():
+                        cursor.close()
                         conn.close()
                 except:
                     pass
@@ -319,8 +329,10 @@ class NotificationSystem:
             
         print(f"🎯 Iniciando notificação de contratação para candidato {candidato_id}")
         
-        conn = get_db_connection
-        cursor.execute("SET SESSION innodb_lock_wait_timeout = 60;")
+        conn = get_db_connection()
+        if not conn:
+            return False
+        
         cursor = conn.cursor()
 
         try:
@@ -401,90 +413,27 @@ class NotificationSystem:
             print(f"✅ Notificação de contratação processada para candidato {candidato_id}")
             return True
 
-        except Exception as e:
-            print(f"❌ Erro ao notificar contratação para candidato {candidato_id}: {e}")
+        except Error as e:
+            print(f"❌ Erro ao notificar contratação: {e}")
             return False
         finally:
-            conn.close()
+            if conn.is_connected():
+                cursor.close()
+                conn.close()
 
     def notificar_alteracao_vaga(self, vaga_id, tipo_alteracao='atualizada'):
-        """Notifica candidatos sobre alterações na vaga"""
+        """Notifica candidatos sobre alterações em vagas"""
         conn = get_db_connection()
-        cursor = conn.cursor()
-
-        try:
-            # Buscar candidatos da vaga com mais detalhes
-            cursor.execute(
-                '''
-                SELECT DISTINCT c.id, c.nome, c.email, v.titulo, e.nome, ca.posicao, ca.score,
-                       v.salario_oferecido, v.tipo_vaga, v.descricao, v.requisitos
-                FROM candidaturas ca
-                JOIN candidatos c ON ca.candidato_id = c.id
-                JOIN vagas v ON ca.vaga_id = v.id
-                JOIN empresas e ON v.empresa_id = e.id
-                WHERE ca.vaga_id = %s AND v.status = 'Ativa'
-            ''', (vaga_id, ))
-
-            candidatos = cursor.fetchall()
-
-            for candidato in candidatos:
-                candidato_id, nome, email, vaga_titulo, empresa_nome, posicao, score, salario, tipo_vaga, descricao, requisitos = candidato
-
-                mensagem = f"""📝 VAGA ATUALIZADA - AÇÃO NECESSÁRIA
-
-🏢 Empresa: {empresa_nome}
-💼 Vaga: {vaga_titulo}
-📊 Sua posição atual: {posicao}º lugar
-⭐ Seu score: {round(score, 1) if score else 'N/A'}%
-
-🔄 MUDANÇAS REALIZADAS:
-A vaga foi {tipo_alteracao} e pode incluir:
-• Novos requisitos ou qualificações
-• Alterações no salário ou benefícios
-• Mudanças na descrição da função
-• Ajustes no tipo de contratação
-
-✅ O QUE FAZER AGORA:
-1. Acesse seu dashboard para ver as mudanças
-2. Verifique se ainda atende aos novos requisitos
-3. Seu score pode ter sido recalculado
-4. Considere atualizar seu perfil se necessário
-
-🎯 IMPACTO NA SUA CANDIDATURA:
-• Sua candidatura permanece ativa
-• Posição pode ser ajustada conforme novos critérios
-• Recomendamos revisar a vaga completa
-
-Data da atualização: {datetime.now().strftime('%d/%m/%Y às %H:%M')}
-
-💡 Mantenha-se competitivo atualizando seu perfil!"""
-
-                # Criar notificação
-                self.criar_notificacao(candidato_id, mensagem, vaga_id, None,
-                                       'vaga_alterada')
-
-                # Enviar email
-                assunto = f"📝 Vaga Atualizada - {vaga_titulo} na {empresa_nome}"
-                self.enviar_email(email, assunto, mensagem)
-
-            return True
-
-        except Exception as e:
-            print(f"Erro ao notificar alteração de vaga: {e}")
+        if not conn:
             return False
-        finally:
-            conn.close()
-
-    def notificar_vaga_congelada(self, vaga_id):
-        """Notifica candidatos sobre congelamento de vaga"""
-        conn = get_db_connection()
+        
         cursor = conn.cursor()
 
         try:
+            # Buscar candidatos da vaga
             cursor.execute(
                 '''
-                SELECT DISTINCT c.id, c.nome, c.email, v.titulo, e.nome, ca.posicao, ca.score,
-                       v.salario_oferecido, v.tipo_vaga
+                SELECT DISTINCT c.id, c.nome, c.email, v.titulo, e.nome
                 FROM candidaturas ca
                 JOIN candidatos c ON ca.candidato_id = c.id
                 JOIN vagas v ON ca.vaga_id = v.id
@@ -495,14 +444,91 @@ Data da atualização: {datetime.now().strftime('%d/%m/%Y às %H:%M')}
             candidatos = cursor.fetchall()
 
             for candidato in candidatos:
-                candidato_id, nome, email, vaga_titulo, empresa_nome, posicao, score, salario, tipo_vaga = candidato
+                candidato_id, nome, email, vaga_titulo, empresa_nome = candidato
 
-                mensagem = f"""❄️ PROCESSO SELETIVO PAUSADO TEMPORARIAMENTE
+                if tipo_alteracao == 'congelada':
+                    mensagem = f"""❄️ PROCESSO PAUSADO TEMPORARIAMENTE
 
 🏢 Empresa: {empresa_nome}
 💼 Vaga: {vaga_titulo}
-📊 Sua posição atual: {posicao}º lugar
-⭐ Seu score: {round(score, 1) if score else 'N/A'}%
+📅 Status: Processo pausado temporariamente
+
+📋 O QUE SIGNIFICA:
+• O processo seletivo foi pausado temporariamente
+• Sua candidatura permanece ATIVA e válida
+• Você manterá sua posição no ranking
+• Será notificado quando o processo for retomado
+
+🔔 PRÓXIMOS PASSOS:
+• Mantenha seu perfil atualizado
+• Continue explorando outras oportunidades
+• Aguarde nossa comunicação sobre a reativação
+
+Data da pausa: {datetime.now().strftime('%d/%m/%Y às %H:%M')}
+
+💡 Dica: Use este tempo para aprimorar suas habilidades relacionadas à vaga!"""
+
+                    self.criar_notificacao(candidato_id, mensagem, vaga_id, None,
+                                           'vaga_congelada')
+
+                    assunto = f"❄️ Processo Pausado - {vaga_titulo} na {empresa_nome}"
+                    self.enviar_email(email, assunto, mensagem)
+
+                else:
+                    mensagem = f"""📝 VAGA ATUALIZADA
+
+🏢 Empresa: {empresa_nome}
+💼 Vaga: {vaga_titulo}
+📅 Status: Informações atualizadas
+
+A vaga para a qual você se candidatou foi atualizada. Verifique as novas informações no sistema para se manter informado sobre possíveis mudanças nos requisitos ou benefícios.
+
+Data da atualização: {datetime.now().strftime('%d/%m/%Y às %H:%M')}"""
+
+                    self.criar_notificacao(candidato_id, mensagem, vaga_id, None,
+                                           'vaga_alterada')
+
+                    assunto = f"📝 Vaga Atualizada - {vaga_titulo}"
+                    self.enviar_email(email, assunto, mensagem)
+
+            return True
+
+        except Error as e:
+            print(f"Erro ao notificar alteração: {e}")
+            return False
+        finally:
+            if conn.is_connected():
+                cursor.close()
+                conn.close()
+
+    def notificar_congelamento_vaga(self, vaga_id):
+        """Notifica candidatos sobre congelamento de vaga"""
+        conn = get_db_connection()
+        if not conn:
+            return False
+        
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute(
+                '''
+                SELECT DISTINCT c.id, c.nome, c.email, v.titulo, e.nome, v.salario_oferecido, v.tipo_vaga
+                FROM candidaturas ca
+                JOIN candidatos c ON ca.candidato_id = c.id
+                JOIN vagas v ON ca.vaga_id = v.id
+                JOIN empresas e ON v.empresa_id = e.id
+                WHERE ca.vaga_id = %s
+            ''', (vaga_id, ))
+
+            candidatos = cursor.fetchall()
+
+            for candidato in candidatos:
+                candidato_id, nome, email, vaga_titulo, empresa_nome, salario, tipo_vaga = candidato
+
+                mensagem = f"""❄️ PROCESSO PAUSADO TEMPORARIAMENTE
+
+🏢 Empresa: {empresa_nome}
+💼 Vaga: {vaga_titulo}
 💰 Salário: R$ {salario:,.2f} ({tipo_vaga})
 
 📋 O QUE SIGNIFICA:
@@ -528,16 +554,21 @@ Data da pausa: {datetime.now().strftime('%d/%m/%Y às %H:%M')}
 
             return True
 
-        except Exception as e:
+        except Error as e:
             print(f"Erro ao notificar congelamento: {e}")
             return False
         finally:
-            conn.close()
+            if conn.is_connected():
+                cursor.close()
+                conn.close()
 
     def notificar_nova_candidatura(self, candidato_id, vaga_id, posicao,
                                    score):
         """Notifica candidato sobre nova candidatura com informações úteis"""
         conn = get_db_connection()
+        if not conn:
+            return False
+        
         cursor = conn.cursor()
 
         try:
@@ -558,8 +589,7 @@ Data da pausa: {datetime.now().strftime('%d/%m/%Y às %H:%M')}
 
             # Calcular quantos dias a vaga está ativa
             if data_criacao:
-                data_vaga = datetime.strptime(data_criacao,
-                                              '%Y-%m-%d %H:%M:%S')
+                data_vaga = data_criacao
                 dias_ativa = (datetime.now() - data_vaga).days
             else:
                 dias_ativa = 0
@@ -600,15 +630,20 @@ Boa sorte! 🍀"""
 
             return True
 
-        except Exception as e:
+        except Error as e:
             print(f"Erro ao notificar nova candidatura: {e}")
             return False
         finally:
-            conn.close()
+            if conn.is_connected():
+                cursor.close()
+                conn.close()
 
     def notificar_vaga_excluida(self, vaga_id):
         """Notifica candidatos sobre exclusão de vaga"""
         conn = get_db_connection()
+        if not conn:
+            return False
+        
         cursor = conn.cursor()
 
         try:
@@ -639,11 +674,13 @@ Infelizmente, o processo seletivo para esta vaga foi encerrado. Continue explora
 
             return True
 
-        except Exception as e:
+        except Error as e:
             print(f"Erro ao notificar exclusão: {e}")
             return False
         finally:
-            conn.close()
+            if conn.is_connected():
+                cursor.close()
+                conn.close()
 
 
 # Funções de conveniência para manter compatibilidade
@@ -667,6 +704,9 @@ def notificar_alteracao_vaga(vaga_id, tipo_alteracao='atualizada'):
 def buscar_notificacoes_candidato(candidato_id, apenas_nao_lidas=False):
     """Busca notificações de um candidato"""
     conn = get_db_connection()
+    if not conn:
+        return []
+    
     cursor = conn.cursor()
 
     try:
@@ -686,16 +726,21 @@ def buscar_notificacoes_candidato(candidato_id, apenas_nao_lidas=False):
 
         cursor.execute(query, (candidato_id, ))
         return cursor.fetchall()
-    except Exception as e:
+    except Error as e:
         print(f"Erro ao buscar notificações: {e}")
         return []
     finally:
-        conn.close()
+        if conn.is_connected():
+            cursor.close()
+            conn.close()
 
 
 def marcar_notificacao_como_lida(notificacao_id, candidato_id):
     """Marca uma notificação como lida"""
     conn = get_db_connection()
+    if not conn:
+        return False
+    
     cursor = conn.cursor()
 
     try:
@@ -708,16 +753,21 @@ def marcar_notificacao_como_lida(notificacao_id, candidato_id):
 
         conn.commit()
         return cursor.rowcount > 0
-    except Exception as e:
+    except Error as e:
         print(f"Erro ao marcar notificação como lida: {e}")
         return False
     finally:
-        conn.close()
+        if conn.is_connected():
+            cursor.close()
+            conn.close()
 
 
 def marcar_todas_notificacoes_como_lidas(candidato_id):
     """Marca todas as notificações do candidato como lidas"""
     conn = get_db_connection()
+    if not conn:
+        return 0
+    
     cursor = conn.cursor()
 
     try:
@@ -730,16 +780,21 @@ def marcar_todas_notificacoes_como_lidas(candidato_id):
 
         conn.commit()
         return cursor.rowcount
-    except Exception as e:
+    except Error as e:
         print(f"Erro ao marcar todas notificações como lidas: {e}")
         return 0
     finally:
-        conn.close()
+        if conn.is_connected():
+            cursor.close()
+            conn.close()
 
 
 def contar_notificacoes_nao_lidas(candidato_id):
     """Conta quantas notificações não lidas o candidato tem"""
     conn = get_db_connection()
+    if not conn:
+        return 0
+    
     cursor = conn.cursor()
 
     try:
@@ -751,16 +806,21 @@ def contar_notificacoes_nao_lidas(candidato_id):
 
         resultado = cursor.fetchone()
         return resultado[0] if resultado else 0
-    except Exception as e:
+    except Error as e:
         print(f"Erro ao contar notificações: {e}")
         return 0
     finally:
-        conn.close()
+        if conn.is_connected():
+            cursor.close()
+            conn.close()
 
 
 def obter_historico_notificacoes(candidato_id, limite=50):
     """Obtém o histórico completo de notificações do candidato"""
     conn = get_db_connection()
+    if not conn:
+        return []
+    
     cursor = conn.cursor()
 
     try:
@@ -768,7 +828,7 @@ def obter_historico_notificacoes(candidato_id, limite=50):
             '''
             SELECT n.id, n.mensagem, n.data_envio, n.lida, n.tipo,
                    v.titulo as vaga_titulo, e.nome as empresa_nome,
-                   strftime('%d/%m/%Y %H:%M', n.data_envio) as data_formatada
+                   DATE_FORMAT(n.data_envio, '%d/%m/%Y %H:%i') as data_formatada
             FROM notificacoes n
             LEFT JOIN vagas v ON n.vaga_id = v.id
             LEFT JOIN empresas e ON n.empresa_id = e.id
@@ -778,16 +838,22 @@ def obter_historico_notificacoes(candidato_id, limite=50):
         ''', (candidato_id, limite))
 
         return cursor.fetchall()
-    except Exception as e:
+    except Error as e:
         print(f"Erro ao obter histórico de notificações: {e}")
         return []
     finally:
-        conn.close()
+        if conn.is_connected():
+            cursor.close()
+            conn.close()
 
 
 def debug_notificacoes_sistema():
     """Função de debug para verificar o sistema de notificações"""
     conn = get_db_connection()
+    if not conn:
+        print("❌ Erro: Não foi possível conectar ao banco de dados")
+        return False
+    
     cursor = conn.cursor()
     
     try:
@@ -820,24 +886,30 @@ def debug_notificacoes_sistema():
             print("  • Nenhuma notificação encontrada")
             
         # Verificar estrutura da tabela
-        cursor.execute("SELECT * FROM notificacoes")
+        cursor.execute("SHOW COLUMNS FROM notificacoes")
         colunas = cursor.fetchall()
         print(f"\n📊 Estrutura da tabela notificacoes:")
         for coluna in colunas:
-            print(f"  • {coluna[1]} ({coluna[2]})")
+            print(f"  • {coluna[0]} ({coluna[1]})")
             
         return True
         
-    except Exception as e:
+    except Error as e:
         print(f"❌ Erro no debug: {e}")
         return False
     finally:
-        conn.close()
+        if conn.is_connected():
+            cursor.close()
+            conn.close()
 
 
 def testar_notificacao_para_todos():
     """Testa criação de notificação para todos os candidatos"""
     conn = get_db_connection()
+    if not conn:
+        print("❌ Erro: Não foi possível conectar ao banco de dados")
+        return False
+    
     cursor = conn.cursor()
     
     try:
@@ -866,8 +938,11 @@ def testar_notificacao_para_todos():
         print(f"\n📊 Resultado: {sucessos} sucessos, {falhas} falhas")
         return sucessos > 0
         
-    except Exception as e:
+    except Error as e:
         print(f"❌ Erro no teste: {e}")
         return False
     finally:
-        conn.close()
+        if conn.is_connected():
+            cursor.close()
+            conn.close()
+

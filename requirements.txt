@@ -11,6 +11,7 @@ nltk==3.9.1
 python -m venv venv
 venv\Scripts\activate
 pip install flask pymupdf python-dotenv schedule
+pip install mysql-connector-python
 py app.py
 
 
