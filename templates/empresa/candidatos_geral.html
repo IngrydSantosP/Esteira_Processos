@@ -1,5 +1,3 @@
-
-
 {% extends "base.html" %}
 
 {% block title %}Todos os Candidatos{% endblock %}
@@ -365,7 +363,7 @@ function atualizarPaginacao() {
     
     if (totalPaginas <= 1) {
         document.getElementById('paginacao').classList.add('hidden');
-        return;
+        return; 
     }
 
     document.getElementById('paginacao').classList.remove('hidden');

@@ -12,6 +12,6 @@ python -m venv venv
 venv\Scripts\activate
 pip install flask pymupdf python-dotenv schedule
 pip install mysql-connector-python
-py app.py
+python app.py
 
 

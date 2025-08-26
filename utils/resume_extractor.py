@@ -1,4 +1,6 @@
 import os
+import mysql.connector
+from mysql.connector import Error
 from db import get_db_connection
 from werkzeug.utils import secure_filename
 import fitz  # PyMuPDF
@@ -20,25 +22,30 @@ def arquivo_permitido(filename):
 def extrair_texto_pdf(caminho_arquivo):
     """Extrai texto de um arquivo PDF"""
     try:
-        with fitz.open(caminho_arquivo) as doc:
-            texto = ""
-            for page in doc:
-                texto += page.get_text()
+        doc = fitz.open(caminho_arquivo)
+        texto = ""
+        for page in doc:
+            texto += page.get_text()
+        doc.close()
         return texto
     except Exception as e:
         print(f"Erro ao extrair texto do PDF: {e}")
         return None
 
 
-def processar_curriculo(texto_curriculo):
-    """Processa o texto do currículo e extrai informações relevantes"""
+def processar_curriculo(texto_completo):
+    """
+    Processa o texto bruto do currículo e extrai informações relevantes:
+    experiência, competências, resumo profissional e formação.
+    """
     experiencia = ""
     competencias = ""
     resumo_profissional = ""
+    formacao = ""
 
-    texto_upper = texto_curriculo.upper()
+    texto_upper = texto_completo.upper()
 
-    # Experiência profissional
+    # Extrair experiência profissional
     patterns_exp = [
         r'EXPERIÊNCIA PROFISSIONAL(.*?)(?=FORMAÇÃO|EDUCAÇÃO|COMPETÊNCIAS|HABILIDADES|$)',
         r'EXPERIÊNCIA(.*?)(?=FORMAÇÃO|EDUCAÇÃO|COMPETÊNCIAS|HABILIDADES|$)',
@@ -50,7 +57,7 @@ def processar_curriculo(texto_curriculo):
             experiencia = match.group(1).strip()
             break
 
-    # Competências / habilidades
+    # Extrair competências/habilidades
     patterns_comp = [
         r'COMPETÊNCIAS(.*?)(?=EXPERIÊNCIA|FORMAÇÃO|EDUCAÇÃO|$)',
         r'HABILIDADES(.*?)(?=EXPERIÊNCIA|FORMAÇÃO|EDUCAÇÃO|$)',
@@ -62,64 +69,122 @@ def processar_curriculo(texto_curriculo):
             competencias = match.group(1).strip()
             break
 
-    # Caso não encontre seções específicas
-    if not experiencia and not competencias:
-        resumo_profissional = texto_curriculo[:500] + "..." if len(texto_curriculo) > 500 else texto_curriculo
+    # Extrair formação/educação
+    patterns_form = [
+        r'FORMAÇÃO(.*?)(?=EXPERIÊNCIA|COMPETÊNCIAS|HABILIDADES|EDUCAÇÃO|$)',
+        r'EDUCAÇÃO(.*?)(?=EXPERIÊNCIA|COMPETÊNCIAS|HABILIDADES|FORMAÇÃO|$)'
+    ]
+    for pattern in patterns_form:
+        match = re.search(pattern, texto_upper, re.DOTALL)
+        if match:
+            formacao = match.group(1).strip()
+            break
 
-    return experiencia, competencias, resumo_profissional
+    # Se não encontrou seções específicas, usar trecho inicial do texto como resumo profissional
+    if not experiencia and not competencias and not formacao:
+        resumo_profissional = texto_completo[:500] + "..." if len(texto_completo) > 500 else texto_completo
+    else:
+        # Gerar o resumo profissional com base no que foi extraído
+        resumo_parts = []
 
+        if experiencia:
+            resumo_parts.append(f"Experiência: {experiencia[:100]}...")
+        if competencias:
+            resumo_parts.append(f"Competências: {competencias[:100]}...")
+        if formacao:
+            resumo_parts.append(f"Formação: {formacao[:100]}...")
+
+        if resumo_parts:
+            resumo_profissional = ' | '.join(resumo_parts)
+        else:
+            resumo_profissional = texto_completo[:500] + "..." if len(texto_completo) > 500 else texto_completo
+
+    return experiencia, competencias, resumo_profissional, formacao
 
 def processar_upload_curriculo(request, candidato_id):
     """Processa o upload de currículo e retorna resultado"""
     resultado = {'sucesso': False, 'mensagens': [], 'dados_extraidos': None}
 
-    if 'arquivo' not in request.files:
-        resultado['mensagens'].append({'texto': 'Nenhum arquivo selecionado', 'tipo': 'error'})
-        return resultado
-
-    arquivo = request.files['arquivo']
-    if arquivo.filename == '':
-        resultado['mensagens'].append({'texto': 'Nenhum arquivo selecionado', 'tipo': 'error'})
-        return resultado
-
-    if not arquivo_permitido(arquivo.filename):
-        resultado['mensagens'].append({'texto': 'Tipo de arquivo não permitido. Use apenas PDF.', 'tipo': 'error'})
-        return resultado
-
-    nome_arquivo = secure_filename(arquivo.filename)
-    caminho_arquivo = os.path.join(UPLOAD_FOLDER, f"candidato_{candidato_id}_{nome_arquivo}")
-    arquivo.save(caminho_arquivo)
-
-    texto_curriculo = extrair_texto_pdf(caminho_arquivo)
-    if not texto_curriculo:
-        resultado['mensagens'].append({'texto': 'Erro ao extrair texto do PDF', 'tipo': 'error'})
-        return resultado
-
-    experiencia, competencias, resumo_profissional = processar_curriculo(texto_curriculo)
-
-    # Salvar no banco
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            '''
-            UPDATE candidatos 
-            SET texto_curriculo = %s, caminho_curriculo = %s
-            WHERE id = %s
-            ''', (texto_curriculo, nome_arquivo, candidato_id)
-        )
-        conn.commit()
-        resultado['sucesso'] = True
-        resultado['dados_extraidos'] = {
-            'experiencia': experiencia,
-            'competencias': competencias,
-            'resumo_profissional': resumo_profissional
-        }
-        resultado['mensagens'].append({'texto': 'Currículo processado com sucesso!', 'tipo': 'success'})
+        if 'curriculo' not in request.files:
+            resultado['mensagens'].append({
+                'texto': 'Nenhum arquivo selecionado',
+                'tipo': 'error'
+            })
+            return resultado
+
+        arquivo = request.files['curriculo']
+
+        if arquivo.filename == '':
+            resultado['mensagens'].append({
+                'texto': 'Nenhum arquivo selecionado',
+                'tipo': 'error'
+            })
+            return resultado
+
+        if arquivo and arquivo_permitido(arquivo.filename):
+            nome_arquivo = secure_filename(arquivo.filename)
+            caminho_arquivo = os.path.join(
+                UPLOAD_FOLDER, f"candidato_{candidato_id}_{nome_arquivo}")
+            arquivo.save(caminho_arquivo)
+
+            # Extrair texto do PDF
+            texto_pdf = extrair_texto_pdf(caminho_arquivo)
+
+            if texto_pdf:
+                # Processar texto do currículo para extrair dados
+                experiencia, competencias, resumo_profissional, formacao = processar_curriculo(texto_pdf)
+
+                # Salvar caminho do arquivo e dados extraídos no banco
+                conn = get_db_connection()
+                cursor = conn.cursor()
+
+                cursor.execute(
+                    '''
+                    UPDATE candidatos 
+                    SET caminho_curriculo = %s, experiencia = %s, competencias = %s, resumo_profissional = %s, formacao = %s 
+                    WHERE id = %s
+                    ''',
+                    (nome_arquivo, experiencia, competencias, resumo_profissional, formacao, candidato_id)
+                )
+
+                conn.commit()
+                conn.close()
+
+                resultado['sucesso'] = True
+                resultado['dados_extraidos'] = {
+                    'experiencia': experiencia,
+                    'competencias': competencias,
+                    'resumo_profissional': resumo_profissional,
+                    'formacao': formacao
+                }
+                resultado['mensagens'].append({
+                    'texto': 'Currículo processado com sucesso! Revise as informações extraídas:',
+                    'tipo': 'success'
+                })
+            else:
+                resultado['mensagens'].append({
+                    'texto': 'Erro ao extrair texto do arquivo PDF',
+                    'tipo': 'error'
+                })
+        else:
+            resultado['mensagens'].append({
+                'texto': 'Tipo de arquivo não permitido. Use apenas PDF.',
+                'tipo': 'error'
+            })
+
     except Exception as e:
-        resultado['mensagens'].append({'texto': f'Erro ao salvar currículo: {e}', 'tipo': 'error'})
-    finally:
-        conn.close()
+        resultado['mensagens'].append({
+            'texto': f'Erro ao processar arquivo: {str(e)}',
+            'tipo': 'error'
+        })
+
+        # Tentar remover arquivo em caso de erro
+        try:
+            if 'caminho_arquivo' in locals() and os.path.exists(caminho_arquivo):
+                os.remove(caminho_arquivo)
+        except:
+            pass
 
     return resultado
 
@@ -127,51 +192,45 @@ def processar_upload_curriculo(request, candidato_id):
 def finalizar_processamento_curriculo(request, candidato_id):
     """Finaliza o processamento do currículo salvando as informações editadas"""
     resultado = {'sucesso': False, 'mensagens': []}
-    experiencia = request.form.get('experiencia', '').strip()
-    competencias = request.form.get('competencias', '').strip()
-    resumo_profissional = request.form.get('resumo_profissional', '').strip()
-
-    if not experiencia and not competencias and not resumo_profissional:
-        resultado['mensagens'].append({'texto': 'Preencha pelo menos um campo antes de finalizar.', 'tipo': 'error'})
-        return resultado
 
     try:
+        experiencia = request.form.get('experiencia', '').strip()
+        competencias = request.form.get('competencias', '').strip()
+        resumo_profissional = request.form.get('resumo_profissional', '').strip()
+        formacao = request.form.get('formacao', '').strip()
+
+        if not experiencia and not competencias and not resumo_profissional and not formacao:
+            resultado['mensagens'].append({
+                'texto': 'Por favor, preencha pelo menos um dos campos antes de finalizar.',
+                'tipo': 'error'
+            })
+            return resultado
+
         conn = get_db_connection()
         cursor = conn.cursor()
+
         cursor.execute(
             '''
             UPDATE candidatos 
-            SET experiencia = %s, competencias = %s, resumo_profissional = %s
+            SET experiencia = %s, competencias = %s, resumo_profissional = %s, formacao = %s 
             WHERE id = %s
-            ''', (experiencia, competencias, resumo_profissional, candidato_id)
+            ''',
+            (experiencia, competencias, resumo_profissional, formacao, candidato_id)
         )
+
         conn.commit()
-        resultado['sucesso'] = True
-        resultado['mensagens'].append({'texto': 'Currículo processado e salvo com sucesso!', 'tipo': 'success'})
-    except Exception as e:
-        resultado['mensagens'].append({'texto': f'Erro ao salvar informações: {e}', 'tipo': 'error'})
-    finally:
         conn.close()
 
-    return resultado
+        resultado['sucesso'] = True
+        resultado['mensagens'].append({
+            'texto': 'Currículo processado e salvo com sucesso!',
+            'tipo': 'success'
+        })
 
-
-def gerar_resumo_automatico(texto_completo, informacoes):
-    """Gera um resumo automático baseado nas informações extraídas"""
-    try:
-        resumo_parts = []
-        if informacoes.get('formacao'):
-            resumo_parts.append(f"Formação: {informacoes['formacao'][:100]}...")
-        if informacoes.get('experiencias'):
-            resumo_parts.append(f"Experiência: {informacoes['experiencias'][:150]}...")
-        if informacoes.get('habilidades'):
-            resumo_parts.append(f"Principais habilidades: {informacoes['habilidades'][:100]}...")
-
-        if not resumo_parts:
-            texto_limpo = ' '.join(texto_completo.split())
-            resumo_parts.append(texto_limpo[:300] + "...")
-
-        return ' | '.join(resumo_parts)
     except Exception as e:
-        print(f"Erro ao gerar resumo automático: {e}")
-        return "Resumo não disponível."
+        resultado['mensagens'].append({
+            'texto': f'Erro ao salvar informações: {str(e)}',
+            'tipo': 'error'
+        })
+
+    return resultado

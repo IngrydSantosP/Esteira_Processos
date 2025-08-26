@@ -4,7 +4,9 @@ from utils.helpers import inicializar_banco, calcular_distancia_endereco
 from utils.resume_extractor import processar_upload_curriculo, finalizar_processamento_curriculo
 from avaliador import criar_avaliador
 import mysql.connector
+from PyPDF2 import PdfReader
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 import io
 import json
 import smtplib
@@ -229,10 +231,9 @@ def login_empresa():
             return render_template('empresa/login_empresa.html')
 
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(buffered=True)  # <-- Adicionado buffered=True
 
         try:
-            # consulta empresa pelo CNPJ (como está gravado no banco)
             cursor.execute(
                 'SELECT id, senha_hash FROM empresas WHERE cnpj = %s',
                 (cnpj,)
@@ -318,6 +319,8 @@ def login_candidato():
     return render_template('candidato/login_candidato.html')
 
 
+
+
 @app.route('/candidato/cadastro_candidato', methods=['GET', 'POST'])
 def cadastro_candidato():
     if request.method == 'POST':
@@ -326,18 +329,25 @@ def cadastro_candidato():
         senha = request.form['senha']
         telefone = request.form['telefone']
         linkedin = request.form['linkedin']
-        endereco_completo = request.form['endereco_completo']
         pretensao_salarial = float(request.form['pretensao_salarial'])
+
+        # Novo formato de endereço
+        cep = request.form['cep']
+        endereco = request.form['endereco']  # logradouro + bairro + cidade - estado
+        numero = request.form['numero']
+        complemento = request.form.get('complemento', '')
 
         conn = get_db_connection()
         cursor = conn.cursor()
 
         try:
             cursor.execute(
-                '''INSERT INTO candidatos (nome, email, senha_hash, telefone, linkedin, endereco_completo, pretensao_salarial)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s)''',
-                (nome, email, generate_password_hash(senha), telefone,
-                 linkedin, endereco_completo, pretensao_salarial))
+                '''INSERT INTO candidatos 
+                   (nome, email, senha_hash, telefone, linkedin, cep, endereco, numero, complemento, pretensao_salarial)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''',
+                (nome, email, generate_password_hash(senha), telefone, linkedin,
+                 cep, endereco, numero, complemento, pretensao_salarial)
+            )
             conn.commit()
             flash('Candidato cadastrado com sucesso!', 'success')
             return redirect(url_for('login_candidato'))
@@ -583,15 +593,15 @@ def dashboard_candidato():
     cursor = conn.cursor()
 
     # Verifica se o candidato já enviou currículo
-    cursor.execute('SELECT texto_curriculo FROM candidatos WHERE id = %s',
-                   (session['candidato_id'], ))
+    cursor.execute('SELECT resumo_profissional FROM candidatos WHERE id = %s',
+                   (session['candidato_id'],))
     candidato = cursor.fetchone()
 
     if not candidato or not candidato[0]:
         conn.close()
         return redirect(url_for('upload_curriculo'))
 
-    # Candidaturas em vagas ATIVAS, ordenadas por score decrescente
+    # Candidaturas em vagas ATIVAS
     cursor.execute(
         '''
         SELECT v.id, v.titulo, e.nome AS empresa_nome, v.salario_oferecido, ca.score, ca.posicao,
@@ -605,21 +615,20 @@ def dashboard_candidato():
         ''', (session['candidato_id'], session['candidato_id']))
     vagas_candidatadas_raw = cursor.fetchall()
 
-    # Processamento dos dados
     vagas_candidatadas = []
     for vaga in vagas_candidatadas_raw:
         vaga_processada = (
-            int(vaga[0]),  # id
-            vaga[1],  # titulo
-            vaga[2],  # empresa_nome
-            float(vaga[3]) if vaga[3] else 0.0,  # salario
-            float(vaga[4]) if vaga[4] else 0.0,  # score
-            int(vaga[5]) if vaga[5] else 0,  # posicao
-            bool(vaga[6])  # is_favorita
+            int(vaga[0]),
+            vaga[1],
+            vaga[2],
+            float(vaga[3]) if vaga[3] else 0.0,
+            float(vaga[4]) if vaga[4] else 0.0,
+            int(vaga[5]) if vaga[5] else 0,
+            bool(vaga[6])
         )
         vagas_candidatadas.append(vaga_processada)
 
-    # Agora busca vagas disponíveis que o candidato ainda não se candidatou
+    # Vagas disponíveis
     cursor.execute(
         '''
         SELECT v.id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido,
@@ -634,7 +643,7 @@ def dashboard_candidato():
         ''', (session['candidato_id'], session['candidato_id']))
     vagas_disponiveis = cursor.fetchall()
 
-    # Buscar vagas favoritas (com e sem candidatura)
+    # Vagas favoritas
     cursor.execute(
         '''
         SELECT v.id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido,
@@ -650,41 +659,45 @@ def dashboard_candidato():
         ''', (session['candidato_id'], session['candidato_id']))
     vagas_favoritas = cursor.fetchall()
 
-    # Informações do candidato
+    # Informações do candidato com endereço simplificado
     cursor.execute(
-        'SELECT pretensao_salarial, texto_curriculo, endereco_completo FROM candidatos WHERE id = %s',
-        (session['candidato_id'], ))
+        '''
+        SELECT pretensao_salarial, resumo_profissional, endereco, cep 
+        FROM candidatos WHERE id = %s
+        ''', (session['candidato_id'],))
     candidato_info = cursor.fetchone()
-
     conn.close()
 
-    # Calcula score para vagas disponíveis
     config = get_config()
     avaliador = get_avaliador(config['MODO_IA'])
     vagas_com_score = []
+
     for vaga in vagas_disponiveis:
         score = avaliador.calcular_score(
             candidato_info[1], vaga[3], candidato_info[0], vaga[4],
             vaga[6] if vaga[6] else '',
-            candidato_info[2] if len(candidato_info) > 2 else None, vaga[8],
-            vaga[7])
-        vaga_processada = (int(vaga[0]), vaga[1], vaga[2], vaga[3],
-                           float(vaga[4]) if vaga[4] else 0.0, vaga[5], vaga[6]
-                           or '', vaga[7] or 'Presencial', vaga[8]
-                           or '', float(score), bool(vaga[9]))
+            candidato_info[2] if len(candidato_info) > 2 else None,
+            vaga[8], vaga[7]
+        )
+        vaga_processada = (
+            int(vaga[0]), vaga[1], vaga[2], vaga[3],
+            float(vaga[4]) if vaga[4] else 0.0, vaga[5],
+            vaga[6] or '', vaga[7] or 'Presencial', vaga[8] or '',
+            float(score), bool(vaga[9])
+        )
         vagas_com_score.append(vaga_processada)
 
-    # Processa vagas favoritas
     vagas_favoritas_processadas = []
     for vaga in vagas_favoritas:
-        if not vaga[9]:  # Se não se candidatou ainda, calcular score
+        if not vaga[9]:
             score = avaliador.calcular_score(
                 candidato_info[1], vaga[3], candidato_info[0], vaga[4],
                 vaga[6] if vaga[6] else '',
                 candidato_info[2] if len(candidato_info) > 2 else None,
-                vaga[8], vaga[7])
+                vaga[8], vaga[7]
+            )
         else:
-            score = vaga[10]  # Score já existente da candidatura
+            score = vaga[10]
 
         vaga_processada = {
             'id': int(vaga[0]),
@@ -703,7 +716,6 @@ def dashboard_candidato():
         }
         vagas_favoritas_processadas.append(vaga_processada)
 
-    # Ordena pelas melhores recomendações
     vagas_com_score.sort(key=lambda x: x[9], reverse=True)
     top_vagas = vagas_com_score[:config['TOP_JOBS']]
 
@@ -713,16 +725,15 @@ def dashboard_candidato():
                            vagas_favoritas=vagas_favoritas_processadas)
 
 
+
 @app.route('/candidato/upload_curriculo', methods=['GET', 'POST'])
 def upload_curriculo():
     if 'candidato_id' not in session:
         return redirect(url_for('login_candidato'))
 
     if request.method == 'POST':
-        resultado = processar_upload_curriculo(request,
-                                               session['candidato_id'])
+        resultado = processar_upload_curriculo(request, session['candidato_id'])
 
-        # Processar mensagens corretamente
         for mensagem in resultado['mensagens']:
             if isinstance(mensagem, dict) and 'texto' in mensagem:
                 flash(mensagem['texto'], mensagem.get('tipo', 'info'))
@@ -730,24 +741,26 @@ def upload_curriculo():
                 flash(str(mensagem), 'info')
 
         if resultado['sucesso']:
+            # Passa dados extraídos para o template de revisão
             return render_template(
-                'processar_curriculo.html',
-                dados_extraidos=resultado['dados_extraidos'])
+                'candidato/processar_curriculo.html',
+                dados_extraidos=resultado['dados_extraidos']
+            )
         else:
+            # Erro no upload/processamento, permanece na página
             return redirect(request.url)
 
     return render_template('candidato/upload_curriculo.html')
 
 
-@app.route('/candidato/finalizar_curriculo', methods=['POST'])
+@app.route('/finalizar_curriculo', methods=['POST'])
 def finalizar_curriculo():
     if 'candidato_id' not in session:
         return redirect(url_for('login_candidato'))
 
-    resultado = finalizar_processamento_curriculo(request,
-                                                  session['candidato_id'])
+    candidato_id = session['candidato_id']
+    resultado = finalizar_processamento_curriculo(request, candidato_id)
 
-    # Processar mensagens corretamente
     for mensagem in resultado['mensagens']:
         if isinstance(mensagem, dict) and 'texto' in mensagem:
             flash(mensagem['texto'], mensagem.get('tipo', 'info'))
@@ -757,8 +770,14 @@ def finalizar_curriculo():
     if resultado['sucesso']:
         return redirect(url_for('dashboard_candidato'))
     else:
-        return redirect(url_for('upload_curriculo'))
-
+        # Reexibe formulário com os dados preenchidos em caso de erro
+        dados_extraidos = {
+            'experiencia': request.form.get('experiencia', ''),
+            'competencias': request.form.get('competencias', ''),
+            'resumo_profissional': request.form.get('resumo_profissional', ''),
+            'formacao': request.form.get('formacao', '')
+        }
+        return render_template('candidato/processar_curriculo.html', dados_extraidos=dados_extraidos)
 
 @app.route('/candidatar/<int:vaga_id>')
 def candidatar(vaga_id):
@@ -1018,6 +1037,7 @@ def editar_perfil_candidato():
 
     conn = get_db_connection()
     cursor = conn.cursor()
+    candidato_id = session['candidato_id']
 
     if request.method == 'POST':
         nome = request.form['nome']
@@ -1028,32 +1048,69 @@ def editar_perfil_candidato():
         competencias = request.form['competencias']
         resumo_profissional = request.form['resumo_profissional']
 
-        cursor.execute(
-            '''
-            UPDATE candidatos
-            SET nome =  %s, telefone =  %s, linkedin =  %s, pretensao_salarial =  %s,
-                experiencia =  %s, competencias =  %s, resumo_profissional =  %s
-            WHERE id =  %s
-        ''', (nome, telefone, linkedin, pretensao_salarial, experiencia,
-              competencias, resumo_profissional, session['candidato_id']))
+        # Se você estiver lidando com upload de arquivo:
+        file = request.files.get('curriculo')
+        if file and file.filename:
+            caminho_curriculo = file.filename
+            # Salve o arquivo, se necessário
+            # file.save(os.path.join('caminho_para_salvar', file.filename))
+
+            # Exemplo fictício de extração de texto
+            texto_extraido = "Texto extraído do currículo"
+
+            cursor.execute("""
+                UPDATE candidatos
+                SET nome=%s,
+                    telefone=%s,
+                    linkedin=%s,
+                    pretensao_salarial=%s,
+                    experiencia=%s,
+                    competencias=%s,
+                    resumo_profissional=%s,
+                    caminho_curriculo=%s,
+                    resumo_profissional=%s
+                WHERE id=%s
+            """, (
+                nome, telefone, linkedin, pretensao_salarial,
+                experiencia, competencias, resumo_profissional,
+                caminho_curriculo, texto_extraido, candidato_id
+            ))
+        else:
+            # Atualização sem novo currículo
+            cursor.execute("""
+                UPDATE candidatos
+                SET nome=%s,
+                    telefone=%s,
+                    linkedin=%s,
+                    pretensao_salarial=%s,
+                    experiencia=%s,
+                    competencias=%s,
+                    resumo_profissional=%s
+                WHERE id=%s
+            """, (
+                nome, telefone, linkedin, pretensao_salarial,
+                experiencia, competencias, resumo_profissional,
+                candidato_id
+            ))
 
         conn.commit()
         conn.close()
 
         flash('Perfil atualizado com sucesso!', 'success')
-        return redirect(url_for('dashboard_candidato'))
+        return redirect(url_for('dashboard_candidato'))  # Corrigido o nome da rota
 
-    cursor.execute(
-        '''
+    # Método GET – carregar dados atuais
+    cursor.execute("""
         SELECT nome, telefone, linkedin, pretensao_salarial,
                experiencia, competencias, resumo_profissional
-        FROM candidatos WHERE id =  %s
-    ''', (session['candidato_id'], ))
+        FROM candidatos WHERE id = %s
+    """, (candidato_id, ))
 
     candidato = cursor.fetchone()
     conn.close()
 
     return render_template('candidato/editar_perfil_candidato.html', candidato=candidato)
+
 
 @app.route('/empresa/editar_vaga/<int:vaga_id>', methods=['GET', 'POST'])
 def editar_vaga(vaga_id):
@@ -1198,7 +1255,7 @@ def detalhes_vaga(vaga_id):
     # Buscar dados do candidato para calcular feedback
     cursor.execute(
         '''
-        SELECT texto_curriculo, endereco_completo, pretensao_salarial
+        SELECT resumo_profissional, endereco_completo, pretensao_salarial
         FROM candidatos WHERE id = %s
     ''', (session['candidato_id'], ))
     candidato_data = cursor.fetchone()
@@ -2398,7 +2455,7 @@ def api_score_detalhes(candidato_id, vaga_id):
         # Verificar se a empresa tem acesso ao candidato
         cursor.execute(
             '''
-            SELECT c.texto_curriculo, c.pretensao_salarial, c.endereco_completo,
+            SELECT c.resumo_profissional, c.pretensao_salarial, c.endereco_completo,
                    v.requisitos, v.salario_oferecido, v.diferenciais, v.tipo_vaga, v.endereco_vaga
             FROM candidatos c, vagas v
             WHERE c.id = %s AND v.id = %s AND v.empresa_id = %s
@@ -2562,63 +2619,65 @@ def api_candidatos_geral():
         return jsonify({'error': 'Não autorizado'}), 401
 
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
 
     try:
-        # Primeiro, verificar se a tabela de favoritos existe e criá-la se necessário
+        # Criar tabela de favoritos se não existir (MySQL)
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS empresa_favorito_candidato_geral (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                empresa_id INTEGER NOT NULL,
-                candidato_id INTEGER NOT NULL,
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                empresa_id INT NOT NULL,
+                candidato_id INT NOT NULL,
                 data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (empresa_id) REFERENCES empresas (id),
-                FOREIGN KEY (candidato_id) REFERENCES candidatos (id),
-                UNIQUE(empresa_id, candidato_id)
+                FOREIGN KEY (empresa_id) REFERENCES empresas(id),
+                FOREIGN KEY (candidato_id) REFERENCES candidatos(id),
+                UNIQUE KEY(empresa_id, candidato_id)
             )
         ''')
+        conn.commit()
 
-        # Verificar se a coluna data_cadastro existe e criá-la se necessário
-        cursor.execute("PRAGMA table_info(candidatos)")
-        columns = [column[1] for column in cursor.fetchall()]
-
-        if 'data_cadastro' not in columns:
-            cursor.execute(
-                'ALTER TABLE candidatos ADD COLUMN data_cadastro TIMESTAMP')
-            # Atualizar registros existentes com data atual
-            cursor.execute(
-                'UPDATE candidatos SET data_cadastro = datetime("now") WHERE data_cadastro IS NULL'
-            )
+        # Garantir que a coluna data_cadastro exista
+        cursor.execute("SHOW COLUMNS FROM candidatos LIKE 'data_cadastro'")
+        col_exists = cursor.fetchone()
+        if not col_exists:
+            cursor.execute("""
+                ALTER TABLE candidatos 
+                ADD COLUMN data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            """)
+            conn.commit()
 
         empresa_id = session['empresa_id']
 
-        cursor.execute(
-            '''
-            SELECT DISTINCT c.id, c.nome, c.email, c.telefone, c.linkedin,
-                   c.endereco_completo, c.pretensao_salarial, c.competencias,
-                   c.texto_curriculo, COALESCE(c.data_cadastro, datetime('now')) as data_cadastro,
-                   CASE WHEN c.texto_curriculo IS NOT NULL AND c.texto_curriculo != '' THEN 1 ELSE 0 END as tem_curriculo,
-                   CASE WHEN efcg.candidato_id IS NOT NULL THEN 1 ELSE 0 END as is_favorito
+        # Buscar candidatos
+        cursor.execute('''
+            SELECT DISTINCT 
+                c.id, c.nome, c.email, c.telefone, c.linkedin,
+                c.endereco_completo, c.pretensao_salarial, c.competencias,
+                c.resumo_profissional, 
+                COALESCE(c.data_cadastro, NOW()) as data_cadastro,
+                CASE WHEN c.resumo_profissional IS NOT NULL AND c.resumo_profissional != '' THEN 1 ELSE 0 END as tem_curriculo,
+                CASE WHEN efcg.candidato_id IS NOT NULL THEN 1 ELSE 0 END as is_favorito
             FROM candidatos c
-            LEFT JOIN empresa_favorito_candidato_geral efcg ON efcg.candidato_id = c.id AND efcg.empresa_id = %s
-            ORDER BY COALESCE(c.data_cadastro, datetime('now')) DESC
-        ''', (empresa_id, ))
+            LEFT JOIN empresa_favorito_candidato_geral efcg 
+                   ON efcg.candidato_id = c.id AND efcg.empresa_id = %s
+            ORDER BY COALESCE(c.data_cadastro, NOW()) DESC
+        ''', (empresa_id,))
 
         candidatos = []
         for row in cursor.fetchall():
             candidatos.append({
-                'id': row[0],
-                'nome': row[1] or '',
-                'email': row[2] or '',
-                'telefone': row[3] or '',
-                'linkedin': row[4] or '',
-                'endereco_completo': row[5] or '',
-                'pretensao_salarial': row[6] or 0,
-                'competencias': row[7] or '',
-                'texto_curriculo': row[8] or '',
-                'data_cadastro': row[9] or '',
-                'tem_curriculo': bool(row[10]),
-                'is_favorito': bool(row[11])
+                'id': row['id'],
+                'nome': row['nome'] or '',
+                'email': row['email'] or '',
+                'telefone': row['telefone'] or '',
+                'linkedin': row['linkedin'] or '',
+                'endereco_completo': row['endereco_completo'] or '',
+                'pretensao_salarial': row['pretensao_salarial'] or 0,
+                'competencias': row['competencias'] or '',
+                'resumo_profissional': row['resumo_profissional'] or '',
+                'data_cadastro': str(row['data_cadastro']) if row['data_cadastro'] else '',
+                'tem_curriculo': bool(row['tem_curriculo']),
+                'is_favorito': bool(row['is_favorito'])
             })
 
         return jsonify(candidatos)
@@ -2627,8 +2686,8 @@ def api_candidatos_geral():
         print(f"Erro na API candidatos-geral: {e}")
         return jsonify({'error': str(e)}), 500
     finally:
+        cursor.close()
         conn.close()
-
 
 @app.route('/api/favoritar-candidato-geral', methods=['POST'])
 def favoritar_candidato_geral():
@@ -2775,7 +2834,7 @@ def api_todas_vagas():
 
         # Buscar informações do candidato para calcular scores
         cursor.execute(
-            'SELECT pretensao_salarial, texto_curriculo, endereco_completo FROM candidatos WHERE id = %s',
+            'SELECT pretensao_salarial, resumo_profissional, endereco_completo FROM candidatos WHERE id = %s',
             (session['candidato_id'], ))
         candidato_info = cursor.fetchone()
 
@@ -2954,7 +3013,7 @@ def api_buscar_vagas():
 
         # Buscar informações do candidato para calcular scores
         cursor.execute(
-            'SELECT pretensao_salarial, texto_curriculo, endereco_completo FROM candidatos WHERE id = %s',
+            'SELECT pretensao_salarial, resumo_profissional, endereco_completo FROM candidatos WHERE id = %s',
             (session['candidato_id'], ))
         candidato_info = cursor.fetchone()
 
@@ -3037,7 +3096,7 @@ def api_analisar_curriculo():
         candidato_id = session['candidato_id']
 
         # Buscar currículo do candidato
-        cursor.execute('SELECT texto_curriculo FROM candidatos WHERE id = %s',
+        cursor.execute('SELECT resumo_profissional FROM candidatos WHERE id = %s',
                        (candidato_id, ))
         resultado = cursor.fetchone()
 
@@ -3071,7 +3130,7 @@ def api_recomendacoes_ia():
         candidato_id = session['candidato_id']
 
         # Buscar currículo do candidato
-        cursor.execute('SELECT texto_curriculo FROM candidatos WHERE id = %s',
+        cursor.execute('SELECT resumo_profissional FROM candidatos WHERE id = %s',
                        (candidato_id, ))
         resultado = cursor.fetchone()
 
@@ -3107,7 +3166,7 @@ def api_dicas_vaga_ia(vaga_id):
         # Buscar dados do candidato e da vaga
         cursor.execute(
             '''
-            SELECT c.texto_curriculo, v.requisitos, v.salario_oferecido
+            SELECT c.resumo_profissional, v.requisitos, v.salario_oferecido
             FROM candidatos c, vagas v
             WHERE c.id = %s AND v.id = %s AND v.status = 'Ativa'
         ''', (candidato_id, vaga_id))
@@ -3146,7 +3205,7 @@ def api_enviar_recomendacoes_email():
 
         # Buscar dados do candidato
         cursor.execute(
-            'SELECT nome, email, texto_curriculo FROM candidatos WHERE id = %s',
+            'SELECT nome, email FROM candidatos WHERE id = %s',
             (candidato_id, ))
         resultado = cursor.fetchone()
 

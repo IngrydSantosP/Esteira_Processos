@@ -1,17 +1,8 @@
 import mysql.connector
+from mysql.connector import Error
+from db import get_db_connection
 from datetime import datetime
 import random
-
-def get_db_connection():
-    """Obtém conexão de banco no MySQL (XAMPP)"""
-    conn = mysql.connector.connect(
-        host="localhost",
-        user="root",          # ajuste conforme sua config
-        password="",          # senha (em branco no XAMPP por padrão)
-        database="recrutamentodb",
-        connection_timeout=60
-    )
-    return conn
 
 
 def inicializar_banco():
