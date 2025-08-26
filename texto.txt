@@ -1,6 +1,0 @@
-python -m venv venv
-venv\Scripts\activate
-pip install flask pymupdf python-dotenv schedule
-py app.py
-
-
