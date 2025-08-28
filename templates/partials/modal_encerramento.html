@@ -1,0 +1,291 @@
+<!-- Modal de Encerramento de Vaga -->
+<style>
+    /* Scrollbar refinado dentro do modal */
+    #modalEncerramento .scroll-area::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    #modalEncerramento .scroll-area::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    #modalEncerramento .scroll-area::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
+        transition: background 0.3s;
+    }
+
+    #modalEncerramento .scroll-area::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.2);
+    }
+
+    #modalEncerramento .scroll-area {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+    }
+
+    /* Evitar seleção de texto no modal */
+    #modalEncerramento .candidate-item {
+        user-select: none;
+    }
+</style>
+
+<div id="modalEncerramento" class="fixed inset-0 bg-black bg-opacity-60 hidden z-50 flex items-center justify-center backdrop-blur-sm">
+    <div class="w-full max-w-[480px] sm:max-w-[520px] md:max-w-[560px] lg:max-w-[600px] px-4">
+        <div class="bg-white rounded-3xl w-full max-h-[90vh] overflow-hidden shadow-2xl relative border border-gray-100">
+            <!-- Gradiente decorativo no topo -->
+            <div class="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-orange-500 via-red-500 to-pink-500"></div>
+
+            <!-- Botão de fechar no canto superior direito -->
+            <button onclick="fecharModalEncerramento()" 
+                    class="absolute top-6 right-6 z-10 w-12 h-12 bg-red-50 hover:bg-red-100 text-red-600 rounded-2xl transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 border border-red-200">
+                <span class="text-xl font-bold">✕</span>
+            </button>
+
+            <div class="scroll-area overflow-y-auto max-h-[90vh] p-8 pt-20">
+                <div class="text-center mb-8">
+                    <div class="w-20 h-20 bg-gradient-to-br from-orange-100 to-red-100 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg">
+                        <span class="text-4xl">⚠️</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-800 mb-3">Como deseja encerrar esta vaga?</h3>
+                    <p class="text-gray-600 bg-gray-50 px-4 py-2 rounded-xl font-medium" id="vagaTitulo">Carregando...</p>
+                </div>
+
+                <div id="secaoCandidatos" class="mb-6 hidden">
+                    <h4 class="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                        <span>👥</span> Candidatos Disponíveis
+                    </h4>
+                    <div class="max-h-40 overflow-y-auto border rounded-lg scroll-area bg-gray-50">
+                        <div id="listaCandidatos" class="space-y-1 p-2">
+                            <!-- Os candidatos serão carregados dinamicamente aqui -->
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <label for="mensagemPersonalizada" class="block text-sm font-semibold text-gray-700 mb-2">
+                            💬 Mensagem para o candidato selecionado
+                        </label>
+                        <textarea 
+                            id="mensagemPersonalizada" 
+                            rows="4" 
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                            placeholder="Digite uma mensagem personalizada para o candidato contratado (opcional)..."
+                            maxlength="500"
+                        ></textarea>
+                        <div class="text-xs text-gray-500 mt-1">
+                            <span id="contadorCaracteres">0</span>/500 caracteres
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <button 
+                        onclick="encerrarVagaModal('contratar')"
+                        id="btnContratar"
+                        class="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-4 px-6 rounded-2xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center gap-3 hidden">
+                        <span class="text-lg">🎉</span> 
+                        <span>Contratar Candidato Selecionado</span>
+                    </button>
+
+                    <button 
+                        onclick="encerrarVagaModal('congelar')"
+                        class="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white py-4 px-6 rounded-2xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center gap-3">
+                        <span class="text-lg">❄️</span>
+                        <span>Congelar Vaga</span>
+                    </button>
+
+                    <button 
+                        onclick="encerrarVagaModal('excluir')"
+                        class="w-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white py-4 px-6 rounded-2xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center gap-3">
+                        <span class="text-lg">🗑️</span>
+                        <span>Excluir Vaga</span>
+                    </button>
+                </div>
+
+                <button 
+                    onclick="fecharModalEncerramento()"
+                    class="w-full mt-6 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-6 rounded-2xl font-semibold transition-all duration-300 transform hover:scale-105">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let vagaAtualId = null;
+let candidatoSelecionado = null;
+
+// Bloquear/desbloquear rolagem do fundo
+function bloquearFundo() {
+    document.body.classList.add('overflow-hidden');
+}
+function desbloquearFundo() {
+    document.body.classList.remove('overflow-hidden');
+}
+
+async function abrirModalEncerramento(vagaId, vagaTitulo) {
+    vagaAtualId = vagaId;
+    candidatoSelecionado = null;
+
+    document.getElementById('vagaTitulo').textContent = vagaTitulo;
+    document.getElementById('mensagemPersonalizada').value = '';
+    document.getElementById('contadorCaracteres').textContent = '0';
+
+    try {
+        const response = await fetch(`/api/candidatos_vaga/${vagaId}`);
+        const candidatos = await response.json();
+
+        const secaoCandidatos = document.getElementById('secaoCandidatos');
+        const listaCandidatos = document.getElementById('listaCandidatos');
+        const btnContratar = document.getElementById('btnContratar');
+
+        if (candidatos.length > 0) {
+            secaoCandidatos.classList.remove('hidden');
+            listaCandidatos.innerHTML = '';
+
+            candidatos.forEach(candidato => {
+                const item = document.createElement('div');
+                item.className = 'p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0 candidate-item';
+                item.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="font-medium text-gray-800">${candidato.nome}</p>
+                            <p class="text-sm text-gray-600">Score: ${candidato.score.toFixed(1)}%</p>
+                        </div>
+                        <input type="radio" name="candidatoSelecionado" value="${candidato.id}" 
+                               class="w-4 h-4 text-purple-600 focus:ring-purple-500">
+                    </div>
+                `;
+
+                item.addEventListener('click', () => {
+                    const radio = item.querySelector('input[type="radio"]');
+                    radio.checked = true;
+                    candidatoSelecionado = candidato.id;
+
+                    document.querySelectorAll('.candidate-item').forEach(el => {
+                        el.classList.remove('bg-purple-50', 'border-purple-200');
+                    });
+
+                    item.classList.add('bg-purple-50', 'border-purple-200');
+                    btnContratar.classList.remove('hidden');
+                });
+
+                listaCandidatos.appendChild(item);
+            });
+        } else {
+            secaoCandidatos.classList.add('hidden');
+            btnContratar.classList.add('hidden');
+        }
+    } catch (error) {
+        console.error('Erro ao carregar candidatos:', error);
+        document.getElementById('vagaTitulo').textContent = 'Erro ao carregar';
+    }
+
+    document.getElementById('modalEncerramento').classList.remove('hidden');
+    bloquearFundo();
+}
+
+document.getElementById('mensagemPersonalizada').addEventListener('input', function () {
+    const contador = document.getElementById('contadorCaracteres');
+    contador.textContent = this.value.length;
+});
+
+async function encerrarVagaModal(acao) {
+    if (!vagaAtualId) return;
+
+    if (acao === 'contratar' && !candidatoSelecionado) {
+        showToast('Por favor, selecione um candidato para contratar.', 'error');
+        return;
+    }
+
+    let confirmMessage = '';
+    switch(acao) {
+        case 'excluir':
+            confirmMessage = 'Tem certeza que deseja excluir esta vaga? Esta ação não pode ser desfeita.';
+            break;
+        case 'congelar':
+            confirmMessage = 'Tem certeza que deseja congelar esta vaga? Ela ficará inativa temporariamente.';
+            break;
+        case 'contratar':
+            confirmMessage = 'Confirma a contratação do candidato selecionado? A vaga será marcada como concluída.';
+            break;
+    }
+
+    if (confirmMessage && !confirm(confirmMessage)) {
+        return;
+    }
+
+    const mensagem = document.getElementById('mensagemPersonalizada').value.trim();
+
+    try {
+        const response = await fetch('/encerrar_vaga', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                vaga_id: vagaAtualId,
+                acao: acao,
+                candidato_id: candidatoSelecionado,
+                mensagem_personalizada: mensagem
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast(result.message || 'Operação realizada com sucesso!', 'success');
+            fecharModalEncerramento();
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showToast('Erro: ' + (result.error || 'Erro desconhecido'), 'error');
+        }
+    } catch (error) {
+        console.error('Erro ao encerrar vaga:', error);
+        showToast('Erro ao processar solicitação. Tente novamente.', 'error');
+    }
+}
+
+function fecharModalEncerramento() {
+    document.getElementById('modalEncerramento').classList.add('hidden');
+    vagaAtualId = null;
+    candidatoSelecionado = null;
+    desbloquearFundo();
+}
+
+// Fechar modal ao clicar fora
+document.getElementById('modalEncerramento').addEventListener('click', function (e) {
+    if (e.target === this) {
+        fecharModalEncerramento();
+    }
+});
+
+// Toast notifications
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed bottom-4 right-4 z-50 px-6 py-4 rounded-xl shadow-lg transform translate-y-full transition-all duration-300 ${
+        type === 'success' ? 'bg-green-500 text-white' :
+        type === 'error' ? 'bg-red-500 text-white' :
+        'bg-blue-500 text-white'
+    }`;
+    toast.textContent = message;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.remove('translate-y-full');
+    }, 100);
+
+    setTimeout(() => {
+        toast.classList.add('translate-y-full');
+        setTimeout(() => {
+            document.body.removeChild(toast);
+        }, 300);
+    }, 3000);
+}
+</script>

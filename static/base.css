@@ -1,0 +1,90 @@
+/* Animações para menu mobile */
+        .mobile-menu {
+            transition: all 0.3s ease-in-out;
+        }
+        .mobile-menu.hidden {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+        .mobile-menu.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        /* Responsividade para texto do logo */
+        @media (max-width: 480px) {
+            .logo-text {
+                font-size: 1.5rem;
+            }
+        }
+
+.profile-container {
+    position: relative;
+    display: inline-block;
+}
+
+.profile-img {
+    width: 50px;
+    height: 50px;
+    border-radius: 9999px;
+    cursor: pointer;
+}
+
+/* Dropdown */
+.dropdown-menu {
+    position: absolute;
+    top: 60px; /* ajusta conforme o tamanho da imagem */
+    right: 0;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    display: none; /* começa fechado */
+    flex-direction: column;
+    min-width: 160px;
+    z-index: 10;
+    padding: 0.5rem 0;
+}
+
+/* Balãozinho / seta */
+.dropdown-menu::before {
+    content: '';
+    position: absolute;
+    top: -8px; /* acima do menu */
+    right: 10px; /* posição da seta */
+    border-width: 0 8px 8px 8px; /* largura da seta */
+    border-style: solid;
+    border-color: transparent transparent white transparent; /* seta branca apontando para cima */
+}
+
+/* Itens do menu */
+.dropdown-menu p,
+.dropdown-menu button,
+.dropdown-menu a {
+    padding: 0.5rem 1rem;
+    text-align: left;
+    width: 100%;
+    border: none;
+    background: none;
+    cursor: pointer;
+}
+
+.dropdown-menu button:hover,
+.dropdown-menu a:hover {
+    background-color: #f0f0f0;
+}
+
+.box {
+    position: relative;
+}
+
+.Fechar {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+}

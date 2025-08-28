@@ -1,0 +1,122 @@
+{% block head %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='formulario.css') }}">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='base.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-center px-4 py-6 md:py-10">
+  <div class="flex flex-col md:flex-row w-full max-w-4xl bg-white rounded-xl shadow-lg overflow-hidden">
+
+    <!-- Lado esquerdo: Criar conta -->
+    <div class="w-full md:w-1/2 p-6 md:p-8 bg-white">
+      <h2 class="text-2xl md:text-3xl font-bold text-[#7C71B2] text-center mb-4 md:mb-6">Criar Conta</h2>
+
+      <form id="registerFormEmpresa" method="POST" class="space-y-4">
+        <div>
+          <label for="cnpj" class="sr-only">CNPJ</label>
+          <input type="text" id="cnpj" name="cnpj" placeholder="CNPJ" required
+            class="w-full px-4 py-2 rounded-full bg-[#E1D8EB] placeholder-[#7C71B2] text-sm focus:outline-none">
+        </div>
+        <div>
+          <label for="nome" class="sr-only">Nome da Empresa</label>
+          <input type="text" id="nome" name="nome" placeholder="Nome da Empresa" required
+                 class="w-full px-4 py-2 rounded-full bg-[#E1D8EB] placeholder-[#7C71B2] text-sm focus:outline-none">
+        </div>
+        <div>
+          <label for="email" class="sr-only">Email</label>
+          <input type="email" id="email" name="email" placeholder="E-mail" required
+                 class="w-full px-4 py-2 rounded-full bg-[#E1D8EB] placeholder-[#7C71B2] text-sm focus:outline-none">
+        </div>
+
+
+        <!-- Campos de senha em duas colunas responsivas -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div>
+            <label for="senha" class="sr-only">Senha</label>
+            <input type="password" id="senha" name="senha" placeholder="Senha" required
+              class="w-full px-4 py-2 rounded-full bg-[#E1D8EB] placeholder-[#7C71B2] text-sm focus:outline-none"> 
+          </div>
+
+          <div>
+            <label for="confirmar_senha" class="sr-only">Confirmar Senha</label>
+            <input type="password" id="confirmar_senha" name="confirmar_senha" placeholder="Confirmar Senha" required
+              class="w-full px-4 py-2 rounded-full bg-[#E1D8EB] placeholder-[#7C71B2] text-sm focus:outline-none"/>
+          </div>
+        </div>
+
+
+        <h3 class="text-lg md:text-xl font-semibold text-[#7C71B2] mt-6 mb-2">Localização da Empresa</h3>
+          <input type="text" id="cep" name="cep" placeholder="CEP" maxlength="9" required
+            class="w-full px-4 py-2 rounded-full bg-[#E1D8EB] placeholder-[#7C71B2] text-sm focus:outline-none" />
+          <input type="text" id="endereco" name="endereco" placeholder="Endereço" required 
+              class="w-full px-4 py-2 rounded-full bg-[#E1D8EB] placeholder-[#7C71B2] text-sm focus:outline-none" />
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <input type="text" id="numero" name="numero" placeholder="Número" required
+              class="w-full px-4 py-2 rounded-full bg-[#E1D8EB] placeholder-[#7C71B2] text-sm focus:outline-none" />
+            <input type="text" id="complemento" name="complemento" placeholder="Complemento (opcional)"
+              class="w-full px-4 py-2 rounded-full bg-[#E1D8EB] placeholder-[#7C71B2] text-sm focus:outline-none" />
+          </div>
+
+          <div  id="msgLocalizacao" class="text-gray-500 hidden">
+            <small class="text-gray-500">ℹ️ Os dados de localização serão utilizados para melhorar o matching de vagas e podem ser reutilizados na criação de vagas.</small>
+          </div>
+
+
+        <div class="mb-6">
+                    <label class="flex items-start space-x-3">
+                        <input type="checkbox" name="aceita_termos" required class="mt-1 h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                        <span class="text-sm text-gray-600">
+                            Eu concordo com os <a href="{{ url_for('politica_privacidade') }}" target="_blank" class="text-purple-600 hover:underline">termos de uso e política de privacidade</a>. 
+                            Entendo que os dados dos candidatos serão utilizados exclusivamente para processos seletivos e que seguimos as melhores práticas de proteção de dados.
+                        </span>
+                    </label>
+                </div>
+
+                <button type="submit" class="w-full bg-[#7C71B2] hover:bg-purple-600 text-white font-bold py-2 rounded-full transition">
+                  Cadastrar
+                </button>
+      </form>
+    </div>
+
+    <!-- Lado direito: Boas-vindas -->
+    <div class="box w-full md:w-1/2 bg-[#7C71B2] text-white p-6 md:p-8 flex flex-col justify-center items-center md:rounded-l-[4rem] order-first md:order-last">
+      <a href="{{ url_for('index') }}" stylesheet="color:white" class="Fechar" >X</a>
+      <h1 class="text-2xl md:text-4xl font-bold mb-4 text-center">Bem-Vindo de Volta!</h1>
+      <p class="mb-6 text-xs md:text-sm text-center">Já possui uma conta? Faça seu login abaixo</p>
+      <a href="{{ url_for('login_empresa') }}"
+         class="bg-white text-[#7C71B2] px-4 md:px-6 py-2 rounded-full font-bold hover:bg-gray-100 transition text-sm md:text-base">
+        Login
+      </a>
+
+      <a href="{{ url_for('cadastro_candidato') }}"
+         class="mt-4 text-xs md:text-sm text-white underline hover:text-[#E1D8EB] transition-colors duration-200">
+        Sou candidato
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<script type="module">
+  import { aplicarValidacaoSenha, aplicarBuscaEndereco } from "{{ url_for('static', filename='validador.js') }}";
+
+  aplicarValidacaoSenha('#registerFormEmpresa');
+  aplicarBuscaEndereco('cep', 'endereco');
+
+  const camposLocalizacao = ['cep', 'endereco', 'numero', 'complemento'].map(id => document.getElementById(id));
+  const msgLocalizacao = document.getElementById('msgLocalizacao');
+
+  camposLocalizacao.forEach(campo => {
+    if (!campo) return;
+
+    campo.addEventListener('focus', () => {
+      if (msgLocalizacao) msgLocalizacao.classList.remove('hidden');
+    });
+});
+</script>
+
+
+
+{% endblock %}
