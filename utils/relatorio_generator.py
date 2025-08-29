@@ -1,26 +1,28 @@
-import sqlite3
+
+import mysql.connector
 from datetime import datetime, timedelta
 import json
+from db import get_db_connection
 
 
 def gerar_relatorio_completo(empresa_id, filtro_vagas=None):
     """Gera relatório estratégico e gerencial completo para a empresa"""
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
         # Dados básicos da empresa
-        cursor.execute('SELECT nome FROM empresas WHERE id = ?',
+        cursor.execute('SELECT nome FROM empresas WHERE id = %s',
                        (empresa_id, ))
         empresa_nome = cursor.fetchone()[0]
 
         # Total de vagas (com filtro opcional)
         if filtro_vagas:
-            vagas_query = 'SELECT COUNT(*) FROM vagas WHERE empresa_id = ? AND id IN ({})'.format(
-                ','.join('?' * len(filtro_vagas)))
+            vagas_query = 'SELECT COUNT(*) FROM vagas WHERE empresa_id = %s AND id IN ({})'.format(
+                ','.join(['%s'] * len(filtro_vagas)))
             cursor.execute(vagas_query, [empresa_id] + filtro_vagas)
         else:
-            cursor.execute('SELECT COUNT(*) FROM vagas WHERE empresa_id = ?',
+            cursor.execute('SELECT COUNT(*) FROM vagas WHERE empresa_id = %s',
                            (empresa_id, ))
         total_vagas = cursor.fetchone()[0]
 
@@ -29,15 +31,15 @@ def gerar_relatorio_completo(empresa_id, filtro_vagas=None):
             candidaturas_query = '''
                 SELECT COUNT(*) FROM candidaturas cand 
                 JOIN vagas v ON v.id = cand.vaga_id 
-                WHERE v.empresa_id = ? AND v.id IN ({})
-            '''.format(','.join('?' * len(filtro_vagas)))
+                WHERE v.empresa_id = %s AND v.id IN ({})
+            '''.format(','.join(['%s'] * len(filtro_vagas)))
             cursor.execute(candidaturas_query, [empresa_id] + filtro_vagas)
         else:
             cursor.execute(
                 '''
                 SELECT COUNT(*) FROM candidaturas cand 
                 JOIN vagas v ON v.id = cand.vaga_id 
-                WHERE v.empresa_id = ?
+                WHERE v.empresa_id = %s
             ''', (empresa_id, ))
         total_candidaturas = cursor.fetchone()[0]
 
@@ -46,15 +48,15 @@ def gerar_relatorio_completo(empresa_id, filtro_vagas=None):
             score_query = '''
                 SELECT AVG(cand.score) FROM candidaturas cand 
                 JOIN vagas v ON v.id = cand.vaga_id 
-                WHERE v.empresa_id = ? AND v.id IN ({})
-            '''.format(','.join('?' * len(filtro_vagas)))
+                WHERE v.empresa_id = %s AND v.id IN ({})
+            '''.format(','.join(['%s'] * len(filtro_vagas)))
             cursor.execute(score_query, [empresa_id] + filtro_vagas)
         else:
             cursor.execute(
                 '''
                 SELECT AVG(cand.score) FROM candidaturas cand 
                 JOIN vagas v ON v.id = cand.vaga_id 
-                WHERE v.empresa_id = ?
+                WHERE v.empresa_id = %s
             ''', (empresa_id, ))
         score_geral = cursor.fetchone()[0] or 0
 
@@ -64,11 +66,11 @@ def gerar_relatorio_completo(empresa_id, filtro_vagas=None):
                 SELECT v.titulo, COUNT(cand.id) as total_candidatos
                 FROM vagas v
                 LEFT JOIN candidaturas cand ON cand.vaga_id = v.id
-                WHERE v.empresa_id = ? AND v.id IN ({})
+                WHERE v.empresa_id = %s AND v.id IN ({})
                 GROUP BY v.id, v.titulo
                 ORDER BY total_candidatos DESC
                 LIMIT 1
-            '''.format(','.join('?' * len(filtro_vagas)))
+            '''.format(','.join(['%s'] * len(filtro_vagas)))
             cursor.execute(vaga_candidatos_query, [empresa_id] + filtro_vagas)
         else:
             cursor.execute(
@@ -76,7 +78,7 @@ def gerar_relatorio_completo(empresa_id, filtro_vagas=None):
                 SELECT v.titulo, COUNT(cand.id) as total_candidatos
                 FROM vagas v
                 LEFT JOIN candidaturas cand ON cand.vaga_id = v.id
-                WHERE v.empresa_id = ?
+                WHERE v.empresa_id = %s
                 GROUP BY v.id, v.titulo
                 ORDER BY total_candidatos DESC
                 LIMIT 1
@@ -89,11 +91,11 @@ def gerar_relatorio_completo(empresa_id, filtro_vagas=None):
                 SELECT v.titulo, AVG(cand.score) as score_medio
                 FROM vagas v
                 LEFT JOIN candidaturas cand ON cand.vaga_id = v.id
-                WHERE v.empresa_id = ? AND v.id IN ({}) AND cand.score IS NOT NULL
+                WHERE v.empresa_id = %s AND v.id IN ({}) AND cand.score IS NOT NULL
                 GROUP BY v.id, v.titulo
                 ORDER BY score_medio DESC
                 LIMIT 1
-            '''.format(','.join('?' * len(filtro_vagas)))
+            '''.format(','.join(['%s'] * len(filtro_vagas)))
             cursor.execute(vaga_score_query, [empresa_id] + filtro_vagas)
         else:
             cursor.execute(
@@ -101,7 +103,7 @@ def gerar_relatorio_completo(empresa_id, filtro_vagas=None):
                 SELECT v.titulo, AVG(cand.score) as score_medio
                 FROM vagas v
                 LEFT JOIN candidaturas cand ON cand.vaga_id = v.id
-                WHERE v.empresa_id = ? AND cand.score IS NOT NULL
+                WHERE v.empresa_id = %s AND cand.score IS NOT NULL
                 GROUP BY v.id, v.titulo
                 ORDER BY score_medio DESC
                 LIMIT 1
@@ -120,10 +122,10 @@ def gerar_relatorio_completo(empresa_id, filtro_vagas=None):
                        v.data_criacao
                 FROM vagas v
                 LEFT JOIN candidaturas cand ON cand.vaga_id = v.id
-                WHERE v.empresa_id = ? AND v.id IN ({})
+                WHERE v.empresa_id = %s AND v.id IN ({})
                 GROUP BY v.id, v.titulo, v.status, v.data_criacao
                 ORDER BY v.data_criacao DESC
-            '''.format(','.join('?' * len(filtro_vagas)))
+            '''.format(','.join(['%s'] * len(filtro_vagas)))
             cursor.execute(vagas_detalhes_query, [empresa_id] + filtro_vagas)
         else:
             cursor.execute(
@@ -137,7 +139,7 @@ def gerar_relatorio_completo(empresa_id, filtro_vagas=None):
                        v.data_criacao
                 FROM vagas v
                 LEFT JOIN candidaturas cand ON cand.vaga_id = v.id
-                WHERE v.empresa_id = ?
+                WHERE v.empresa_id = %s
                 GROUP BY v.id, v.titulo, v.status, v.data_criacao
                 ORDER BY v.data_criacao DESC
             ''', (empresa_id, ))
@@ -150,7 +152,7 @@ def gerar_relatorio_completo(empresa_id, filtro_vagas=None):
             SELECT DATE(cand.data_candidatura) as data, COUNT(cand.id) as candidaturas
             FROM candidaturas cand
             JOIN vagas v ON v.id = cand.vaga_id
-            WHERE v.empresa_id = ? AND cand.data_candidatura >= ?
+            WHERE v.empresa_id = %s AND cand.data_candidatura >= %s
             GROUP BY DATE(cand.data_candidatura)
             ORDER BY data DESC
         ''', (empresa_id, data_limite))
@@ -159,11 +161,11 @@ def gerar_relatorio_completo(empresa_id, filtro_vagas=None):
         # Distribuição geográfica básica
         cursor.execute(
             '''
-            SELECT SUBSTR(c.endereco, -8, 2) as estado_provavel, COUNT(*) as total
+            SELECT SUBSTRING(c.endereco, -8, 2) as estado_provavel, COUNT(*) as total
             FROM candidatos c
             JOIN candidaturas cand ON c.id = cand.candidato_id
             JOIN vagas v ON v.id = cand.vaga_id
-            WHERE v.empresa_id = ? AND c.endereco IS NOT NULL
+            WHERE v.empresa_id = %s AND c.endereco IS NOT NULL
             GROUP BY estado_provavel
             ORDER BY total DESC
             LIMIT 10
@@ -359,8 +361,7 @@ def gerar_html_relatorio(dados):
                     <strong>Atenção:</strong> {len(vagas_baixo_desempenho)} vaga(s) precisam de revisão:
                     <ul>
         """
-        for vaga in vagas_baixo_desempenho[:
-                                           5]:  # Mostrar apenas as 5 primeiras
+        for vaga in vagas_baixo_desempenho[:5]:
             motivo = []
             if vaga[3] < 3:
                 motivo.append("poucos candidatos")
@@ -374,7 +375,6 @@ def gerar_html_relatorio(dados):
             </div>
         """
 
-    # Conclusão estratégica e recomendações
     html += f"""
             <div class="section">
                 <h2>🎯 Conclusão Estratégica</h2>
@@ -407,21 +407,6 @@ def gerar_html_relatorio(dados):
                         <li><strong>Processo Seletivo:</strong> Priorizar candidatos com score acima de 70% para entrevistas</li>
                         <li><strong>Feedback Contínuo:</strong> Implementar ciclos de melhoria baseados nos dados de performance</li>
                     </ul>
-
-                    <h3>📊 Melhorias no Funil de Contratação:</h3>
-                    <ul>
-                        <li><strong>Pré-triagem Automatizada:</strong> Usar o score como filtro inicial</li>
-                        <li><strong>Comunicação Proativa:</strong> Manter candidatos de alto score engajados durante o processo</li>
-                        <li><strong>Análise de Concorrência:</strong> Pesquisar salários e benefícios do mercado</li>
-                        <li><strong>Experiência do Candidato:</strong> Simplificar o processo de candidatura</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="section">
-                <div class="alert alert-info">
-                    <strong>📌 Lembrete Importante:</strong><br>
-                    Este relatório foi gerado com base em dados reais da sua empresa. Para uma visão mais precisa e estratégica, mantenha seus registros atualizados e considere implementar métricas adicionais como tempo de preenchimento de vagas e taxa de conversão.
                 </div>
             </div>
 
@@ -439,7 +424,7 @@ def gerar_html_relatorio(dados):
 
 def gerar_dados_graficos(empresa_id, filtro_vagas=None):
     """Gera dados formatados para gráficos"""
-    conn = sqlite3.connect('recrutamento.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     # Dados para gráfico de pizza - Distribuição de candidatos por vaga
@@ -449,10 +434,10 @@ def gerar_dados_graficos(empresa_id, filtro_vagas=None):
             SELECT v.titulo, COUNT(cand.id) as total
             FROM vagas v
             LEFT JOIN candidaturas cand ON cand.vaga_id = v.id
-            WHERE v.empresa_id = ? AND v.id IN ({})
+            WHERE v.empresa_id = %s AND v.id IN ({})
             GROUP BY v.id, v.titulo
             ORDER BY total DESC
-        '''.format(','.join('?' * len(filtro_vagas))),
+        '''.format(','.join(['%s'] * len(filtro_vagas))),
             [empresa_id] + filtro_vagas)
     else:
         cursor.execute(
@@ -460,7 +445,7 @@ def gerar_dados_graficos(empresa_id, filtro_vagas=None):
             SELECT v.titulo, COUNT(cand.id) as total
             FROM vagas v
             LEFT JOIN candidaturas cand ON cand.vaga_id = v.id
-            WHERE v.empresa_id = ?
+            WHERE v.empresa_id = %s
             GROUP BY v.id, v.titulo
             ORDER BY total DESC
         ''', (empresa_id, ))
@@ -474,10 +459,10 @@ def gerar_dados_graficos(empresa_id, filtro_vagas=None):
             SELECT v.titulo, AVG(cand.score) as score_medio
             FROM vagas v
             LEFT JOIN candidaturas cand ON cand.vaga_id = v.id
-            WHERE v.empresa_id = ? AND v.id IN ({}) AND cand.score IS NOT NULL
+            WHERE v.empresa_id = %s AND v.id IN ({}) AND cand.score IS NOT NULL
             GROUP BY v.id, v.titulo
             ORDER BY score_medio DESC
-        '''.format(','.join('?' * len(filtro_vagas))),
+        '''.format(','.join(['%s'] * len(filtro_vagas))),
             [empresa_id] + filtro_vagas)
     else:
         cursor.execute(
@@ -485,7 +470,7 @@ def gerar_dados_graficos(empresa_id, filtro_vagas=None):
             SELECT v.titulo, AVG(cand.score) as score_medio
             FROM vagas v
             LEFT JOIN candidaturas cand ON cand.vaga_id = v.id
-            WHERE v.empresa_id = ? AND cand.score IS NOT NULL
+            WHERE v.empresa_id = %s AND cand.score IS NOT NULL
             GROUP BY v.id, v.titulo
             ORDER BY score_medio DESC
         ''', (empresa_id, ))
@@ -499,7 +484,7 @@ def gerar_dados_graficos(empresa_id, filtro_vagas=None):
         SELECT DATE(cand.data_candidatura) as data, COUNT(cand.id) as total
         FROM candidaturas cand
         JOIN vagas v ON v.id = cand.vaga_id
-        WHERE v.empresa_id = ? AND cand.data_candidatura >= ?
+        WHERE v.empresa_id = %s AND cand.data_candidatura >= %s
         GROUP BY DATE(cand.data_candidatura)
         ORDER BY data ASC
     ''', (empresa_id, data_limite))
@@ -511,15 +496,15 @@ def gerar_dados_graficos(empresa_id, filtro_vagas=None):
     return {
         'pizza': {
             'labels': [item[0] for item in pizza_data],
-            'data': [item[1] for item in pizza_data]
+            'data': [int(item[1]) if item[1] else 0 for item in pizza_data]
         },
         'barras': {
             'labels': [item[0] for item in barras_data],
             'data':
-            [round(item[1], 1) if item[1] else 0 for item in barras_data]
+            [round(float(item[1]), 1) if item[1] else 0 for item in barras_data]
         },
         'linha': {
-            'labels': [item[0] for item in linha_data],
-            'data': [item[1] for item in linha_data]
+            'labels': [str(item[0]) for item in linha_data],
+            'data': [int(item[1]) if item[1] else 0 for item in linha_data]
         }
     }

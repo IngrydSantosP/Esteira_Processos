@@ -1,220 +1,349 @@
-
 {% extends "base.html" %}
 
-{% block title %}{{ vaga.titulo }} - Detalhes da Vaga{% endblock %}
+{% block title %}{{ vaga.titulo }} - {{ empresa.nome }}{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 py-8">
-    <div class="max-w-4xl mx-auto px-4">
-        <!-- Header Aprimorado -->
-        <div class="mb-8">
-            <div class="flex items-center justify-between mb-6">
-                <a href="{{ url_for('dashboard_candidato') }}" 
-                   class="inline-flex items-center gap-2 bg-purple-100 hover:bg-purple-200 text-purple-700 hover:text-purple-800 font-semibold px-4 py-2 rounded-xl transition-all duration-300 transform hover:scale-105">
-                    <span class="text-lg">⬅️</span> Voltar ao Dashboard
-                </a>
-                
-                {% if score %}
-                <div class="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-2xl font-bold text-lg shadow-lg">
-                    <span class="text-xl">🎯</span> {{ "%.0f"|format(score) }}% de Compatibilidade
-                </div>
-                {% endif %}
+
+     <!-- Botões de Ação no Topo -->
+        <div class="flex flex-wrap gap-4 justify-center mt-6">
+            {% if ja_candidatado %}
+            <div class="bg-green-50 border border-green-200 rounded-xl px-6 py-3 text-center">
+                <div class="text-green-600 font-semibold">✅ Você já se candidatou!</div>
+                <p class="text-sm text-green-700">Sua candidatura foi enviada com sucesso</p>
             </div>
-            
-            <div class="bg-white rounded-3xl p-8 shadow-xl border border-gray-100">
-                <div class="flex items-start gap-8">
-                    <div class="w-24 h-24 bg-gradient-to-br from-purple-500 via-blue-500 to-indigo-500 rounded-3xl flex items-center justify-center flex-shrink-0 shadow-lg transform -rotate-3 hover:rotate-0 transition-transform duration-300">
-                        <span class="text-4xl">💼</span>
+            {% else %}
+            <a href="{{ url_for('candidatar', vaga_id=vaga.id) }}" 
+               class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-3 group">
+                <span class="text-xl group-hover:scale-110 transition-transform">🚀</span>
+                Candidatar-se Agora
+            </a>
+            {% endif %}
+
+            <button onclick="toggleFavorito({{ vaga.id }})" 
+                    class="bg-pink-100 hover:bg-pink-200 text-pink-700 font-semibold py-4 px-6 rounded-xl transition-all duration-300 flex items-center gap-2 group">
+                <span class="text-lg group-hover:scale-110 transition-transform">❤️</span>
+                Adicionar aos Favoritos
+            </button>
+
+            <button onclick="window.open('/exemplo-score', '_blank')"
+                    class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-semibold py-4 px-6 rounded-xl transition-all duration-300 flex items-center gap-2 group">
+                <span class="text-lg group-hover:scale-110 transition-transform">📊</span>
+                Ver Como Score é Calculado
+            </button>
+
+            <a href="{{ url_for('dashboard_candidato') }}" 
+               class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-4 px-6 rounded-xl transition-all duration-300 flex items-center gap-2 group">
+                <span class="group-hover:-translate-x-1 transition-transform">←</span>
+                Voltar ao Dashboard
+            </a>
+        </div>
+    </div>
+
+<div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 py-8">
+    <div class="max-w-6xl mx-auto px-4">
+        <!-- Header com Score Destacado -->
+        <div class="bg-white rounded-3xl p-8 shadow-lg border border-gray-100 mb-8">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+                <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center">
+                            <span class="text-white font-bold text-xl">💼</span>
+                        </div>
+                        <div>
+                            <h1 class="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                                {{ vaga.titulo }}
+                            </h1>
+                            <p class="text-lg text-gray-600">{{ empresa.nome }}</p>
+                        </div>
                     </div>
-                    <div class="flex-1">
-                        <h1 class="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-4">{{ vaga.titulo }}</h1>
-                        <div class="flex flex-wrap gap-4 mb-6">
-                            <span class="flex items-center gap-2 bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 px-4 py-2 rounded-full font-semibold shadow-sm">
-                                <span class="text-lg">🏢</span> {{ vaga.titulo}}
-                            </span>
-                            <span class="flex items-center gap-2 bg-gradient-to-r from-green-100 to-emerald-200 text-green-800 px-4 py-2 rounded-full font-semibold shadow-sm">
-                                <span class="text-lg">💰</span> R$ {{ "{:,.2f}".format(vaga.salario_oferecido) }}
-                            </span>
-                            <span class="flex items-center gap-2 bg-gradient-to-r from-blue-100 to-indigo-200 text-blue-800 px-4 py-2 rounded-full font-semibold shadow-sm">
-                                <span class="text-lg">📍</span> {{ vaga.tipo_vaga }}
-                            </span>
-                        </div>
-                        
-                        {% if vaga.endereco_vaga and vaga.tipo_vaga in ['Presencial', 'Híbrida'] %}
-                        <div class="flex items-center gap-3 text-gray-700 mb-4 bg-gray-50 px-4 py-3 rounded-xl border border-gray-200">
-                            <span class="text-xl">🗺️</span>
-                            <span class="font-medium">{{ vaga.endereco_vaga }}</span>
-                        </div>
+
+                    <div class="flex flex-wrap gap-3 mb-4">
+                        <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                            {{ vaga.tipo_vaga }}
+                        </span>
+                        {% if vaga.salario_oferecido %}
+                        <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                            R$ {{ "{:,.2f}".format(vaga.salario_oferecido) }}
+                        </span>
+                        {% endif %}
+                        {% if vaga.endereco_vaga %}
+                        <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
+                            📍 {{ vaga.endereco_vaga }}
+                        </span>
                         {% endif %}
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="grid gap-8 lg:grid-cols-3">
-            <!-- Coluna Principal -->
-            <div class="lg:col-span-2 space-y-6">
-                <!-- Descrição -->
-                <div class="bg-white rounded-3xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                        <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-                            <span class="text-xl">📝</span>
-                        </div>
-                        Sobre esta Oportunidade
-                    </h2>
-                    <div class="text-gray-700 leading-relaxed whitespace-pre-wrap text-base">{{ vaga.descricao }}</div>
-                </div>
-
-                <!-- Requisitos -->
-                <div class="bg-white rounded-3xl p-8 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                        <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
-                            <span class="text-xl">⚡</span>
-                        </div>
-                        Requisitos Essenciais
-                    </h2>
-                    <div class="text-gray-700 leading-relaxed whitespace-pre-wrap text-base">{{ vaga.requisitos }}</div>
-                </div>
-
+                <!-- Score Visualização -->
                 {% if score %}
-                <!-- Detalhamento do Score -->
-                <div class="bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 rounded-3xl p-8 border border-indigo-200 shadow-lg">
-                    <h2 class="text-2xl font-bold text-indigo-800 mb-6 flex items-center gap-3">
-                        <div class="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
-                            <span class="text-2xl">📊</span>
+                <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white min-w-[280px]">
+                    <div class="text-center">
+                        <div class="text-4xl font-bold mb-2">{{ "%.1f"|format(score) }}%</div>
+                        <div class="text-lg font-medium mb-3">Seu Score de Compatibilidade</div>
+
+                        <!-- Barra de Score Visual -->
+                        <div class="w-full bg-white/20 rounded-full h-3 mb-3">
+                            <div class="bg-white rounded-full h-3 transition-all duration-1000" 
+                                 style="width: {{ score }}%"></div>
                         </div>
-                        Análise da Sua Compatibilidade
-                    </h2>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
-                            <h4 class="font-bold text-gray-800 mb-2 flex items-center gap-2">
-                                <span class="text-lg">💰</span> Compatibilidade Salarial
-                            </h4>
-                            <div class="text-sm text-gray-600 mb-2">Peso: 20% da análise</div>
-                            <p class="text-sm text-gray-700">Baseado na sua pretensão salarial vs. salário oferecido</p>
+
+                        <!-- Interpretação do Score -->
+                        {% if score >= 80 %}
+                        <div class="flex items-center justify-center gap-2 text-sm">
+                            <span class="text-2xl">🎯</span>
+                            <span>Excelente compatibilidade!</span>
                         </div>
-                        
-                        <div class="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
-                            <h4 class="font-bold text-gray-800 mb-2 flex items-center gap-2">
-                                <span class="text-lg">⚡</span> Requisitos Técnicos
-                            </h4>
-                            <div class="text-sm text-gray-600 mb-2">Peso: 40% da análise</div>
-                            <p class="text-sm text-gray-700">Compatibilidade entre suas habilidades e os requisitos da vaga</p>
+                        <p class="text-xs mt-2 opacity-90">Seu perfil está muito alinhado com esta vaga</p>
+                        {% elif score >= 60 %}
+                        <div class="flex items-center justify-center gap-2 text-sm">
+                            <span class="text-2xl">⚡</span>
+                            <span>Boa compatibilidade</span>
                         </div>
-                        
-                        <div class="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
-                            <h4 class="font-bold text-gray-800 mb-2 flex items-center gap-2">
-                                <span class="text-lg">🎓</span> Experiência Profissional
-                            </h4>
-                            <div class="text-sm text-gray-600 mb-2">Peso: 15% da análise</div>
-                            <p class="text-sm text-gray-700">Nível de senioridade e anos de experiência</p>
+                        <p class="text-xs mt-2 opacity-90">Você atende a maioria dos requisitos</p>
+                        {% elif score >= 40 %}
+                        <div class="flex items-center justify-center gap-2 text-sm">
+                            <span class="text-2xl">💡</span>
+                            <span>Compatibilidade moderada</span>
                         </div>
-                        
-                        <div class="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
-                            <h4 class="font-bold text-gray-800 mb-2 flex items-center gap-2">
-                                <span class="text-lg">⭐</span> Diferenciais
-                            </h4>
-                            <div class="text-sm text-gray-600 mb-2">Peso: 10% da análise</div>
-                            <p class="text-sm text-gray-700">Certificações e habilidades extras que você possui</p>
+                        <p class="text-xs mt-2 opacity-90">Considere desenvolver algumas habilidades</p>
+                        {% else %}
+                        <div class="flex items-center justify-center gap-2 text-sm">
+                            <span class="text-2xl">🔧</span>
+                            <span>Potencial de crescimento</span>
                         </div>
-                        
-                        <div class="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
-                            <h4 class="font-bold text-gray-800 mb-2 flex items-center gap-2">
-                                <span class="text-lg">📍</span> Localização
-                            </h4>
-                            <div class="text-sm text-gray-600 mb-2">Peso: 10% da análise</div>
-                            <p class="text-sm text-gray-700">Proximidade geográfica e modalidade da vaga</p>
-                        </div>
-                        
-                        <div class="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
-                            <h4 class="font-bold text-gray-800 mb-2 flex items-center gap-2">
-                                <span class="text-lg">🎓</span> Formação Acadêmica
-                            </h4>
-                            <div class="text-sm text-gray-600 mb-2">Peso: 5% da análise</div>
-                            <p class="text-sm text-gray-700">Nível educacional e área de formação</p>
-                        </div>
+                        <p class="text-xs mt-2 opacity-90">Esta vaga pode ser um desafio interessante</p>
+                        {% endif %}
                     </div>
                 </div>
                 {% endif %}
             </div>
+        </div>
 
-            <!-- Sidebar -->
-            <div class="space-y-6">
-                <!-- Empresa -->
-                <div class="bg-white rounded-3xl p-6 shadow-lg border border-gray-100">
-                    <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-3">
-                        <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
-                            <span class="text-lg">🏢</span>
+    <div class="grid lg:grid-cols-3 gap-8">
+        <!-- Conteúdo Principal -->
+        <div class="lg:col-span-2 space-y-8">
+            <!-- Descrição da Vaga -->
+            <div class="bg-white rounded-3xl p-8 shadow-lg border border-gray-100">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                    <span class="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">📋</span>
+                    Descrição da Vaga
+                </h2>
+                <div class="prose prose-gray max-w-none">
+                    <p class="text-gray-700 leading-relaxed whitespace-pre-line">{{ vaga.descricao }}</p>
+                </div>
+            </div>
+
+            <!-- Requisitos -->
+            <div class="bg-white rounded-3xl p-8 shadow-lg border border-gray-100">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                    <span class="w-8 h-8 bg-purple-100 rounded-xl flex items-center justify-center">🎯</span>
+                    Requisitos
+                </h2>
+                <div class="prose prose-gray max-w-none">
+                    <div class="text-gray-700 leading-relaxed whitespace-pre-line">{{ vaga.requisitos }}</div>
+                </div>
+            </div>
+
+            <!-- Diferenciais -->
+            {% if vaga.diferenciais %}
+            <div class="bg-white rounded-3xl p-8 shadow-lg border border-gray-100">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+                    <span class="w-8 h-8 bg-green-100 rounded-xl flex items-center justify-center">⭐</span>
+                    Diferenciais e Benefícios
+                </h2>
+                <div class="prose prose-gray max-w-none">
+                    <div class="text-gray-700 leading-relaxed whitespace-pre-line">{{ vaga.diferenciais }}</div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Análise Detalhada do Score -->
+            {% if score %}
+            <div class="bg-white rounded-3xl p-6 shadow-lg border border-gray-100">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <span class="w-6 h-6 bg-indigo-100 rounded-lg flex items-center justify-center">📊</span>
+                    Análise do Seu Score
+                </h3>
+
+                <div class="space-y-4">
+                    <!-- Detalhamento por categoria (simulado) -->
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Experiência</span>
+                            <span class="text-sm font-medium">{{ "%.0f"|format(score|float * 0.3) }}%</span>
                         </div>
-                        Sobre a Empresa
-                    </h3>
-                    <div class="text-gray-700">
-                        <p class="font-bold text-purple-600 mb-3 text-lg">{{vaga.titulo}}</p>
-                        <p class="text-gray-600 leading-relaxed">
-                            Empresa focada em inovação e desenvolvimento de soluções tecnológicas modernas e escaláveis.
-                        </p>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-gradient-to-r from-blue-500 to-purple-500 rounded-full h-2" 
+                                 style="width: {{ score|float * 0.3 }}%"></div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Habilidades</span>
+                            <span class="text-sm font-medium">{{ "%.0f"|format(score|float * 0.4) }}%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-gradient-to-r from-green-500 to-teal-500 rounded-full h-2" 
+                                 style="width: {{ score|float * 0.4 }}%"></div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Salário</span>
+                            <span class="text-sm font-medium">{{ "%.0f"|format(score|float * 0.2) }}%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full h-2" 
+                                 style="width: {{ score|float * 0.2 }}%"></div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Localização</span>
+                            <span class="text-sm font-medium">{{ "%.0f"|format(score|float * 0.1) }}%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-gradient-to-r from-pink-500 to-red-500 rounded-full h-2" 
+                                 style="width: {{ score|float * 0.1 }}%"></div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Ações -->
-                <div class="bg-white rounded-3xl p-6 shadow-lg border border-gray-100">
-                    {% if ja_candidatado %}
-                        <div class="text-center">
-                            <div class="w-20 h-20 bg-green-100 rounded-2xl mx-auto mb-4 flex items-center justify-center">
-                                <span class="text-3xl">✅</span>
-                            </div>
-                            <h4 class="font-bold text-green-700 mb-2 text-lg">Candidatura Enviada!</h4>
-                            <p class="text-sm text-gray-600 mb-6 bg-green-50 p-3 rounded-lg border border-green-200">
-                                🎯 Acompanhe o andamento da sua candidatura no dashboard
-                            </p>
-                            <button onclick="cancelarCandidatura({{ vaga.id }})"
-                                    class="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white py-4 px-6 rounded-2xl font-bold transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center justify-center gap-2">
-                                <span class="text-lg">❌</span>
-                                Cancelar Candidatura
-                            </button>
+                <div class="mt-4 p-3 bg-blue-50 rounded-xl">
+                    <p class="text-xs text-blue-800">
+                        💡 <strong>Dica:</strong> Scores acima de 70% indicam alta compatibilidade. 
+                        Continue desenvolvendo suas habilidades para aumentar seu score!
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Informações Adicionais da Vaga -->
+            {% if vaga.nivel_experiencia or vaga.regime_contratacao or vaga.carga_horaria or vaga.formacao_minima %}
+            <div class="bg-white rounded-3xl p-6 shadow-lg border border-gray-100">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <span class="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">📋</span>
+                    Informações Adicionais
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {% if vaga.nivel_experiencia %}
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">🎯</span>
+                        <div>
+                            <div class="text-sm text-gray-500">Nível de Experiência</div>
+                            <div class="font-semibold text-gray-800">{{ vaga.nivel_experiencia }}</div>
                         </div>
-                    {% else %}
-                        <a href="{{ url_for('candidatar', vaga_id=vaga.id) }}" 
-                           class="block w-full bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 hover:from-green-700 hover:via-emerald-700 hover:to-teal-700 text-white font-bold py-5 px-6 rounded-2xl text-center transition-all duration-300 transform hover:scale-105 shadow-xl">
-                            <span class="flex items-center justify-center gap-3 text-lg">
-                                <span class="text-2xl">🚀</span>
-                                Candidatar-se Agora
-                            </span>
-                        </a>
+                    </div>
+                    {% endif %}
+
+                    {% if vaga.regime_contratacao %}
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">📝</span>
+                        <div>
+                            <div class="text-sm text-gray-500">Regime de Contratação</div>
+                            <div class="font-semibold text-gray-800">{{ vaga.regime_contratacao }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if vaga.carga_horaria %}
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">⏰</span>
+                        <div>
+                            <div class="text-sm text-gray-500">Carga Horária</div>
+                            <div class="font-semibold text-gray-800">{{ vaga.carga_horaria }} semanais</div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if vaga.turno_trabalho %}
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">🕒</span>
+                        <div>
+                            <div class="text-sm text-gray-500">Turno de Trabalho</div>
+                            <div class="font-semibold text-gray-800">{{ vaga.turno_trabalho }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if vaga.formacao_minima %}
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">🎓</span>
+                        <div>
+                            <div class="text-sm text-gray-500">Formação Mínima</div>
+                            <div class="font-semibold text-gray-800">{{ vaga.formacao_minima }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if vaga.idiomas_exigidos %}
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">🌍</span>
+                        <div>
+                            <div class="text-sm text-gray-500">Idiomas</div>
+                            <div class="font-semibold text-gray-800">{{ vaga.idiomas_exigidos }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if vaga.disponibilidade_viagens %}
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">✈️</span>
+                        <div>
+                            <div class="text-sm text-gray-500">Viagens</div>
+                            <div class="font-semibold text-gray-800">Disponibilidade para viagens</div>
+                        </div>
+                    </div>
                     {% endif %}
                 </div>
+            </div>
+            {% endif %}
 
-                <!-- Informações Adicionais -->
-                <div class="bg-gradient-to-br from-indigo-50 via-blue-50 to-purple-50 rounded-3xl p-6 border border-indigo-200 shadow-lg">
-                    <h4 class="font-bold text-indigo-800 mb-4 flex items-center gap-2">
-                        <span class="text-lg">ℹ️</span> Detalhes da Oportunidade
-                    </h4>
-                    <div class="space-y-4">
-                        <div class="bg-white rounded-xl p-4 shadow-sm">
-                            <div class="flex justify-between items-center">
-                                <span class="text-gray-600 flex items-center gap-2">
-                                    <span>🏠</span> Modalidade:
-                                </span>
-                                <span class="font-bold text-gray-800">{{ vaga.tipo_vaga }}</span>
+            <!-- Benefícios -->
+            {% if vaga.beneficios %}
+            <div class="bg-white rounded-3xl p-6 shadow-lg border border-gray-100">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <span class="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center">🎁</span>
+                    Benefícios
+                </h3>
+                <div class="prose prose-gray max-w-none">
+                    <div class="text-gray-700 leading-relaxed whitespace-pre-line">{{ vaga.beneficios }}</div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Informações da Empresa -->
+            <div class="bg-white rounded-3xl p-6 shadow-lg border border-gray-100">
+                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <span class="w-6 h-6 bg-purple-100 rounded-lg flex items-center justify-center">🏢</span>
+                    Sobre a Empresa
+                </h3>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
+                                <span class="text-white font-bold">{{ vaga.empresa_nome }}</span>
+                            </div>
+                            <div>
+                                <button onclick="verVagasEmpresa('{{ empresa.nome }}', {{ empresa.id }})"
+                                        class="font-semibold text-gray-800 hover:text-purple-600 transition-colors duration-200 text-left">
+                                    {{ empresa.nome }}
+                                </button>
+                                {% if vaga.data_criacao %}
+                                <div class="text-sm text-gray-500">Vaga publicada em {{ vaga.data_criacao.strftime('%d/%m/%Y') }}</div>
+                                {% endif %}
                             </div>
                         </div>
-                        <div class="bg-white rounded-xl p-4 shadow-sm">
-                            <div class="flex justify-between items-center">
-                                <span class="text-gray-600 flex items-center gap-2">
-                                    <span>💰</span> Salário:
-                                </span>
-                                <span class="font-bold text-green-600 text-lg">R$ {{ "{:,.2f}".format(vaga.salario_oferecido) }}</span>
-                            </div>
-                        </div>
-                        <div class="bg-white rounded-xl p-4 shadow-sm">
-                            <div class="flex justify-between items-center">
-                                <span class="text-gray-600 flex items-center gap-2">
-                                    <span>📅</span> Publicada em:
-                                </span>
-                                <span class="font-bold text-gray-800">{{ vaga.data_criacao.strftime('%d/%m/%Y') if vaga.data_criacao else 'N/A' }}</span>
-                            </div>
-                        </div>
+                        <button onclick="verVagasEmpresa('{{ empresa.nome }}', {{ empresa.id }})"
+                                class="text-sm text-purple-600 hover:text-purple-800 font-medium transition-colors duration-200">
+                            Ver todas as vagas →
+                        </button>
                     </div>
                 </div>
             </div>
@@ -222,31 +351,179 @@
     </div>
 </div>
 
-<script>
-async function cancelarCandidatura(vagaId) {
-    if (confirm('🤔 Tem certeza que deseja cancelar sua candidatura para esta vaga?')) {
-        try {
-            const response = await fetch('/cancelar_candidatura', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    vaga_id: vagaId
-                })
-            });
+<!-- Modal para Vagas da Empresa -->
+<div id="modalVagasEmpresa" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+        <div class="p-6 border-b border-gray-200">
+            <div class="flex justify-between items-center">
+                <h2 id="tituloModalEmpresa" class="text-2xl font-bold text-gray-800"></h2>
+                <button onclick="fecharModalVagasEmpresa()" class="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+            </div>
+        </div>
+        <div id="conteudoVagasEmpresa" class="p-6 overflow-y-auto max-h-[70vh]">
+            <div class="text-center py-8">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+                <p class="mt-4 text-gray-600">Carregando vagas...</p>
+            </div>
+        </div>
+    </div>
+</div>
 
-            if (response.ok) {
-                alert('✅ Candidatura cancelada com sucesso!');
-                window.location.href = '{{ url_for("dashboard_candidato") }}';
+<script>
+async function toggleFavorito(vagaId) {
+    try {
+        const response = await fetch('/api/favoritar-vaga', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ vaga_id: vagaId })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Mostrar feedback visual
+            const button = event.target.closest('button');
+            const originalText = button.innerHTML;
+
+            if (data.favorited) {
+                button.innerHTML = '<span class="text-lg">💖</span> Adicionado aos Favoritos!';
+                button.className = 'w-full bg-pink-100 text-pink-700 font-semibold py-3 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-2';
             } else {
-                alert('❌ Erro ao cancelar candidatura');
+                button.innerHTML = '<span class="text-lg">💔</span> Removido dos Favoritos';
+                button.className = 'w-full bg-gray-100 text-gray-700 font-semibold py-3 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-2';
             }
-        } catch (error) {
-            console.error('Erro:', error);
-            alert('❌ Erro ao cancelar candidatura');
+
+            // Voltar ao estado original após 2 segundos
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.className = 'w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 group';
+            }, 2000);
+        } else {
+            alert('Erro ao atualizar favoritos: ' + data.error);
         }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('Erro ao processar solicitação');
     }
 }
+
+async function verVagasEmpresa(nomeEmpresa, empresaId) {
+    const modal = document.getElementById('modalVagasEmpresa');
+    const titulo = document.getElementById('tituloModalEmpresa');
+    const conteudo = document.getElementById('conteudoVagasEmpresa');
+
+    titulo.textContent = `Vagas da ${nomeEmpresa}`;
+    conteudo.innerHTML = `
+        <div class="text-center py-8">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+            <p class="mt-4 text-gray-600">Carregando vagas...</p>
+        </div>
+    `;
+
+    modal.classList.remove('hidden');
+
+    try {
+        const response = await fetch(`/api/vagas-empresa/${empresaId}`);
+        const data = await response.json();
+
+        if (data.error) {
+            throw new Error(data.error);
+        }
+
+        if (data.vagas.length === 0) {
+            conteudo.innerHTML = `
+                <div class="text-center py-12">
+                    <div class="text-6xl mb-4">📭</div>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2">Nenhuma vaga ativa</h3>
+                    <p class="text-gray-600">Esta empresa não possui vagas ativas no momento.</p>
+                </div>
+            `;
+            return;
+        }
+
+        let vagasHtml = '<div class="grid gap-4">';
+
+        data.vagas.forEach(vaga => {
+            const salarioFormatado = vaga.salario_oferecido ? 
+                `R$ ${vaga.salario_oferecido.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 
+                'A combinar';
+
+            const scoreClass = vaga.score >= 80 ? 'text-green-600' : 
+                              vaga.score >= 60 ? 'text-yellow-600' : 'text-red-600';
+
+            const statusBadge = vaga.ja_candidatou ? 
+                '<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">Candidatado</span>' :
+                '<span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">Disponível</span>';
+
+            vagasHtml += `
+                <div class="bg-gray-50 rounded-2xl p-6 hover:shadow-lg transition-shadow duration-300">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex-1">
+                            <h4 class="text-lg font-bold text-gray-800 mb-2">${vaga.titulo}</h4>
+                            <p class="text-gray-600 text-sm mb-3">${vaga.descricao.substring(0, 150)}${vaga.descricao.length > 150 ? '...' : ''}</p>
+                        </div>
+                        <div class="ml-4 text-right">
+                            <div class="text-2xl font-bold ${scoreClass} mb-1">${vaga.score.toFixed(1)}%</div>
+                            <div class="text-xs text-gray-500">Compatibilidade</div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
+                            ${vaga.tipo_vaga}
+                        </span>
+                        <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                            ${salarioFormatado}
+                        </span>
+                        ${statusBadge}
+                    </div>
+
+                    <div class="flex gap-3">
+                        <a href="/vaga/${vaga.id}" 
+                           class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-300 text-center">
+                            Ver Detalhes
+                        </a>
+                        ${!vaga.ja_candidatou ? `
+                            <a href="/candidatar/${vaga.id}" 
+                               class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-300">
+                                Candidatar-se
+                            </a>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        });
+
+        vagasHtml += '</div>';
+        conteudo.innerHTML = vagasHtml;
+
+    } catch (error) {
+        console.error('Erro ao carregar vagas da empresa:', error);
+        conteudo.innerHTML = `
+            <div class="text-center py-12">
+                <div class="text-6xl mb-4">⚠️</div>
+                <h3 class="text-xl font-semibold text-gray-800 mb-2">Erro ao carregar vagas</h3>
+                <p class="text-gray-600">Não foi possível carregar as vagas desta empresa. Tente novamente.</p>
+                <button onclick="verVagasEmpresa('${nomeEmpresa}', ${empresaId})" 
+                        class="mt-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg">
+                    Tentar Novamente
+                </button>
+            </div>
+        `;
+    }
+}
+
+function fecharModalVagasEmpresa() {
+    document.getElementById('modalVagasEmpresa').classList.add('hidden');
+}
+
+// Fechar modal ao clicar fora
+document.getElementById('modalVagasEmpresa').addEventListener('click', function(e) {
+    if (e.target === this) {
+        fecharModalVagasEmpresa();
+    }
+});
 </script>
 {% endblock %}

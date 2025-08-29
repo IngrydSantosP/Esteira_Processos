@@ -16,23 +16,71 @@ def candidatos_vaga(vaga_id):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute(
-        """SELECT c.nome, c.email, c.telefone, c.linkedin, ca.score, ca.posicao, c.id, c.endereco
-           FROM candidaturas ca
-           JOIN candidatos c ON ca.candidato_id = c.id
-           WHERE ca.vaga_id = ?
-           ORDER BY ca.score DESC""", (vaga_id, ))
+    try:
+        empresa_id = session["empresa_id"]
 
-    candidatos = cursor.fetchall()
+        # Buscar dados da vaga
+        cursor.execute(
+            "SELECT titulo FROM vagas WHERE id = %s AND empresa_id = %s",
+            (vaga_id, empresa_id)
+        )
+        vaga = cursor.fetchone()
+        if not vaga:
+            flash("Vaga não encontrada", "error")
+            return redirect(url_for("dashboard_empresa.dashboard_empresa"))
 
-    cursor.execute("SELECT titulo FROM vagas WHERE id = ?", (vaga_id, ))
-    vaga = cursor.fetchone()
-    conn.close()
+        # Buscar candidatos
+        cursor.execute("""
+            SELECT c.id, c.nome, c.email, c.telefone, c.linkedin, 
+                   ca.score, ca.posicao, ca.data_candidatura, c.endereco,
+                   CASE WHEN ecf.id IS NOT NULL THEN 1 ELSE 0 END as is_favorito
+            FROM candidaturas ca
+            JOIN candidatos c ON ca.candidato_id = c.id
+            LEFT JOIN empresa_candidato_favorito ecf 
+                   ON ecf.candidato_id = c.id AND ecf.vaga_id = %s AND ecf.empresa_id = %s
+            WHERE ca.vaga_id = %s
+            ORDER BY ca.score DESC
+        """, (vaga_id, empresa_id, vaga_id))
 
-    return render_template("candidatos_vaga.html",
-                           candidatos=candidatos,
-                           vaga_titulo=vaga[0] if vaga else "",
-                           vaga_id=vaga_id)
+        candidatos_raw = cursor.fetchall()
+        candidatos = []
+        for c in candidatos_raw:
+            candidatos.append({
+                "id": c[0],
+                "nome": c[1],
+                "email": c[2],
+                "telefone": c[3] or "Não informado",
+                "linkedin": c[4] or "Não informado",
+                "score": round(float(c[5]), 1),
+                "posicao": c[6] or 0,
+                "endereco": c[8] or "",
+                "data_candidatura": c[7].strftime("%Y-%m-%d") if c[7] else "N/A",
+                "is_favorito": bool(c[9])
+            })
+
+        # Se a URL receber ?json=1, retorna JSON
+        if request.args.get("json") == "1":
+            return jsonify({
+                "candidatos": candidatos,
+                "vaga_titulo": vaga[0],
+                "total": len(candidatos)
+            })
+
+        # Caso contrário, renderiza o template
+        return render_template(
+            "empresa/candidatos_vaga.html",
+            vaga_titulo=vaga[0],
+            vaga_id=vaga_id,
+            candidatos=candidatos
+        )
+
+    except Exception as e:
+        print(f"Erro na rota candidatos_vaga: {e}")
+        flash("Erro ao carregar página de candidatos", "error")
+        return redirect(url_for("dashboard_empresa.dashboard_empresa"))
+    finally:
+        conn.close()
+
 
 
 @candidaturas_bp.route("/dashboard_candidato")
@@ -60,8 +108,8 @@ def dashboard_candidato():
         FROM candidaturas ca
         JOIN vagas v ON ca.vaga_id = v.id
         JOIN empresas e ON v.empresa_id = e.id
-        LEFT JOIN candidato_vaga_favorita cvf ON cvf.candidato_id = ? AND cvf.vaga_id = v.id
-        WHERE ca.candidato_id = ? AND v.status = 'Ativa'
+        LEFT JOIN candidato_vaga_favorita cvf ON cvf.candidato_id = %s AND cvf.vaga_id = v.id
+        WHERE ca.candidato_id = %s AND v.status = 'Ativa'
         ORDER BY ca.score DESC
         """, (session["candidato_id"], session["candidato_id"]))
     vagas_candidatadas_raw = cursor.fetchall()
@@ -88,9 +136,9 @@ def dashboard_candidato():
                CASE WHEN cvf.id IS NOT NULL THEN 1 ELSE 0 END as is_favorita
         FROM vagas v
         JOIN empresas e ON v.empresa_id = e.id
-        LEFT JOIN candidato_vaga_favorita cvf ON cvf.candidato_id = ? AND cvf.vaga_id = v.id
+        LEFT JOIN candidato_vaga_favorita cvf ON cvf.candidato_id = %s AND cvf.vaga_id = v.id
         WHERE v.id NOT IN (
-            SELECT vaga_id FROM candidaturas WHERE candidato_id = ?
+            SELECT vaga_id FROM candidaturas WHERE candidato_id = %s
         ) AND v.status = 'Ativa'
         """, (session["candidato_id"], session["candidato_id"]))
     vagas_disponiveis = cursor.fetchall()
@@ -105,15 +153,15 @@ def dashboard_candidato():
         FROM candidato_vaga_favorita cvf
         JOIN vagas v ON cvf.vaga_id = v.id
         JOIN empresas e ON v.empresa_id = e.id
-        LEFT JOIN candidaturas ca ON ca.candidato_id = ? AND ca.vaga_id = v.id
-        WHERE cvf.candidato_id = ? AND v.status = 'Ativa'
+        LEFT JOIN candidaturas ca ON ca.candidato_id = %s AND ca.vaga_id = v.id
+        WHERE cvf.candidato_id = %s AND v.status = 'Ativa'
         ORDER BY cvf.data_criacao DESC
         """, (session["candidato_id"], session["candidato_id"]))
     vagas_favoritas = cursor.fetchall()
 
     # Informações do candidato
     cursor.execute(
-        "SELECT pretensao_salarial, resumo_profissional, endereco FROM candidatos WHERE id = ?",
+        "SELECT pretensao_salarial, resumo_profissional, endereco FROM candidatos WHERE id = %s",
         (session["candidato_id"], ))
     candidato_info = cursor.fetchone()
 
@@ -418,22 +466,57 @@ def api_candidatos_vaga(vaga_id):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute(
-        """SELECT c.id, c.nome, ca.score
-           FROM candidaturas ca
-           JOIN candidatos c ON ca.candidato_id = c.id
-           JOIN vagas v ON ca.vaga_id = v.id
-           WHERE ca.vaga_id = ? AND v.empresa_id = ?
-           ORDER BY ca.score DESC""", (vaga_id, session["empresa_id"]))
+    try:
+        # Verificar se a vaga pertence à empresa
+        if hasattr(conn, 'server_version'):  # PostgreSQL
+            cursor.execute("SELECT titulo FROM vagas WHERE id = %s AND empresa_id = %s", (vaga_id, session["empresa_id"]))
+        else:  
+            cursor.execute("SELECT titulo FROM vagas WHERE id = %s AND empresa_id = %s", (vaga_id, session["empresa_id"]))
 
-    candidatos = cursor.fetchall()
-    conn.close()
+        vaga_info = cursor.fetchone()
 
-    return jsonify([{
-        "id": c[0],
-        "nome": c[1],
-        "score": round(c[2], 1)
-    } for c in candidatos])
+        if not vaga_info:
+            return jsonify({"error": "Vaga não encontrada"}), 404
+
+        # Buscar candidatos com informações completas
+        cursor.execute(
+            """SELECT c.id, c.nome, c.email, c.telefone, c.linkedin, 
+                      ca.score, ca.posicao, ca.data_candidatura,
+                      CASE WHEN ecf.id IS NOT NULL THEN 1 ELSE 0 END as is_favorito
+               FROM candidaturas ca
+               JOIN candidatos c ON ca.candidato_id = c.id
+               LEFT JOIN empresa_candidato_favorito ecf ON ecf.candidato_id = c.id 
+                        AND ecf.vaga_id = %s AND ecf.empresa_id = %s
+               WHERE ca.vaga_id = %s
+               ORDER BY ca.score DESC""", (vaga_id, session["empresa_id"], vaga_id))
+
+        candidatos_raw = cursor.fetchall()
+
+        candidatos = []
+        for c in candidatos_raw:
+            candidatos.append({
+                "id": c[0],
+                "nome": c[1],
+                "email": c[2],
+                "telefone": c[3] or "Não informado",
+                "linkedin": c[4] or "Não informado", 
+                "score": round(float(c[5]), 1),
+                "posicao": c[6],
+                "data_candidatura": c[7][:10] if c[7] else "N/A",  # Formato YYYY-MM-DD
+                "is_favorito": bool(c[8])
+            })
+
+        return jsonify({
+            "candidatos": candidatos,
+            "vaga_titulo": vaga_info[0],
+            "total": len(candidatos)
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+    
 
 
 @candidaturas_bp.route("/api/score-detalhes/<int:candidato_id>/<int:vaga_id>")
@@ -447,13 +530,22 @@ def api_score_detalhes(candidato_id, vaga_id):
 
     try:
         # Verificar se a empresa tem acesso ao candidato
-        cursor.execute(
-            """
-            SELECT c.resumo_profissional, c.pretensao_salarial, c.endereco,
-                   v.requisitos, v.salario_oferecido, v.diferenciais, v.tipo_vaga, v.endereco_vaga
-            FROM candidatos c, vagas v
-            WHERE c.id = ? AND v.id = ? AND v.empresa_id = ?
-        """, (candidato_id, vaga_id, session["empresa_id"]))
+        if hasattr(conn, 'server_version'):  # PostgreSQL
+            cursor.execute(
+                """
+                SELECT c.resumo_profissional, c.pretensao_salarial, c.endereco,
+                       v.requisitos, v.salario_oferecido, v.diferenciais, v.tipo_vaga, v.endereco_vaga
+                FROM candidatos c, vagas v
+                WHERE c.id = %s AND v.id = %s AND v.empresa_id = %s
+            """, (candidato_id, vaga_id, session["empresa_id"]))
+        else:  # SQLite
+            cursor.execute(
+                """
+                SELECT c.resumo_profissional, c.pretensao_salarial, c.endereco,
+                       v.requisitos, v.salario_oferecido, v.diferenciais, v.tipo_vaga, v.endereco_vaga
+                FROM candidatos c, vagas v
+                WHERE c.id = ? AND v.id = ? AND v.empresa_id = ?
+            """, (candidato_id, vaga_id, session["empresa_id"]))
 
         resultado = cursor.fetchone()
         if not resultado:
@@ -810,12 +902,21 @@ def favoritar_candidato():
         empresa_id = session["empresa_id"]
 
         # Verificar se a empresa tem acesso ao candidato (através de candidatura)
-        cursor.execute(
-            """
-            SELECT c.vaga_id FROM candidaturas c
-            JOIN vagas v ON c.vaga_id = v.id
-            WHERE c.candidato_id = ? AND v.empresa_id = ? AND c.vaga_id = ?
-        """, (candidato_id, empresa_id, vaga_id))
+        if hasattr(conn, 'server_version'):  # PostgreSQL
+            cursor.execute(
+                """
+                SELECT c.vaga_id FROM candidaturas c
+                JOIN vagas v ON c.vaga_id = v.id
+                WHERE c.candidato_id = %s AND v.empresa_id = %s AND c.vaga_id = %s
+            """, (candidato_id, empresa_id, vaga_id))
+        else:  # SQLite
+            cursor.execute(
+                """
+                SELECT c.vaga_id FROM candidaturas c
+                JOIN vagas v ON c.vaga_id = v.id
+                WHERE c.candidato_id = ? AND v.empresa_id = ? AND c.vaga_id = ?
+            """, (candidato_id, empresa_id, vaga_id))
+
 
         if not cursor.fetchone():
             return jsonify({
@@ -824,22 +925,36 @@ def favoritar_candidato():
             }), 404
 
         # Verificar se já está favoritado
-        cursor.execute(
-            """
-            SELECT id FROM empresa_candidato_favorito
-            WHERE empresa_id = ? AND candidato_id = ? AND vaga_id = ?
-        """, (empresa_id, candidato_id, vaga_id))
+        if hasattr(conn, 'server_version'):  # PostgreSQL
+            cursor.execute(
+                """
+                SELECT id FROM empresa_candidato_favorito
+                WHERE empresa_id = %s AND candidato_id = %s AND vaga_id = %s
+            """, (empresa_id, candidato_id, vaga_id))
+        else:  # SQLite
+            cursor.execute(
+                """
+                SELECT id FROM empresa_candidato_favorito
+                WHERE empresa_id = ? AND candidato_id = ? AND vaga_id = ?
+            """, (empresa_id, candidato_id, vaga_id))
 
         ja_favoritado = cursor.fetchone() is not None
 
         if acao == "toggle" or (acao == "add" and not ja_favoritado):
             if ja_favoritado:
                 # Remover dos favoritos
-                cursor.execute(
-                    """
-                    DELETE FROM empresa_candidato_favorito
-                    WHERE empresa_id = ? AND candidato_id = ? AND vaga_id = ?
-                """, (empresa_id, candidato_id, vaga_id))
+                if hasattr(conn, 'server_version'):  # PostgreSQL
+                    cursor.execute(
+                        """
+                        DELETE FROM empresa_candidato_favorito
+                        WHERE empresa_id = %s AND candidato_id = %s AND vaga_id = %s
+                    """, (empresa_id, candidato_id, vaga_id))
+                else: # SQLite
+                    cursor.execute(
+                        """
+                        DELETE FROM empresa_candidato_favorito
+                        WHERE empresa_id = ? AND candidato_id = ? AND vaga_id = ?
+                    """, (empresa_id, candidato_id, vaga_id))
                 conn.commit()
                 return jsonify({
                     "success": True,
@@ -848,11 +963,18 @@ def favoritar_candidato():
                 })
             else:
                 # Adicionar aos favoritos
-                cursor.execute(
-                    """
-                    INSERT INTO empresa_candidato_favorito (empresa_id, candidato_id, vaga_id)
-                    VALUES (?, ?, ?)
-                """, (empresa_id, candidato_id, vaga_id))
+                if hasattr(conn, 'server_version'):  # PostgreSQL
+                    cursor.execute(
+                        """
+                        INSERT INTO empresa_candidato_favorito (empresa_id, candidato_id, vaga_id)
+                        VALUES (%s, %s, %s)
+                    """, (empresa_id, candidato_id, vaga_id))
+                else: # SQLite
+                    cursor.execute(
+                        """
+                        INSERT INTO empresa_candidato_favorito (empresa_id, candidato_id, vaga_id)
+                        VALUES (?, ?, ?)
+                    """, (empresa_id, candidato_id, vaga_id))
                 conn.commit()
                 return jsonify({
                     "success": True,
@@ -861,11 +983,18 @@ def favoritar_candidato():
                 })
 
         elif acao == "remove" and ja_favoritado:
-            cursor.execute(
-                """
-                DELETE FROM empresa_candidato_favorito
-                WHERE empresa_id = ? AND candidato_id = ? AND vaga_id = ?
-            """, (empresa_id, candidato_id, vaga_id))
+            if hasattr(conn, 'server_version'):  # PostgreSQL
+                cursor.execute(
+                    """
+                    DELETE FROM empresa_candidato_favorito
+                    WHERE empresa_id = %s AND candidato_id = %s AND vaga_id = %s
+                """, (empresa_id, candidato_id, vaga_id))
+            else: # SQLite
+                cursor.execute(
+                    """
+                    DELETE FROM empresa_candidato_favorito
+                    WHERE empresa_id = ? AND candidato_id = ? AND vaga_id = ?
+                """, (empresa_id, candidato_id, vaga_id))
             conn.commit()
             return jsonify({
                 "success": True,
@@ -922,8 +1051,11 @@ def favoritar_candidato_geral():
         empresa_id = session["empresa_id"]
 
         # Verificar se o candidato existe
-        cursor.execute("SELECT id FROM candidatos WHERE id = ?",
-                       (candidato_id, ))
+        if hasattr(conn, 'server_version'): # PostgreSQL
+            cursor.execute("SELECT id FROM candidatos WHERE id = %s", (candidato_id, ))
+        else: # SQLite
+            cursor.execute("SELECT id FROM candidatos WHERE id = ?", (candidato_id, ))
+            
         if not cursor.fetchone():
             return jsonify({
                 "success": False,
@@ -931,22 +1063,36 @@ def favoritar_candidato_geral():
             }), 404
 
         # Verificar se já está favoritado
-        cursor.execute(
-            """
-            SELECT id FROM empresa_favorito_candidato_geral
-            WHERE empresa_id = ? AND candidato_id = ?
-        """, (empresa_id, candidato_id))
+        if hasattr(conn, 'server_version'): # PostgreSQL
+            cursor.execute(
+                """
+                SELECT id FROM empresa_favorito_candidato_geral
+                WHERE empresa_id = %s AND candidato_id = %s
+            """, (empresa_id, candidato_id))
+        else: # SQLite
+            cursor.execute(
+                """
+                SELECT id FROM empresa_favorito_candidato_geral
+                WHERE empresa_id = ? AND candidato_id = ?
+            """, (empresa_id, candidato_id))
 
         ja_favoritado = cursor.fetchone() is not None
 
         if acao == "toggle" or (acao == "add" and not ja_favoritado):
             if ja_favoritado:
                 # Remover dos favoritos
-                cursor.execute(
-                    """
-                    DELETE FROM empresa_favorito_candidato_geral
-                    WHERE empresa_id = ? AND candidato_id = ?
-                """, (empresa_id, candidato_id))
+                if hasattr(conn, 'server_version'): # PostgreSQL
+                    cursor.execute(
+                        """
+                        DELETE FROM empresa_favorito_candidato_geral
+                        WHERE empresa_id = %s AND candidato_id = %s
+                    """, (empresa_id, candidato_id))
+                else: # SQLite
+                    cursor.execute(
+                        """
+                        DELETE FROM empresa_favorito_candidato_geral
+                        WHERE empresa_id = ? AND candidato_id = ?
+                    """, (empresa_id, candidato_id))
                 conn.commit()
                 return jsonify({
                     "success": True,
@@ -955,11 +1101,18 @@ def favoritar_candidato_geral():
                 })
             else:
                 # Adicionar aos favoritos
-                cursor.execute(
-                    """
-                    INSERT INTO empresa_favorito_candidato_geral (empresa_id, candidato_id)
-                    VALUES (?, ?)
-                """, (empresa_id, candidato_id))
+                if hasattr(conn, 'server_version'): # PostgreSQL
+                    cursor.execute(
+                        """
+                        INSERT INTO empresa_favorito_candidato_geral (empresa_id, candidato_id)
+                        VALUES (%s, %s)
+                    """, (empresa_id, candidato_id))
+                else: # SQLite
+                    cursor.execute(
+                        """
+                        INSERT INTO empresa_favorito_candidato_geral (empresa_id, candidato_id)
+                        VALUES (?, ?)
+                    """, (empresa_id, candidato_id))
                 conn.commit()
                 return jsonify({
                     "success": True,
@@ -968,11 +1121,18 @@ def favoritar_candidato_geral():
                 })
 
         elif acao == "remove" and ja_favoritado:
-            cursor.execute(
-                """
-                DELETE FROM empresa_favorito_candidato_geral
-                WHERE empresa_id = ? AND candidato_id = ?
-            """, (empresa_id, candidato_id))
+            if hasattr(conn, 'server_version'): # PostgreSQL
+                cursor.execute(
+                    """
+                    DELETE FROM empresa_favorito_candidato_geral
+                    WHERE empresa_id = %s AND candidato_id = %s
+                """, (empresa_id, candidato_id))
+            else: # SQLite
+                cursor.execute(
+                    """
+                    DELETE FROM empresa_favorito_candidato_geral
+                    WHERE empresa_id = ? AND candidato_id = ?
+                """, (empresa_id, candidato_id))
             conn.commit()
             return jsonify({
                 "success": True,
@@ -998,11 +1158,11 @@ def favoritar_candidato_geral():
 def favoritar_vaga():
     """API para adicionar/remover vaga dos favoritos"""
     if "candidato_id" not in session:
-        return jsonify({"error": "Não autorizado", "favorited": False}), 401
+        return jsonify({"success": False, "error": "Não autorizado", "favorited": False}), 401
 
     data = request.get_json()
     if not data or "vaga_id" not in data:
-        return jsonify({"error": "ID da vaga é obrigatório", "favorited": False}), 400
+        return jsonify({"success": False, "error": "ID da vaga é obrigatório", "favorited": False}), 400
 
     candidato_id = session["candidato_id"]
     vaga_id = data["vaga_id"]
@@ -1011,27 +1171,63 @@ def favoritar_vaga():
     cursor = conn.cursor()
 
     try:
+        # Criar tabela se não existir (MySQL syntax)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS candidato_vaga_favorita (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                candidato_id INT NOT NULL,
+                vaga_id INT NOT NULL,
+                data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (candidato_id) REFERENCES candidatos (id),
+                FOREIGN KEY (vaga_id) REFERENCES vagas (id),
+                UNIQUE(candidato_id, vaga_id)
+            )
+        """)
+
+        # Verificar se existe coluna data_adicao e renomear para data_criacao se necessário
+        cursor.execute("SHOW COLUMNS FROM candidato_vaga_favorita LIKE 'data_adicao'")
+        if cursor.fetchone():
+            cursor.execute("ALTER TABLE candidato_vaga_favorita CHANGE data_adicao data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+
         # Verificar se já existe nos favoritos
-        cursor.execute(
-            "SELECT id FROM candidato_vaga_favorita WHERE candidato_id = ? AND vaga_id = ?",
-            (candidato_id, vaga_id)
-        )
+        if hasattr(conn, 'server_version'): # PostgreSQL
+            cursor.execute(
+                "SELECT id FROM candidato_vaga_favorita WHERE candidato_id = %s AND vaga_id = %s",
+                (candidato_id, vaga_id)
+            )
+        else: # SQLite
+            cursor.execute(
+                "SELECT id FROM candidato_vaga_favorita WHERE candidato_id = ? AND vaga_id = ?",
+                (candidato_id, vaga_id)
+            )
         favorito_existente = cursor.fetchone()
 
         if favorito_existente:
             # Remover dos favoritos
-            cursor.execute(
-                "DELETE FROM candidato_vaga_favorita WHERE candidato_id = ? AND vaga_id = ?",
-                (candidato_id, vaga_id)
-            )
+            if hasattr(conn, 'server_version'): # PostgreSQL
+                cursor.execute(
+                    "DELETE FROM candidato_vaga_favorita WHERE candidato_id = %s AND vaga_id = %s",
+                    (candidato_id, vaga_id)
+                )
+            else: # SQLite
+                cursor.execute(
+                    "DELETE FROM candidato_vaga_favorita WHERE candidato_id = ? AND vaga_id = ?",
+                    (candidato_id, vaga_id)
+                )
             favorited = False
             action = "removida"
         else:
-            # Adicionar aos favoritos
-            cursor.execute(
-                "INSERT INTO candidato_vaga_favorita (candidato_id, vaga_id, data_adicao) VALUES (?, ?, datetime(\"now\"))",
-                (candidato_id, vaga_id)
-            )
+            # Adicionar aos favoritos (MySQL syntax)
+            if hasattr(conn, 'server_version'): # PostgreSQL
+                cursor.execute(
+                    "INSERT INTO candidato_vaga_favorita (candidato_id, vaga_id) VALUES (%s, %s)",
+                    (candidato_id, vaga_id)
+                )
+            else: # SQLite
+                cursor.execute(
+                    "INSERT INTO candidato_vaga_favorita (candidato_id, vaga_id) VALUES (?, ?)",
+                    (candidato_id, vaga_id)
+                )
             favorited = True
             action = "adicionada"
 
@@ -1044,7 +1240,9 @@ def favoritar_vaga():
 
     except Exception as e:
         conn.rollback()
+        print(f"Erro ao favoritar vaga: {e}")
         return jsonify({
+            "success": False,
             "error": f"Erro ao atualizar favoritos: {str(e)}",
             "favorited": False
         }), 500
@@ -1063,16 +1261,28 @@ def obter_dicas_favoritas():
         cursor = conn.cursor()
 
         # Buscar vagas favoritas do candidato
-        cursor.execute("""
-            SELECT v.id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido, 
-                   v.tipo_vaga, e.nome as empresa_nome, f.data_adicao as data_favoritado
-            FROM candidato_vaga_favorita f
-            JOIN vagas v ON f.vaga_id = v.id
-            JOIN empresas e ON v.empresa_id = e.id
-            WHERE f.candidato_id = ? AND v.status = 'Ativa'
-            ORDER BY f.data_adicao DESC
-            LIMIT 10
-        """, (candidato_id,))
+        if hasattr(conn, 'server_version'): # PostgreSQL
+            cursor.execute("""
+                SELECT v.id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido, 
+                       v.tipo_vaga, e.nome as empresa_nome, f.data_criacao as data_favoritado
+                FROM candidato_vaga_favorita f
+                JOIN vagas v ON f.vaga_id = v.id
+                JOIN empresas e ON v.empresa_id = e.id
+                WHERE f.candidato_id = %s AND v.status = 'Ativa'
+                ORDER BY f.data_criacao DESC
+                LIMIT 10
+            """, (candidato_id,))
+        else: # SQLite
+             cursor.execute("""
+                SELECT v.id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido, 
+                       v.tipo_vaga, e.nome as empresa_nome, f.data_criacao as data_favoritado
+                FROM candidato_vaga_favorita f
+                JOIN vagas v ON f.vaga_id = v.id
+                JOIN empresas e ON v.empresa_id = e.id
+                WHERE f.candidato_id = ? AND v.status = 'Ativa'
+                ORDER BY f.data_criacao DESC
+                LIMIT 10
+            """, (candidato_id,))
 
         vagas_favoritas = cursor.fetchall()
 
@@ -1083,11 +1293,18 @@ def obter_dicas_favoritas():
             })
 
         # Buscar dados do candidato
-        cursor.execute("""
-            SELECT nome, email, competencias, experiencia, resumo_profissional, pretensao_salarial
-            FROM candidatos 
-            WHERE id = ?
-        """, (candidato_id,))
+        if hasattr(conn, 'server_version'): # PostgreSQL
+            cursor.execute("""
+                SELECT nome, email, competencias, experiencia, resumo_profissional, pretensao_salarial
+                FROM candidatos 
+                WHERE id = %s
+            """, (candidato_id,))
+        else: # SQLite
+            cursor.execute("""
+                SELECT nome, email, competencias, experiencia, resumo_profissional, pretensao_salarial
+                FROM candidatos 
+                WHERE id = ?
+            """, (candidato_id,))
 
         candidato_data = cursor.fetchone()
         if not candidato_data:
@@ -1174,7 +1391,7 @@ def gerar_dicas_personalizadas(vagas_favoritas, candidato_data):
             dica_modalidade["acao"] = "Prepare-se para deslocamentos, horários presenciais e interações no escritório."
         elif tipo_mais_comum == "Híbrido":
             dica_modalidade["acao"] = "Organize-se para alternar entre home office e escritório, gerenciando bem seu tempo."
-        
+
         dicas.append(dica_modalidade)
 
     # Dica 4: Perfil profissional
@@ -1196,5 +1413,3 @@ def gerar_dicas_personalizadas(vagas_favoritas, candidato_data):
         })
 
     return dicas
-
-

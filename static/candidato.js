@@ -785,7 +785,7 @@ async function toggleFavorite(vagaId, buttonElement) {
         buttonElement.style.transform = 'scale(1.2)';
         buttonElement.style.transition = 'all 0.2s ease';
 
-        const response = await fetch('/api/favoritos/toggle', {
+        const response = await fetch('/api/favoritar-vaga', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ vaga_id: vagaId })
@@ -793,24 +793,30 @@ async function toggleFavorite(vagaId, buttonElement) {
 
         if (response.ok) {
             const data = await response.json();
-            const novoStatus = data.favorited;
+            
+            if (data.success) {
+                const novoStatus = data.favorited;
 
-            // Atualizar UI
-            buttonElement.textContent = novoStatus ? '⭐' : '☆';
-            buttonElement.dataset.favorited = novoStatus;
-            buttonElement.className = `favorite-btn text-2xl transition-all duration-300 hover:scale-125 ${novoStatus ? 'text-yellow-400' : 'text-gray-300'}`;
+                // Atualizar UI
+                buttonElement.textContent = novoStatus ? '❤️' : '🤍';
+                buttonElement.dataset.favorited = novoStatus;
+                buttonElement.className = `favorite-btn text-2xl transition-all duration-300 hover:scale-125 ${novoStatus ? 'text-red-500' : 'text-gray-300'}`;
 
-            // Feedback visual
-            mostrarFeedbackAcao(
-                novoStatus ? '⭐ Adicionada aos favoritos!' : '☆ Removida dos favoritos!',
-                novoStatus ? 'success' : 'info'
-            );
+                // Feedback visual
+                mostrarFeedbackAcao(
+                    data.message || (novoStatus ? '⭐ Adicionada aos favoritos!' : '☆ Removida dos favoritos!'),
+                    novoStatus ? 'success' : 'info'
+                );
+            } else {
+                throw new Error(data.error || 'Erro desconhecido');
+            }
         } else {
-            throw new Error(`Erro ${response.status}`);
+            const errorData = await response.json();
+            throw new Error(errorData.error || `Erro ${response.status}`);
         }
     } catch (error) {
         console.error('Erro ao alterar favorito:', error);
-        mostrarFeedbackAcao('❌ Erro ao alterar favorito', 'error');
+        mostrarFeedbackAcao('❌ Erro ao alterar favorito: ' + error.message, 'error');
     } finally {
         // Resetar animação
         setTimeout(() => {

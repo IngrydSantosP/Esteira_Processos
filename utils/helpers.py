@@ -79,12 +79,85 @@ def inicializar_banco():
         CREATE TABLE IF NOT EXISTS notificacoes (
             id INT AUTO_INCREMENT PRIMARY KEY,
             candidato_id INT NOT NULL,
-            empresa_id INT NOT NULL,
-            vaga_id INT NOT NULL,
+            empresa_id INT,
+            vaga_id INT,
             mensagem TEXT NOT NULL,
             data_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             lida BOOLEAN DEFAULT FALSE,
+            tipo VARCHAR(50) DEFAULT 'geral',
+            titulo VARCHAR(255),
             FOREIGN KEY (candidato_id) REFERENCES candidatos (id),
+            FOREIGN KEY (empresa_id) REFERENCES empresas (id),
+            FOREIGN KEY (vaga_id) REFERENCES vagas (id)
+        )
+    ''')
+
+    # Criar tabela de favoritos candidato-vaga
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS candidato_vaga_favorita (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            candidato_id INT NOT NULL,
+            vaga_id INT NOT NULL,
+            data_adicao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (candidato_id) REFERENCES candidatos (id),
+            FOREIGN KEY (vaga_id) REFERENCES vagas (id),
+            UNIQUE KEY unique_favorito (candidato_id, vaga_id)
+        )
+    ''')
+
+    # Criar tabela de favoritos empresa-candidato
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS empresa_candidato_favorito (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            empresa_id INT NOT NULL,
+            candidato_id INT NOT NULL,
+            vaga_id INT NOT NULL,
+            data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (empresa_id) REFERENCES empresas (id),
+            FOREIGN KEY (candidato_id) REFERENCES candidatos (id),
+            FOREIGN KEY (vaga_id) REFERENCES vagas (id),
+            UNIQUE KEY unique_empresa_favorito (empresa_id, candidato_id, vaga_id)
+        )
+    ''')
+
+    # Criar tabela de favoritos empresa-candidato geral
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS empresa_favorito_candidato_geral (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            empresa_id INT NOT NULL,
+            candidato_id INT NOT NULL,
+            data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (empresa_id) REFERENCES empresas (id),
+            FOREIGN KEY (candidato_id) REFERENCES candidatos (id),
+            UNIQUE KEY unique_empresa_candidato (empresa_id, candidato_id)
+        )
+    ''')
+    
+    # Criar tabela de favoritos candidato-vaga
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS candidato_vaga_favorita (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            candidato_id INT NOT NULL,
+            vaga_id INT NOT NULL,
+            data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (candidato_id) REFERENCES candidatos (id),
+            FOREIGN KEY (vaga_id) REFERENCES vagas (id),
+            UNIQUE KEY unique_candidato_vaga (candidato_id, vaga_id)
+        )
+    ''')
+
+    # Criar tabela de configuração de score
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS configuracao_score (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            empresa_id INT NOT NULL,
+            vaga_id INT,
+            peso_requisitos DECIMAL(5,2) DEFAULT 30.00,
+            peso_experiencia DECIMAL(5,2) DEFAULT 25.00,
+            peso_salarial DECIMAL(5,2) DEFAULT 20.00,
+            peso_formacao DECIMAL(5,2) DEFAULT 15.00,
+            peso_localizacao DECIMAL(5,2) DEFAULT 10.00,
+            data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (empresa_id) REFERENCES empresas (id),
             FOREIGN KEY (vaga_id) REFERENCES vagas (id)
         )

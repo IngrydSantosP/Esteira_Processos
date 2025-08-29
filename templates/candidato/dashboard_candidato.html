@@ -1,11 +1,10 @@
-
 {% extends "base.html" %}
 
 {% block title %}Dashboard - Candidato{% endblock %}
 
 {% block content %}
 
-<style> 
+<style>
     .icone-contratado { color: #16a34a; font-size: 1.2em; margin-right: 8px; }
     .icone-nao-lida { color: red; font-size: 1em; margin-right: 8px; }
     .icone-congelada { color: #3b82f6; font-size: 1.2em; margin-right: 8px; }
@@ -22,6 +21,12 @@
     @keyframes pulse {
         0%, 100% { opacity: 1; }
         50% { opacity: 0.5; }
+    }
+    .favorite-btn {
+        transition: all 0.3s ease-in-out;
+    }
+    .favorite-btn:hover {
+        transform: scale(1.2);
     }
 </style>
 
@@ -45,7 +50,7 @@
 
                 <!-- Botão de Notificações Melhorado -->
                 <div class="relative">
-                    <button onclick="toggleNotificacoes()" 
+                    <button onclick="toggleNotificacoes()"
                             class="relative p-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group">
                         <span class="text-xl transition-transform group-hover:animate-bounce">🔔</span>
                         <span id="badgeNotificacoes" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full min-w-[20px] h-5 flex items-center justify-center font-bold animate-pulse hidden">0</span>
@@ -61,11 +66,11 @@
                                     <h3 class="font-bold text-lg">Notificações</h3>
                                 </div>
                                 <div class="flex gap-2">
-                                    <button onclick="marcarTodasComoLidas()" 
+                                    <button onclick="marcarTodasComoLidas()"
                                             class="text-xs bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full transition-all duration-200">
                                         ✓ Marcar todas
                                     </button>
-                                    <button onclick="apagarTodasNotificacoes()" 
+                                    <button onclick="apagarTodasNotificacoes()"
                                             class="text-xs bg-red-500/20 hover:bg-red-500/30 px-3 py-1 rounded-full transition-all duration-200">
                                         🗑️ Limpar
                                     </button>
@@ -202,10 +207,11 @@
                                                     {{ vaga[1] }}
                                                 </h3>
                                             </a>
-                                            <button onclick="toggleFavorite('{{ vaga[0] }}', this)"
-                                                    class="favorite-btn text-2xl transition-all duration-300 hover:scale-125 {{ 'text-yellow-400' if vaga[10] else 'text-gray-300' }}"
-                                                    data-favorited="{{ 'true' if vaga[10] else 'false' }}">
-                                                {{ '⭐' if vaga[10] else '☆' }}
+                                            <button onclick="toggleFavorite({{ vaga[0] }}, this)"
+                                                    class="favorite-btn text-2xl transition-all duration-300 hover:scale-125 {% if vaga[10] %}text-red-500{% else %}text-gray-300{% endif %}"
+                                                    data-favorited="{{ vaga[10]|lower }}"
+                                                    title="{% if vaga[10] %}Remover dos favoritos{% else %}Adicionar aos favoritos{% endif %}">
+                                                {% if vaga[10] %}❤️{% else %}🤍{% endif %}
                                             </button>
                                         </div>
                                         <p class="text-purple-600 font-semibold mb-4 flex items-center gap-2">
@@ -244,7 +250,7 @@
                                     </div>
                                 </div>
 
-                                <a href="{{ url_for('candidatar', vaga_id=vaga[0]) }}" 
+                                <a href="{{ url_for('candidatar', vaga_id=vaga[0]) }}"
                                    class="group/btn bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold px-8 py-4 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl flex items-center gap-3">
                                     <span class="transition-transform group-hover/btn:translate-x-1">🚀</span>
                                     Candidatar-se
@@ -262,7 +268,7 @@
                 </div>
                 <h3 class="text-2xl font-bold text-gray-600 mb-4">Nenhuma vaga disponível no momento</h3>
                 <p class="text-gray-500 mb-8 max-w-md mx-auto">Complete seu perfil para receber melhores recomendações e aumentar suas chances!</p>
-                <a href="{{ url_for('editar_perfil_candidato') }}" 
+                <a href="{{ url_for('editar_perfil_candidato') }}"
                    class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 inline-flex items-center gap-3">
                     <span>⚙️</span>
                     Completar Perfil
@@ -326,12 +332,12 @@
                 </div>
 
                 <div class="flex gap-3">
-                    <button onclick="realizarBusca()" 
+                    <button onclick="realizarBusca()"
                             class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
                         <span>🔍</span>
                         Buscar Vagas
                     </button>
-                    <button onclick="limparFiltros()" 
+                    <button onclick="limparFiltros()"
                             class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
                         <span>🧹</span>
                         Limpar Filtros
@@ -378,10 +384,11 @@
                                                     {{ vaga[1] }}
                                                 </h3>
                                             </a>
-                                            <button onclick="toggleFavorite({{ vaga[0] }}, this)" 
-                                                    class="favorite-btn text-xl transition-all duration-300 hover:scale-125 {{ 'text-yellow-400' if vaga[6] else 'text-gray-300' }}"
-                                                    data-favorited="{{ 'true' if vaga[6] else 'false' }}">
-                                                {{ '⭐' if vaga[6] else '☆' }}
+                                            <button onclick="toggleFavorite({{ vaga[0] }}, this)"
+                                                    class="favorite-btn text-2xl transition-all duration-300 hover:scale-125 {% if vaga[6] %}text-red-500{% else %}text-gray-300{% endif %}"
+                                                    data-favorited="{{ vaga[6]|lower }}"
+                                                    title="{% if vaga[6] %}Remover dos favoritos{% else %}Adicionar aos favoritos{% endif %}">
+                                                {% if vaga[6] %}❤️{% else %}🤍{% endif %}
                                             </button>
                                         </div>
                                         <p class="text-purple-600 font-semibold mb-4 flex items-center gap-2">
@@ -408,7 +415,7 @@
                                     </div>
                                 </div>
 
-                                <button 
+                                <button
                                     onclick="cancelarCandidatura({{ vaga[0] }})"
                                     class="group/btn bg-red-50 hover:bg-red-500 text-red-600 hover:text-white px-4 py-2 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
                                     <span class="transition-transform group-hover/btn:rotate-90">❌</span>
@@ -462,10 +469,11 @@
                                                     {{ vaga.titulo }}
                                                 </h3>
                                             </a>
-                                            <button onclick="toggleFavorite({{ vaga.id }}, this)" 
-                                                    class="favorite-btn text-xl transition-all duration-300 hover:scale-125 text-yellow-400"
-                                                    data-favorited="true">
-                                                ⭐
+                                            <button onclick="toggleFavorite({{ vaga.id }}, this)"
+                                                    class="favorite-btn text-2xl transition-all duration-300 hover:scale-125 {% if vaga.favorited %}text-red-500{% else %}text-gray-300{% endif %}"
+                                                    data-favorited="{{ vaga.favorited|lower }}"
+                                                    title="{% if vaga.favorited %}Remover dos favoritos{% else %}Adicionar aos favoritos{% endif %}">
+                                                {% if vaga.favorited %}❤️{% else %}🤍{% endif %}
                                             </button>
                                         </div>
                                         <p class="text-purple-600 font-semibold mb-4 flex items-center gap-2">
@@ -504,7 +512,7 @@
                                 </div>
 
                                 {% if not vaga.ja_candidatou %}
-                                <a href="{{ url_for('candidatar', vaga_id=vaga.id) }}" 
+                                <a href="{{ url_for('candidatar', vaga_id=vaga.id) }}"
                                    class="group/btn bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold px-6 py-3 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-xl flex items-center gap-2">
                                     <span class="transition-transform group-hover/btn:translate-x-1">🚀</span>
                                     Candidatar-se
@@ -587,46 +595,123 @@
 </div>
 <script src="{{ url_for('static', filename='candidato.js') }}">
 // Sistema de favoritos
-async function toggleFavorite(vagaId, button) {
-    const isFavorited = button.dataset.favorited === 'true';
-
+async function toggleFavorite(vagaId, buttonElement) {
     try {
-        button.classList.add('animate-pulse');
-
         const response = await fetch('/api/favoritar-vaga', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                vaga_id: vagaId,
-                acao: 'toggle'
-            })
+            body: JSON.stringify({ vaga_id: vagaId })
         });
 
-        const result = await response.json();
+        const data = await response.json();
 
-        if (result.success) {
-            button.dataset.favorited = result.favorited;
-            button.innerHTML = result.favorited ? '⭐' : '☆';
-            button.className = `relative favorite-btn text-xl transition-all duration-300 hover:scale-125 ${result.favorited ? 'text-red-500' : 'text-gray-300'}`;
+        if (data.success) {
+            // Atualizar ícone do botão
+            buttonElement.innerHTML = data.favorited ? '❤️' : '🤍';
+            buttonElement.title = data.favorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos';
+            buttonElement.setAttribute('data-favorited', data.favorited.toString());
 
-            // Atualiza o texto do tooltip
-            const tooltip = button.querySelector('.tooltiptext');
-            if (tooltip) {
-                tooltip.textContent = result.favorited ? 'Remover dos favoritos' : 'Adicionar aos favoritos';
+            // Atualizar a cor do botão
+            if (data.favorited) {
+                buttonElement.classList.add('text-red-500');
+                buttonElement.classList.remove('text-gray-300');
+            } else {
+                buttonElement.classList.add('text-gray-300');
+                buttonElement.classList.remove('text-red-500');
             }
 
-            showToast(result.message, 'success');
+            // Efeito visual
+            buttonElement.classList.add('animate-pulse');
+            setTimeout(() => {
+                buttonElement.classList.remove('animate-pulse');
+            }, 500);
+
+            showToast(data.message, 'success');
+
+            // Recarregar seção de favoritos se necessário
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
         } else {
-            showToast(result.message || 'Erro ao favoritar vaga', 'error');
+            showToast('Erro ao atualizar favoritos: ' + data.error, 'error');
         }
     } catch (error) {
-        console.error('Erro ao favoritar:', error);
-        showToast('Erro ao favoritar vaga', 'error');
-    } finally {
-        button.classList.remove('animate-pulse');
+        console.error('Erro:', error);
+        showToast('Erro ao processar solicitação', 'error');
     }
+}
+
+// Placeholder for showToast function if it's not defined elsewhere
+if (typeof showToast === 'undefined') {
+    function showToast(message, type) {
+        console.log(`Toast (${type}): ${message}`);
+        // In a real application, you would implement a proper toast notification system here.
+    }
+}
+
+// Placeholder for navigation functions if they are not defined elsewhere
+function showSection(sectionId) {
+    document.querySelectorAll('.content-section').forEach(section => {
+        section.classList.add('hidden');
+    });
+    document.getElementById(`section-${sectionId}`).classList.remove('hidden');
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('filter-active', 'bg-gradient-to-r', 'from-purple-500', 'to-blue-500', 'text-white');
+        btn.classList.add('bg-gray-100', 'text-gray-700');
+    });
+    const activeBtn = document.querySelector(`.filter-btn[onclick="showSection('${sectionId}')"]`);
+    if (activeBtn) {
+        activeBtn.classList.add('filter-active', 'bg-gradient-to-r', 'from-purple-500', 'to-blue-500', 'text-white');
+        activeBtn.classList.remove('bg-gray-100', 'text-gray-700');
+    }
+}
+
+function realizarBusca() {
+    console.log("Realizando busca...");
+    // Implement search logic here
+}
+
+function limparFiltros() {
+    console.log("Limpando filtros...");
+    // Implement filter clearing logic here
+}
+
+function toggleNotificacoes() {
+    const painel = document.getElementById('painelNotificacoes');
+    painel.classList.toggle('hidden');
+}
+
+function marcarTodasComoLidas() {
+    console.log("Marcando todas como lidas...");
+    // Implement logic to mark all notifications as read
+}
+
+function apagarTodasNotificacoes() {
+    console.log("Apagando todas as notificações...");
+    // Implement logic to clear all notifications
+}
+
+function analisarCurriculo() {
+    console.log("Analisando currículo...");
+    // Implement AI analysis logic
+}
+
+function obterRecomendacoesIA() {
+    console.log("Obtendo recomendações IA...");
+    // Implement AI recommendation logic
+}
+
+function obterDicasFavoritas() {
+    console.log("Obtendo dicas para favoritas...");
+    // Implement AI tips logic
+}
+
+function cancelarCandidatura(vagaId) {
+    console.log(`Cancelando candidatura para vaga ${vagaId}...`);
+    // Implement logic to cancel application
 }
 
 </script>

@@ -3,290 +3,251 @@
 {% block title %}Editar Vaga{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 py-8">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="bg-white rounded-2xl shadow-lg p-8">
-            <div class="mb-8">
-                <h1 class="text-3xl font-bold text-gray-900 mb-2">Editar Vaga</h1>
-                <p class="text-gray-600">Atualize as informações da vaga</p>
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-8">
+    <div class="max-w-4xl mx-auto bg-white p-8 rounded-3xl shadow-lg border border-gray-100">
+        <!-- Header -->
+        <div class="flex items-center space-x-4 mb-8">
+            <div class="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center">
+                <span class="text-white font-bold text-2xl">✏️</span>
+            </div>
+            <div>
+                <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    Editar Vaga
+                </h1>
+                <p class="text-gray-500">Atualize as informações da vaga</p>
+            </div>
+        </div>
+
+        <form method="POST" class="space-y-6">
+            <!-- Título da Vaga -->
+            <div>
+                <label for="titulo" class="block text-sm font-medium text-gray-700 mb-2">
+                    📝 Título da Vaga *
+                </label>
+                <input type="text" id="titulo" name="titulo" value="{{ vaga.titulo }}" required
+                       class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                       placeholder="Ex: Desenvolvedor Python Sênior">
             </div>
 
-            <form method="POST" class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="md:col-span-2">
-                        <label for="titulo" class="block text-sm font-medium text-gray-700 mb-2">
-                            Título da Vaga *
-                        </label>
-                        <input type="text" id="titulo" name="titulo" required value="{{ vaga.titulo }}"
-                               class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">
-                    </div>
+            <!-- Descrição -->
+            <div>
+                <label for="descricao" class="block text-sm font-medium text-gray-700 mb-2">
+                    📄 Descrição da Vaga *
+                </label>
+                <textarea id="descricao" name="descricao" rows="4" required
+                          class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                          placeholder="Descreva as principais responsabilidades e atividades...">{{ vaga.descricao }}</textarea>
+            </div>
 
-                    <div>
-                        <label for="salario_oferecido" class="block text-sm font-medium text-gray-700 mb-2">
-                            Salário Oferecido (R$) *
-                        </label>
-                        <input type="number" id="salario_oferecido" name="salario_oferecido" required step="0.01" min="0" value="{{ vaga.salario_oferecido }}"
-                               class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">
-                    </div>
+            <!-- Requisitos -->
+            <div>
+                <label for="requisitos" class="block text-sm font-medium text-gray-700 mb-2">
+                    🎯 Requisitos *
+                </label>
+                <textarea id="requisitos" name="requisitos" rows="4" required
+                          class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                          placeholder="Liste os requisitos obrigatórios e desejáveis...">{{ vaga.requisitos }}</textarea>
+            </div>
 
-                    <div>
-                        <label for="tipo_vaga" class="block text-sm font-medium text-gray-700 mb-2">
-                            Tipo da Vaga *
-                        </label>
-                        <select id="tipo_vaga" name="tipo_vaga" required
-                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                                onchange="toggleEnderecoField()">
-                            <option value="Presencial" {{ 'selected' if vaga.tipo_vaga == 'Presencial' else '' }}>🏢 Presencial</option>
-                            <option value="Remoto" {{ 'selected' if vaga.tipo_vaga == 'Remoto' else '' }}>🏠 Remoto</option>
-                            <option value="Híbrida" {{ 'selected' if vaga.tipo_vaga == 'Híbrida' else '' }}>🔄 Híbrida</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label for="categoria_id" class="block text-sm font-medium text-gray-700 mb-2">
-                            Categoria da Vaga
-                        </label>
-                        <select id="categoria_id" name="categoria_id"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                                onchange="toggleNovaCategoria()">
-                            <option value="">Selecione uma categoria</option>
-                            {% for categoria in categorias %}
-                            <option value="{{ categoria.id }}" {{ 'selected' if categoria.id == vaga.categoria_id else '' }}>{{ categoria.nome }}</option>
-                            {% endfor %}
-                            <option value="nova">+ Adicionar nova categoria</option>
-                        </select>
-                    </div>
-
-                    <div id="nova_categoria_container" class="hidden">
-                        <label for="nova_categoria" class="block text-sm font-medium text-gray-700 mb-2">
-                            Nova Categoria
-                        </label>
-                        <input type="text" id="nova_categoria" name="nova_categoria"
-                               class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                               placeholder="Ex: Marketing Digital">
-                    </div>
-
-                    <div>
-                        <label for="urgencia_contratacao" class="block text-sm font-medium text-gray-700 mb-2">
-                            Urgência da Contratação
-                        </label>
-                        <select id="urgencia_contratacao" name="urgencia_contratacao"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">
-                            <option value="">Selecione a urgência</option>
-                            <option value="Imediata" {{ 'selected' if vaga.urgencia_contratacao == 'Imediata' else '' }}>🚨 Imediata</option>
-                            <option value="Em até 30 dias" {{ 'selected' if vaga.urgencia_contratacao == 'Em até 30 dias' else '' }}>⏰ Em até 30 dias</option>
-                            <option value="Em até 60 dias" {{ 'selected' if vaga.urgencia_contratacao == 'Em até 60 dias' else '' }}>📅 Em até 60 dias</option>
-                            <option value="Sem urgência" {{ 'selected' if vaga.urgencia_contratacao == 'Sem urgência' else '' }}>🕐 Sem urgência</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label for="data_congelamento_agendado" class="block text-sm font-medium text-gray-700 mb-2">
-                            Congelamento Agendado
-                        </label>
-                        <input type="date" id="data_congelamento_agendado" name="data_congelamento_agendado"
-                               value="{{ vaga.data_congelamento_agendado if vaga.data_congelamento_agendado else '' }}"
-                               class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                               min="{{ (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d') }}">
-                        <p class="text-xs text-gray-500 mt-1">
-                            Opcional: A vaga será automaticamente congelada nesta data
-                        </p>
-                    </div>
-
-                    <div id="endereco_container" class="md:col-span-2 {{ 'hidden' if vaga.tipo_vaga == 'Remoto' else '' }}">
-                        <div class="mb-4">
-                            <label class="flex items-center space-x-2">
-                                <input type="checkbox" id="usar_endereco_empresa" name="usar_endereco_empresa" 
-                                       {{ 'checked' if vaga.usar_endereco_empresa else '' }}
-                                       class="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                                       onchange="toggleEnderecoEmpresa()">
-                                <span class="text-sm text-gray-700">Usar endereço da empresa</span>
-                            </label>
-                        </div>
-
-                        <div id="campos_endereco_vaga">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="md:col-span-2">
-                                    <label for="localizacao_endereco" class="block text-sm font-medium text-gray-700 mb-2">
-                                        Endereço *
-                                    </label>
-                                    <input type="text" id="localizacao_endereco" name="localizacao_endereco"
-                                           value="{{ vaga.localizacao_endereco if vaga.localizacao_endereco else '' }}"
-                                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                                           placeholder="Ex: Rua das Flores, 123">
-                                </div>
-
-                                <div>
-                                    <label for="localizacao_cidade" class="block text-sm font-medium text-gray-700 mb-2">
-                                        Cidade *
-                                    </label>
-                                    <input type="text" id="localizacao_cidade" name="localizacao_cidade"
-                                           value="{{ vaga.localizacao_cidade if vaga.localizacao_cidade else '' }}"
-                                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                                           placeholder="Ex: São Paulo">
-                                </div>
-
-                                <div>
-                                    <label for="localizacao_estado" class="block text-sm font-medium text-gray-700 mb-2">
-                                        Estado *
-                                    </label>
-                                    <select id="localizacao_estado" name="localizacao_estado"
-                                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">
-                                        <option value="">Selecione o estado</option>
-                                        {% set estados = [
-                                            ('AC', 'Acre'), ('AL', 'Alagoas'), ('AP', 'Amapá'), ('AM', 'Amazonas'),
-                                            ('BA', 'Bahia'), ('CE', 'Ceará'), ('DF', 'Distrito Federal'), ('ES', 'Espírito Santo'),
-                                            ('GO', 'Goiás'), ('MA', 'Maranhão'), ('MT', 'Mato Grosso'), ('MS', 'Mato Grosso do Sul'),
-                                            ('MG', 'Minas Gerais'), ('PA', 'Pará'), ('PB', 'Paraíba'), ('PR', 'Paraná'),
-                                            ('PE', 'Pernambuco'), ('PI', 'Piauí'), ('RJ', 'Rio de Janeiro'), ('RN', 'Rio Grande do Norte'),
-                                            ('RS', 'Rio Grande do Sul'), ('RO', 'Rondônia'), ('RR', 'Roraima'), ('SC', 'Santa Catarina'),
-                                            ('SP', 'São Paulo'), ('SE', 'Sergipe'), ('TO', 'Tocantins')
-                                        ] %}
-                                        {% for sigla, nome in estados %}
-                                        <option value="{{ sigla }}" {{ 'selected' if vaga.localizacao_estado == sigla else '' }}>{{ nome }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-
-                                <div class="md:col-span-2">
-                                    <label for="localizacao_cep" class="block text-sm font-medium text-gray-700 mb-2">
-                                        CEP
-                                    </label>
-                                    <input type="text" id="localizacao_cep" name="localizacao_cep"
-                                           value="{{ vaga.localizacao_cep if vaga.localizacao_cep else '' }}"
-                                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                                           placeholder="Ex: 01234-567"
-                                           pattern="[0-9]{5}-?[0-9]{3}">
-                                </div>
-                            </div>
-                        </div>
-
-                        <p class="text-xs text-gray-500 mt-2">
-                            Obrigatório para vagas presenciais e híbridas
-                        </p>
-                    </div>
+            <!-- Salário e Tipo -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="salario_oferecido" class="block text-sm font-medium text-gray-700 mb-2">
+                        💰 Salário Oferecido (R$) *
+                    </label>
+                    <input type="number" id="salario_oferecido" name="salario_oferecido" step="0.01" 
+                           value="{{ vaga.salario_oferecido }}" required
+                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                           placeholder="5000.00">
                 </div>
 
                 <div>
-                    <label for="descricao" class="block text-sm font-medium text-gray-700 mb-2">
-                        Descrição da Vaga *
+                    <label for="tipo_vaga" class="block text-sm font-medium text-gray-700 mb-2">
+                        🏢 Modalidade de Trabalho *
                     </label>
-                    <textarea id="descricao" name="descricao" required rows="4"
-                              class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">{{ vaga.descricao }}</textarea>
+                    <select id="tipo_vaga" name="tipo_vaga" required
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                        <option value="Presencial" {% if vaga.tipo_vaga == 'Presencial' %}selected{% endif %}>🏢 Presencial</option>
+                        <option value="Remota" {% if vaga.tipo_vaga == 'Remota' %}selected{% endif %}>🏠 Remota</option>
+                        <option value="Híbrida" {% if vaga.tipo_vaga == 'Híbrida' %}selected{% endif %}>🔄 Híbrida</option>
+                    </select>
                 </div>
+            </div>
 
+            <!-- Categoria -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label for="requisitos" class="block text-sm font-medium text-gray-700 mb-2">
-                        Requisitos *
+                    <label for="categoria_id" class="block text-sm font-medium text-gray-700 mb-2">
+                        🏷️ Categoria
                     </label>
-                    <textarea id="requisitos" name="requisitos" required rows="4"
-                              class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">{{ vaga.requisitos }}</textarea>
+                    <select id="categoria_id" name="categoria_id"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                        <option value="">Selecione uma categoria</option>
+                        {% for categoria in categorias %}
+                        <option value="{{ categoria.id }}" 
+                                {% if vaga.categoria_id == categoria.id %}selected{% endif %}>
+                            {{ categoria.nome }}
+                        </option>
+                        {% endfor %}
+                        <option value="nova">➕ Criar nova categoria</option>
+                    </select>
                 </div>
 
-                <div>
-                    <label for="diferenciais" class="block text-sm font-medium text-gray-700 mb-2">
-                        Diferenciais (Desejáveis)
-                        <span class="text-sm text-gray-500 font-normal">- Confidencial, não será exibido para candidatos</span>
+                <div id="nova-categoria-div" style="display: none;">
+                    <label for="nova_categoria" class="block text-sm font-medium text-gray-700 mb-2">
+                        ✨ Nova Categoria
                     </label>
-                    <textarea id="diferenciais" name="diferenciais" rows="3"
-                              class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                              placeholder="Ex: Inglês fluente, certificações específicas, experiência em setores similares...">{{ vaga.diferenciais if vaga.diferenciais else '' }}</textarea>
+                    <input type="text" id="nova_categoria" name="nova_categoria"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                           placeholder="Nome da nova categoria">
+                </div>
+            </div>
+
+            <!-- Urgência -->
+            <div>
+                <label for="urgencia_contratacao" class="block text-sm font-medium text-gray-700 mb-2">
+                    ⚡ Urgência de Contratação
+                </label>
+                <select id="urgencia_contratacao" name="urgencia_contratacao"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                    <option value="" {% if not vaga.urgencia_contratacao %}selected{% endif %}>Não especificada</option>
+                    <option value="Baixa" {% if vaga.urgencia_contratacao == 'Baixa' %}selected{% endif %}>🟢 Baixa</option>
+                    <option value="Média" {% if vaga.urgencia_contratacao == 'Média' %}selected{% endif %}>🟡 Média</option>
+                    <option value="Alta" {% if vaga.urgencia_contratacao == 'Alta' %}selected{% endif %}>🟠 Alta</option>
+                    <option value="Urgente" {% if vaga.urgencia_contratacao == 'Urgente' %}selected{% endif %}>🔴 Urgente</option>
+                </select>
+            </div>
+
+            <!-- Localização -->
+            <div class="bg-gray-50 p-6 rounded-2xl">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <span>📍</span> Localização da Vaga
+                </h3>
+
+                <div class="mb-4">
+                    <label class="flex items-center space-x-2">
+                        <input type="checkbox" id="usar_endereco_empresa" name="usar_endereco_empresa" 
+                               {% if vaga.usar_endereco_empresa %}checked{% endif %}
+                               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        <span class="text-sm text-gray-700">🏢 Usar endereço da empresa</span>
+                    </label>
                 </div>
 
-                <div class="flex gap-4 pt-6">
-                    <button type="submit"
-                            class="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 px-6 rounded-xl font-semibold hover:from-purple-700 hover:to-blue-700 transition-all duration-300 transform hover:scale-105 shadow-lg">
-                        Atualizar Vaga
-                    </button>
-                    <a href="{{ url_for('dashboard_empresa') }}"
-                       class="flex-1 bg-gray-500 text-white py-3 px-6 rounded-xl font-semibold hover:bg-gray-600 transition-all duration-300 text-center">
-                        Cancelar
-                    </a>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="localizacao_endereco" class="block text-sm font-medium text-gray-700 mb-2">
+                            Endereço
+                        </label>
+                        <input type="text" id="localizacao_endereco" name="localizacao_endereco" 
+                               value="{{ vaga.localizacao_endereco or '' }}"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                               placeholder="Rua, Av, etc.">
+                    </div>
+
+                    <div>
+                        <label for="localizacao_cidade" class="block text-sm font-medium text-gray-700 mb-2">
+                            Cidade
+                        </label>
+                        <input type="text" id="localizacao_cidade" name="localizacao_cidade" 
+                               value="{{ vaga.localizacao_cidade or '' }}"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                               placeholder="São Paulo">
+                    </div>
+
+                    <div>
+                        <label for="localizacao_estado" class="block text-sm font-medium text-gray-700 mb-2">
+                            Estado
+                        </label>
+                        <input type="text" id="localizacao_estado" name="localizacao_estado" 
+                               value="{{ vaga.localizacao_estado or '' }}"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                               placeholder="SP">
+                    </div>
+
+                    <div>
+                        <label for="localizacao_cep" class="block text-sm font-medium text-gray-700 mb-2">
+                            CEP
+                        </label>
+                        <input type="text" id="localizacao_cep" name="localizacao_cep" 
+                               value="{{ vaga.localizacao_cep or '' }}"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                               placeholder="00000-000">
+                    </div>
                 </div>
-            </form>
-        </div>
+            </div>
+
+            <!-- Diferenciais -->
+            <div>
+                <label for="diferenciais" class="block text-sm font-medium text-gray-700 mb-2">
+                    ⭐ Diferenciais (Opcional)
+                </label>
+                <textarea id="diferenciais" name="diferenciais" rows="3"
+                          class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                          placeholder="Benefícios, certificações desejáveis, idiomas, etc.">{{ vaga.diferenciais or '' }}</textarea>
+            </div>
+
+            <!-- Data de Congelamento -->
+            <div>
+                <label for="data_congelamento_agendado" class="block text-sm font-medium text-gray-700 mb-2">
+                    📅 Data de Congelamento Agendado (Opcional)
+                </label>
+                <input type="date" id="data_congelamento_agendado" name="data_congelamento_agendado" 
+                       value="{{ vaga.data_congelamento_agendado.strftime('%Y-%m-%d') if vaga.data_congelamento_agendado else '' }}"
+                       min="{{ datetime.now().strftime('%Y-%m-%d') }}"
+                       class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                <p class="text-xs text-gray-500 mt-1">A vaga será automaticamente congelada nesta data</p>
+            </div>
+
+            <!-- Botões -->
+            <div class="flex gap-4 pt-6 border-t border-gray-200">
+                <button type="submit" 
+                        class="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                    <span>💾</span> Atualizar Vaga
+                </button>
+                <a href="{{ url_for('dashboard_empresa') }}" 
+                   class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-8 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
+                    <span>↩️</span> Cancelar
+                </a>
+            </div>
+        </form>
     </div>
 </div>
 
 <script>
-function toggleEnderecoField() {
-    const tipoVaga = document.getElementById('tipo_vaga').value;
-    const enderecoContainer = document.getElementById('endereco_container');
-    const camposEndereco = document.querySelectorAll('#campos_endereco_vaga input, #campos_endereco_vaga select');
-
-    if (tipoVaga === 'Presencial' || tipoVaga === 'Híbrida') {
-        enderecoContainer.classList.remove('hidden');
-        camposEndereco.forEach(campo => {
-            if (campo.id !== 'localizacao_cep') {
-                campo.required = true;
-            }
-        });
-    } else {
-        enderecoContainer.classList.add('hidden');
-        camposEndereco.forEach(campo => {
-            campo.required = false;
-        });
-    }
-}
-
-function toggleNovaCategoria() {
-    const categoriaSelect = document.getElementById('categoria_id');
-    const novaContainer = document.getElementById('nova_categoria_container');
-    const novaInput = document.getElementById('nova_categoria');
-
-    if (categoriaSelect.value === 'nova') {
-        novaContainer.classList.remove('hidden');
-        novaInput.required = true;
-        novaInput.focus();
-    } else {
-        novaContainer.classList.add('hidden');
-        novaInput.required = false;
-        novaInput.value = '';
-    }
-}
-
-function toggleEnderecoEmpresa() {
-    const checkbox = document.getElementById('usar_endereco_empresa');
-    const camposEndereco = document.getElementById('campos_endereco_vaga');
-
-    if (checkbox.checked) {
-        // Buscar dados da empresa via AJAX
-        fetch('/empresa/endereco')
-            .then(response => response.json())
-            .then(data => {
-                if (data.endereco) {
-                    document.getElementById('localizacao_endereco').value = data.endereco || '';
-                    document.getElementById('localizacao_cidade').value = data.cidade || '';
-                    document.getElementById('localizacao_estado').value = data.estado || '';
-                    document.getElementById('localizacao_cep').value = data.cep || '';
-                }
-            })
-            .catch(error => {
-                console.error('Erro ao buscar endereço da empresa:', error);
-            });
-
-        camposEndereco.style.opacity = '0.6';
-        camposEndereco.style.pointerEvents = 'none';
-    } else {
-        camposEndereco.style.opacity = '1';
-        camposEndereco.style.pointerEvents = 'auto';
-    }
-}
-
-// Máscara para CEP
-document.getElementById('localizacao_cep').addEventListener('input', function(e) {
-    let value = e.target.value.replace(/\D/g, '');
-    if (value.length <= 8) {
-        value = value.replace(/(\d{5})(\d)/, '$1-$2');
-        e.target.value = value;
-    }
-});
-
-// Inicializar estado dos campos ao carregar a página
 document.addEventListener('DOMContentLoaded', function() {
-    toggleEnderecoField();
-    if (document.getElementById('usar_endereco_empresa').checked) {
-        toggleEnderecoEmpresa();
+    const categoriaSelect = document.getElementById('categoria_id');
+    const novaCategoriaDiv = document.getElementById('nova-categoria-div');
+    const usarEnderecoEmpresa = document.getElementById('usar_endereco_empresa');
+
+    // Mostrar/ocultar campo de nova categoria
+    categoriaSelect.addEventListener('change', function() {
+        if (this.value === 'nova') {
+            novaCategoriaDiv.style.display = 'block';
+        } else {
+            novaCategoriaDiv.style.display = 'none';
+        }
+    });
+
+    // Carregar endereço da empresa
+    usarEnderecoEmpresa.addEventListener('change', function() {
+        if (this.checked) {
+            fetch('/empresa/endereco')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.error) {
+                        document.getElementById('localizacao_endereco').value = data.endereco || '';
+                        document.getElementById('localizacao_cidade').value = data.cidade || '';
+                        document.getElementById('localizacao_estado').value = data.estado || '';
+                        document.getElementById('localizacao_cep').value = data.cep || '';
+                    }
+                })
+                .catch(error => console.error('Erro:', error));
+        }
+    });
+
+    // Verificar se deve mostrar nova categoria no carregamento
+    if (categoriaSelect.value === 'nova') {
+        novaCategoriaDiv.style.display = 'block';
     }
 });
 </script>

@@ -1,4 +1,3 @@
-
 from .base_avaliador import BaseAvaliador
 import re
 from datetime import datetime
@@ -6,49 +5,49 @@ from datetime import datetime
 class AvaliadorLocal(BaseAvaliador):
     """Avaliador que usa método local avançado com múltiplos critérios"""
 
-    def calcular_score(self, curriculo, requisitos, pretensao_salarial, salario_oferecido, 
-                      diferenciais=None, candidato_endereco=None, vaga_endereco=None, tipo_vaga='Presencial'):
-        """Calcula score avançado do candidato baseado em critérios abrangentes"""
-        score = 0
-        detalhes_score = {}
+    def calcular_score(self, curriculo, requisitos, pretensao_salarial, salario_oferecido, diferenciais=None, endereco_candidato=None, endereco_vaga=None, tipo_vaga=None, config_score=None):
+        """Calcula score de compatibilidade entre candidato e vaga"""
+        if not curriculo or not requisitos:
+            return 0
 
-        # 1. Score baseado em compatibilidade salarial (20%)
-        score_salarial = self._calcular_score_salarial(pretensao_salarial, salario_oferecido)
-        score += score_salarial
-        detalhes_score['salarial'] = score_salarial
-
-        # 2. Score baseado em requisitos obrigatórios (40%)
         score_requisitos = self._calcular_score_requisitos_avancado(curriculo, requisitos)
-        score += score_requisitos
-        detalhes_score['requisitos'] = score_requisitos
-
-        # 3. Score baseado em experiência e senioridade (15%)
+        score_salarial = self._calcular_score_salarial(pretensao_salarial, salario_oferecido)
         score_experiencia = self._calcular_score_experiencia(curriculo)
-        score += score_experiencia
-        detalhes_score['experiencia'] = score_experiencia
-
-        # 4. Score baseado em diferenciais (10%)
         score_diferenciais = self._calcular_score_diferenciais(curriculo, diferenciais)
-        score += score_diferenciais
-        detalhes_score['diferenciais'] = score_diferenciais
-
-        # 5. Score baseado em proximidade geográfica (10%)
-        score_localizacao = self._calcular_score_localizacao(candidato_endereco, vaga_endereco, tipo_vaga)
-        score += score_localizacao
-        detalhes_score['localizacao'] = score_localizacao
-
-        # 6. Score baseado em formação acadêmica (5%)
+        score_localizacao = self._calcular_score_localizacao(endereco_candidato, endereco_vaga, tipo_vaga)
         score_formacao = self._calcular_score_formacao(curriculo, requisitos)
-        score += score_formacao
-        detalhes_score['formacao'] = score_formacao
 
-        return min(score, 100)
+        # Usar configuração personalizada ou pesos padrão
+        if config_score:
+            peso_requisitos = config_score.get('peso_requisitos', 30) / 100
+            peso_experiencia = config_score.get('peso_experiencia', 25) / 100
+            peso_salarial = config_score.get('peso_salarial', 20) / 100
+            peso_formacao = config_score.get('peso_formacao', 15) / 100
+            peso_localizacao = config_score.get('peso_localizacao', 10) / 100
+        else:
+            # Pesos padrão
+            peso_requisitos = 0.3
+            peso_experiencia = 0.25
+            peso_salarial = 0.2
+            peso_formacao = 0.15
+            peso_localizacao = 0.1
+
+        score_final = (
+            score_requisitos * peso_requisitos +
+            score_experiencia * peso_experiencia +
+            score_salarial * peso_salarial +
+            score_formacao * peso_formacao +
+            score_localizacao * peso_localizacao +
+            score_diferenciais * 0.05  # Peso fixo pequeno para diferenciais
+        )
+
+        return min(score_final, 100)
 
     def _calcular_score_salarial(self, pretensao_salarial, salario_oferecido):
         """Calcula score salarial com lógica mais sofisticada"""
         if not pretensao_salarial or not salario_oferecido:
             return 10  # Score neutro
-        
+
         if salario_oferecido >= pretensao_salarial:
             # Bônus se salário oferecido for muito superior
             ratio = salario_oferecido / pretensao_salarial
@@ -173,74 +172,65 @@ class AvaliadorLocal(BaseAvaliador):
 
         return min(score, 10)
 
-    def _calcular_score_localizacao(self, candidato_endereco, vaga_endereco, tipo_vaga):
-        """Calcula score de localização com análise geográfica avançada"""
-        if not candidato_endereco or not vaga_endereco:
-            return 3 if tipo_vaga == 'Remota' else 0
+    def _calcular_score_localizacao(self, endereco_candidato, endereco_vaga, tipo_vaga):
+        """Calcula score baseado na localização"""
+        if tipo_vaga == 'Remoto':
+            return 100
 
-        candidato_lower = candidato_endereco.lower()
-        vaga_lower = vaga_endereco.lower()
+        if not endereco_candidato or not endereco_vaga:
+            return 70  # Score neutro quando não há informação
 
-        # Se for remota, dar score máximo
-        if tipo_vaga == 'Remota':
-            return 10
+        endereco_candidato = endereco_candidato.lower()
+        endereco_vaga = endereco_vaga.lower()
 
-        # Extrair cidade e estado
-        candidato_cidade = self._extrair_cidade(candidato_lower)
-        vaga_cidade = self._extrair_cidade(vaga_lower)
-        candidato_estado = self._extrair_estado(candidato_lower)
-        vaga_estado = self._extrair_estado(vaga_lower)
+        # Verificar se são da mesma cidade/região
+        if endereco_candidato in endereco_vaga or endereco_vaga in endereco_candidato:
+            return 100
 
-        score = 0
+        # Verificar palavras-chave em comum (bairros, cidades próximas)
+        palavras_candidato = set(endereco_candidato.split())
+        palavras_vaga = set(endereco_vaga.split())
+        palavras_comuns = palavras_candidato.intersection(palavras_vaga)
 
-        # Mesma cidade
-        if candidato_cidade and vaga_cidade and candidato_cidade == vaga_cidade:
-            score = 10 if tipo_vaga == 'Presencial' else 8
-        # Mesmo estado
-        elif candidato_estado and vaga_estado and candidato_estado == vaga_estado:
-            score = 6 if tipo_vaga == 'Presencial' else 5
-        # Regiões próximas (simplificado)
-        elif self._regioes_proximas(candidato_estado, vaga_estado):
-            score = 3 if tipo_vaga == 'Presencial' else 2
-        else:
-            score = 1 if tipo_vaga == 'Híbrida' else 0
+        if palavras_comuns:
+            return 80
 
-        return score
+        return 60  # Localizações diferentes
 
     def _calcular_score_formacao(self, curriculo, requisitos):
-        """Analisa formação acadêmica"""
+        """Calcula score baseado na formação acadêmica"""
+        if not curriculo:
+            return 0
+
         curriculo_lower = curriculo.lower()
-        requisitos_lower = requisitos.lower()
+        requisitos_lower = requisitos.lower() if requisitos else ""
 
-        formacoes_superiores = ['bacharelado', 'licenciatura', 'graduação', 'superior completo']
-        pos_graduacao = ['especialização', 'pós-graduação', 'mba', 'mestrado', 'doutorado']
-        areas_tech = ['computação', 'informática', 'sistemas', 'engenharia', 'tecnologia']
+        score = 50  # Score base
 
-        score = 0
+        # Verificar nível de formação
+        if any(palavra in curriculo_lower for palavra in ['doutorado', 'phd', 'doutor']):
+            score += 30
+        elif any(palavra in curriculo_lower for palavra in ['mestrado', 'mestre']):
+            score += 25
+        elif any(palavra in curriculo_lower for palavra in ['mba', 'especialização', 'pós-graduação']):
+            score += 20
+        elif any(palavra in curriculo_lower for palavra in ['graduação', 'graduado', 'superior', 'bacharelado', 'licenciatura']):
+            score += 15
+        elif any(palavra in curriculo_lower for palavra in ['técnico', 'tecnólogo']):
+            score += 10
 
-        # Verificar se requisitos pedem formação específica
-        pede_superior = any(form in requisitos_lower for form in formacoes_superiores)
-        pede_pos = any(pos in requisitos_lower for pos in pos_graduacao)
+        # Verificar compatibilidade com área da vaga
+        areas_tech = ['computação', 'informática', 'sistemas', 'engenharia', 'tecnologia', 'dados', 'software']
+        if any(area in requisitos_lower for area in areas_tech):
+            if any(area in curriculo_lower for area in areas_tech):
+                score += 15
 
-        # Verificar formação do candidato
-        tem_superior = any(form in curriculo_lower for form in formacoes_superiores)
-        tem_pos = any(pos in curriculo_lower for pos in pos_graduacao)
-        area_relacionada = any(area in curriculo_lower for area in areas_tech)
+        # Verificar certificações
+        certificacoes = ['certificado', 'certificação', 'curso', 'treinamento']
+        if any(cert in curriculo_lower for cert in certificacoes):
+            score += 10
 
-        if pede_pos and tem_pos:
-            score = 5
-        elif pede_superior and tem_superior:
-            score = 4
-        elif tem_pos:
-            score = 4
-        elif tem_superior:
-            score = 3
-        elif area_relacionada:
-            score = 2
-        else:
-            score = 1
-
-        return score
+        return min(score, 100)
 
     def _extrair_tecnologias(self, texto):
         """Extrai tecnologias mencionadas no texto"""
@@ -268,7 +258,7 @@ class AvaliadorLocal(BaseAvaliador):
             r'experiência\s*de\s*(\d+)\s*anos?',
             r'mínimo\s*(\d+)\s*anos?'
         ]
-        
+
         for pattern in patterns:
             match = re.search(pattern, texto)
             if match:
@@ -278,35 +268,35 @@ class AvaliadorLocal(BaseAvaliador):
     def _extrair_anos_experiencia_candidato(self, curriculo):
         """Estima anos de experiência do candidato"""
         import re
-        
+
         # Procurar por datas no currículo
         dates_pattern = r'(20\d{2})'
         dates = re.findall(dates_pattern, curriculo)
-        
+
         if dates:
             dates = [int(d) for d in dates]
             anos_min = min(dates)
             ano_atual = datetime.now().year
             return max(0, ano_atual - anos_min)
-        
+
         # Se não encontrar datas, procurar por menções explícitas
         exp_patterns = [
             r'(\d+)\s*anos?\s*de\s*experiência',
             r'experiência\s*de\s*(\d+)\s*anos?'
         ]
-        
+
         for pattern in exp_patterns:
             match = re.search(pattern, curriculo)
             if match:
                 return int(match.group(1))
-        
+
         return 0
 
     def _extrair_cidade(self, endereco):
         """Extrai cidade do endereço"""
         # Simplificado - na prática seria mais robusto
         cidades_conhecidas = [
-            'são paulo', 'rio de janeiro', 'belo horizonte', 'salvador', 
+            'são paulo', 'rio de janeiro', 'belo horizonte', 'salvador',
             'brasília', 'fortaleza', 'recife', 'porto alegre', 'curitiba'
         ]
         for cidade in cidades_conhecidas:
@@ -321,7 +311,7 @@ class AvaliadorLocal(BaseAvaliador):
             'ba': 'bahia', 'df': 'distrito federal', 'ce': 'ceará',
             'pe': 'pernambuco', 'rs': 'rio grande do sul', 'pr': 'paraná'
         }
-        
+
         for sigla, nome in estados.items():
             if sigla in endereco or nome in endereco:
                 return nome
@@ -331,13 +321,13 @@ class AvaliadorLocal(BaseAvaliador):
         """Verifica se estados são de regiões próximas"""
         if not estado1 or not estado2:
             return False
-            
+
         regioes = {
             'sudeste': ['são paulo', 'rio de janeiro', 'minas gerais', 'espírito santo'],
             'sul': ['rio grande do sul', 'paraná', 'santa catarina'],
             'nordeste': ['bahia', 'ceará', 'pernambuco', 'paraíba', 'rio grande do norte']
         }
-        
+
         for regiao, estados in regioes.items():
             if estado1 in estados and estado2 in estados:
                 return True

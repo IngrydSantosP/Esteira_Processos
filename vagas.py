@@ -114,7 +114,7 @@ def dashboard_empresa():
     cursor.execute(
         """
         WITH CandidatoStats AS (
-            SELECT 
+            SELECT
                 vaga_id,
                 COUNT(*) as total_candidatos,
                 SUM(CASE WHEN score >= 80 THEN 1 ELSE 0 END) as candidatos_80_plus,
@@ -123,9 +123,9 @@ def dashboard_empresa():
             FROM candidaturas
             GROUP BY vaga_id
         )
-        SELECT 
-            v.id, v.empresa_id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido, 
-            v.data_criacao, v.tipo_vaga, v.endereco_vaga, v.status, v.candidato_selecionado_id, 
+        SELECT
+            v.id, v.empresa_id, v.titulo, v.descricao, v.requisitos, v.salario_oferecido,
+            v.data_criacao, v.tipo_vaga, v.endereco_vaga, v.status, v.candidato_selecionado_id,
             v.diferenciais,
             COALESCE(cs.total_candidatos, 0) as total_candidatos,
             COALESCE(cs.candidatos_80_plus, 0) as candidatos_80_plus,
@@ -202,6 +202,17 @@ def criar_vaga():
         diferenciais = request.form.get("diferenciais", "")
 
         # Novos campos
+        turno_trabalho = request.form.get("turno_trabalho", "Comercial")
+        nivel_experiencia = request.form.get("nivel_experiencia", "Júnior")
+        regime_contratacao = request.form.get("regime_contratacao", "CLT")
+        carga_horaria = request.form.get("carga_horaria", "40h")
+        formacao_minima = request.form.get("formacao_minima", "Ensino Médio")
+        idiomas_exigidos = request.form.get("idiomas_exigidos", "")
+        disponibilidade_viagens = "disponibilidade_viagens" in request.form
+        beneficios = request.form.get("beneficios", "")
+        data_limite_candidatura = request.form.get("data_limite_candidatura") or None
+
+
         categoria_id = request.form.get("categoria_id") or None
         nova_categoria = request.form.get("nova_categoria", "").strip()
         urgencia_contratacao = request.form.get("urgencia_contratacao", "")
@@ -240,14 +251,20 @@ def criar_vaga():
                 """INSERT INTO vagas (titulo, descricao, requisitos, salario_oferecido, tipo_vaga,
                     diferenciais, empresa_id, data_criacao, status, categoria_id,
                     urgencia_contratacao, data_congelamento_agendado, usar_endereco_empresa,
-                    localizacao_endereco, localizacao_cidade, localizacao_estado, localizacao_cep
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Ativa', ?, ?, ?, ?, ?, ?, ?, ?)
+                    localizacao_endereco, localizacao_cidade, localizacao_estado, localizacao_cep,
+                    turno_trabalho, nivel_experiencia, regime_contratacao, carga_horaria,
+                    formacao_minima, idiomas_exigidos, disponibilidade_viagens, beneficios,
+                    data_limite_candidatura
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Ativa', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (titulo, descricao, requisitos, salario_oferecido, tipo_vaga,
                   diferenciais, session["empresa_id"],
                   datetime.now().strftime("%Y-%m-%d %H:%M:%S"), categoria_id,
                   urgencia_contratacao, data_congelamento_agendado,
                   int(usar_endereco_empresa), localizacao_endereco,
-                  localizacao_cidade, localizacao_estado, localizacao_cep))
+                  localizacao_cidade, localizacao_estado, localizacao_cep,
+                  turno_trabalho, nivel_experiencia, regime_contratacao, carga_horaria,
+                  formacao_minima, idiomas_exigidos, int(disponibilidade_viagens), beneficios,
+                  data_limite_candidatura))
 
             conn.commit()
             flash("Vaga criada com sucesso!", "success")
@@ -256,6 +273,7 @@ def criar_vaga():
         except Exception as e:
             flash(f"Erro ao criar vaga: {str(e)}", "error")
             print(f"Erro detalhado: {e}")
+
         finally:
             conn.close()
 
@@ -287,6 +305,17 @@ def editar_vaga(vaga_id):
         diferenciais = request.form.get("diferenciais", "")
 
         # Novos campos
+        turno_trabalho = request.form.get("turno_trabalho", "Comercial")
+        nivel_experiencia = request.form.get("nivel_experiencia", "Júnior")
+        regime_contratacao = request.form.get("regime_contratacao", "CLT")
+        carga_horaria = request.form.get("carga_horaria", "40h")
+        formacao_minima = request.form.get("formacao_minima", "Ensino Médio")
+        idiomas_exigidos = request.form.get("idiomas_exigidos", "")
+        disponibilidade_viagens = "disponibilidade_viagens" in request.form
+        beneficios = request.form.get("beneficios", "")
+        data_limite_candidatura = request.form.get("data_limite_candidatura") or None
+
+
         categoria_id = request.form.get("categoria_id") or None
         nova_categoria = request.form.get("nova_categoria", "").strip()
         urgencia_contratacao = request.form.get("urgencia_contratacao", "")
@@ -326,13 +355,18 @@ def editar_vaga(vaga_id):
                 UPDATE vagas
                 SET titulo = ?, descricao = ?, requisitos = ?, salario_oferecido = ?, tipo_vaga = ?, diferenciais = ?,
                     categoria_id = ?, urgencia_contratacao = ?, data_congelamento_agendado = ?, usar_endereco_empresa = ?,
-                    localizacao_endereco = ?, localizacao_cidade = ?, localizacao_estado = ?, localizacao_cep = ?
+                    localizacao_endereco = ?, localizacao_cidade = ?, localizacao_estado = ?, localizacao_cep = ?,
+                    turno_trabalho = ?, nivel_experiencia = ?, regime_contratacao = ?, carga_horaria = ?,
+                    formacao_minima = ?, idiomas_exigidos = ?, disponibilidade_viagens = ?, beneficios = ?,
+                    data_limite_candidatura = ?
                 WHERE id = ?
             """, (titulo, descricao, requisitos, salario_oferecido, tipo_vaga,
                   diferenciais, categoria_id, urgencia_contratacao,
                   data_congelamento_agendado, usar_endereco_empresa,
                   localizacao_endereco, localizacao_cidade, localizacao_estado,
-                  localizacao_cep, vaga_id))
+                  localizacao_cep, turno_trabalho, nivel_experiencia, regime_contratacao,
+                  carga_horaria, formacao_minima, idiomas_exigidos, int(disponibilidade_viagens),
+                  beneficios, data_limite_candidatura, vaga_id))
 
             conn.commit()
             flash("Vaga atualizada com sucesso!", "success")
@@ -797,7 +831,10 @@ def api_buscar_vagas():
                    CASE WHEN cvf.id IS NOT NULL THEN 1 ELSE 0 END as is_favorita,
                    CASE WHEN ca.id IS NOT NULL THEN 1 ELSE 0 END as ja_candidatou,
                    v.urgencia_contratacao, v.localizacao_cidade, v.localizacao_estado,
-                   c.nome as categoria_nome
+                   c.nome as categoria_nome,
+                   v.turno_trabalho, v.nivel_experiencia, v.regime_contratacao, v.carga_horaria,
+                   v.formacao_minima, v.idiomas_exigidos, v.disponibilidade_viagens,
+                   v.beneficios, v.data_limite_candidatura
             FROM vagas v
             JOIN empresas e ON v.empresa_id = e.id
             LEFT JOIN candidato_vaga_favorita cvf ON cvf.candidato_id = ? AND cvf.vaga_id = v.id
@@ -889,7 +926,16 @@ def api_buscar_vagas():
                 "ja_candidatou":
                 bool(vaga[10]),
                 "score":
-                float(score)
+                float(score),
+                "turno_trabalho": vaga[15],
+                "nivel_experiencia": vaga[16],
+                "regime_contratacao": vaga[17],
+                "carga_horaria": vaga[18],
+                "formacao_minima": vaga[19],
+                "idiomas_exigidos": vaga[20],
+                "disponibilidade_viagens": bool(vaga[21]),
+                "beneficios": vaga[22],
+                "data_limite_candidatura": vaga[23]
             }
             vagas_processadas.append(vaga_processada)
 
@@ -955,9 +1001,3 @@ def api_vagas_empresa():
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
-
-
-
-
-
-

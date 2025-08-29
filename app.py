@@ -779,30 +779,68 @@ def candidatar(vaga_id):
     return redirect(url_for('dashboard_candidato'))
 
 
-@app.route('/api/candidatos_vaga/<int:vaga_id>')
+@app.route('/empresa/candidatos_vaga/<int:vaga_id>')
 def api_candidatos_vaga(vaga_id):
+    """Página para visualizar candidatos de uma vaga"""
     if 'empresa_id' not in session:
-        return jsonify({'error': 'Não autorizado'}), 401
+        return redirect(url_for('login_empresa'))
 
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute(
-        '''SELECT c.id, c.nome, ca.score
-           FROM candidaturas ca
-           JOIN candidatos c ON ca.candidato_id = c.id
-           JOIN vagas v ON ca.vaga_id = v.id
-           WHERE ca.vaga_id = %s AND v.empresa_id = %s
-           ORDER BY ca.score DESC''', (vaga_id, session['empresa_id']))
+    try:
+        # Verificar se a vaga pertence à empresa
+        cursor.execute('SELECT titulo FROM vagas WHERE id = %s AND empresa_id = %s', 
+                       (vaga_id, session['empresa_id']))
+        vaga = cursor.fetchone()
+        
+        if not vaga:
+            flash('Vaga não encontrada', 'error')
+            return redirect(url_for('dashboard_empresa'))
 
-    candidatos = cursor.fetchall()
-    conn.close()
+        # Buscar candidatos
+        cursor.execute('''
+            SELECT c.id, c.nome, c.email, c.telefone, c.linkedin, 
+                   ca.score, ca.posicao, ca.data_candidatura, c.endereco,
+                   CASE WHEN ecf.id IS NOT NULL THEN 1 ELSE 0 END as is_favorito
+            FROM candidaturas ca
+            JOIN candidatos c ON ca.candidato_id = c.id
+            LEFT JOIN empresa_candidato_favorito ecf 
+                   ON ecf.candidato_id = c.id AND ecf.vaga_id = %s AND ecf.empresa_id = %s
+            WHERE ca.vaga_id = %s
+            ORDER BY ca.score DESC
+        ''', (vaga_id, session['empresa_id'], vaga_id))
 
-    return jsonify([{
-        'id': c[0],
-        'nome': c[1],
-        'score': round(c[2], 1)
-    } for c in candidatos])
+        candidatos_raw = cursor.fetchall()
+        candidatos = []
+        
+        for c in candidatos_raw:
+            candidatos.append({
+                'id': c[0],
+                'nome': c[1],
+                'email': c[2],
+                'telefone': c[3] or 'Não informado',
+                'linkedin': c[4] or '',
+                'score': round(float(c[5]), 1),
+                'posicao': c[6] or 0,
+                'endereco': c[8] or '',
+                'is_favorito': bool(c[9])
+            })
+
+
+        return render_template(
+            'empresa/candidatos_vaga.html',
+            vaga_titulo=vaga[0],
+            vaga_id=vaga_id,
+            candidatos=candidatos
+        )
+
+    except Exception as e:
+        print(f"Erro ao carregar candidatos da vaga {vaga_id}: {e}")
+        flash('Erro ao carregar candidatos', 'error')
+        return redirect(url_for('dashboard_empresa'))
+    finally:
+        conn.close()
 
 
 # Função para enviar e-mail (compatibilidade)
@@ -1041,7 +1079,7 @@ def editar_perfil_candidato():
             # Garantir que o nome do arquivo seja seguro
             filename = secure_filename(file.filename)
             caminho_curriculo = os.path.join(UPLOAD_FOLDER, filename)
-            
+
             # Salvar o arquivo na pasta 'uploads'
             file.save(caminho_curriculo)
 
@@ -1609,7 +1647,7 @@ def api_notificacoes():
     finally:
         cursor.close()
         conn.close()
-    
+
 
 
 
@@ -1750,7 +1788,7 @@ def gerar_dicas_personalizadas(vagas_favoritas, candidato_data):
             dica_modalidade['acao'] = 'Prepare-se para deslocamentos, horários presenciais e interações no escritório.'
         elif tipo_mais_comum == "Híbrido":
             dica_modalidade['acao'] = 'Organize-se para alternar entre home office e escritório, gerenciando bem seu tempo.'
-        
+
         dicas.append(dica_modalidade)
 
     # Dica 4: Perfil profissional
@@ -2091,6 +2129,10 @@ def politica_privacidade():
     return render_template('politica_privacidade.html',
                            data_atual=datetime.now().strftime('%B de %Y'))
 
+@app.route('/exemplo-score')
+def exemplo_score():
+    return render_template('exemplo_score.html')
+
 
 @app.route('/logout')
 def logout():
@@ -2167,7 +2209,7 @@ def favoritar_vaga():
         else:
             # Adicionar aos favoritos
             cursor.execute(
-                'INSERT INTO candidato_vaga_favorita (candidato_id, vaga_id, data_adicao) VALUES (%s, %s, datetime("now"))',
+                'INSERT INTO candidato_vaga_favorita (candidato_id, vaga_id, data_adicao) VALUES (%s, %s, NOW())',
                 (candidato_id, vaga_id)
             )
             favorited = True
@@ -2316,95 +2358,6 @@ def favoritar_candidato():
 
 
 
-@app.route('/api/candidatos-favoritos')
-def api_candidatos_favoritos():
-    """API para listar candidatos favoritos da empresa"""
-    if 'empresa_id' not in session:
-        return jsonify({'error': 'Não autorizado'}), 401
-
-    conn = mysql.connect('recrutamentodb')
-    cursor = conn.cursor()
-
-    try:
-        # Garantir que as tabelas existem
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS empresa_favorito_candidato_geral (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                empresa_id INTEGER NOT NULL,
-                candidato_id INTEGER NOT NULL,
-                data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (empresa_id) REFERENCES empresas (id),
-                FOREIGN KEY (candidato_id) REFERENCES candidatos (id),
-                UNIQUE(empresa_id, candidato_id)
-            )
-        ''')
-
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS empresa_candidato_favorito (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                empresa_id INTEGER,
-                candidato_id INTEGER,
-                vaga_id INTEGER,
-                data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (empresa_id) REFERENCES empresas (id),
-                FOREIGN KEY (candidato_id) REFERENCES candidatos (id),
-                FOREIGN KEY (vaga_id) REFERENCES vagas (id),
-                UNIQUE(empresa_id, candidato_id, vaga_id)
-            )
-        ''')
-
-        empresa_id = session['empresa_id']
-
-        # Buscar candidatos favoritos gerais
-        cursor.execute(
-            '''
-            SELECT DISTINCT c.id, c.nome, c.email, c.telefone, c.linkedin,
-                   'Favorito Geral' as vaga_titulo, 0 as vaga_id,
-                   0 as score, 0 as posicao,
-                   efcg.data_criacao as data_favorito
-            FROM empresa_favorito_candidato_geral efcg
-            JOIN candidatos c ON efcg.candidato_id = c.id
-            WHERE efcg.empresa_id = %s
-
-            UNION
-
-            SELECT DISTINCT c.id, c.nome, c.email, c.telefone, c.linkedin,
-                   v.titulo as vaga_titulo, v.id as vaga_id,
-                   COALESCE(ca.score, 0) as score, COALESCE(ca.posicao, 0) as posicao,
-                   ecf.data_criacao as data_favorito
-            FROM empresa_candidato_favorito ecf
-            JOIN candidatos c ON ecf.candidato_id = c.id
-            JOIN vagas v ON ecf.vaga_id = v.id
-            LEFT JOIN candidaturas ca ON ca.candidato_id = c.id AND ca.vaga_id = v.id
-            WHERE ecf.empresa_id = %s
-
-            ORDER BY data_favorito DESC
-        ''', (empresa_id, empresa_id))
-
-        favoritos = []
-        for row in cursor.fetchall():
-            favoritos.append({
-                'id': row[0],
-                'nome': row[1],
-                'email': row[2],
-                'telefone': row[3],
-                'linkedin': row[4],
-                'vaga_titulo': row[5],
-                'vaga_id': row[6],
-                'score': round(row[7], 1) if row[7] else 0,
-                'posicao': row[8] if row[8] else 0,
-                'data_favorito': row[9]
-            })
-
-        return jsonify(favoritos)
-
-    except Exception as e:
-        print(f"Erro na API candidatos-favoritos: {e}")
-        return jsonify({'error': str(e)}), 500
-    finally:
-        conn.close()
-
-
 @app.route('/empresa/candidatos-geral')
 def candidatos_geral():
     """Página para visualizar todos os candidatos cadastrados"""
@@ -2412,6 +2365,71 @@ def candidatos_geral():
         return redirect(url_for('login_empresa'))
 
     return render_template('empresa/candidatos_geral.html')
+
+@app.route('/empresa/configurar-score')
+def configurar_score_empresa():
+    """Página para configurar score personalizado"""
+    if 'empresa_id' not in session:
+        return redirect(url_for('login_empresa'))
+
+    # Buscar configuração atual ou usar padrão
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS configuracao_score (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                empresa_id INT NOT NULL,
+                peso_salarial INT DEFAULT 20,
+                peso_requisitos INT DEFAULT 40,
+                peso_experiencia INT DEFAULT 15,
+                peso_diferenciais INT DEFAULT 10,
+                peso_localizacao INT DEFAULT 10,
+                peso_formacao INT DEFAULT 5,
+                data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (empresa_id) REFERENCES empresas(id),
+                UNIQUE KEY(empresa_id)
+            )
+        ''')
+
+        cursor.execute('SELECT * FROM configuracao_score WHERE empresa_id = %s', 
+                       (session['empresa_id'],))
+        config = cursor.fetchone()
+
+        if not config:
+            # Inserir configuração padrão
+            cursor.execute('''
+                INSERT INTO configuracao_score (empresa_id, peso_salarial, peso_requisitos, 
+                peso_experiencia, peso_diferenciais, peso_localizacao, peso_formacao)
+                VALUES (%s, 20, 40, 15, 10, 10, 5)
+            ''', (session['empresa_id'],))
+            conn.commit()
+
+            pesos = {
+                'salarial': 20, 'requisitos': 40, 'experiencia': 15,
+                'diferenciais': 10, 'localizacao': 10, 'formacao': 5
+            }
+        else:
+            pesos = {
+                'salarial': config[2], 'requisitos': config[3], 'experiencia': config[4],
+                'diferenciais': config[5], 'localizacao': config[6], 'formacao': config[7]
+            }
+
+        # Templates predefinidos
+        templates = [
+            (1, 'Foco em Técnico', 'Prioriza habilidades técnicas e experiência'),
+            (2, 'Equilibrado', 'Balanceamento entre todos os critérios'),
+            (3, 'Foco em Salário', 'Prioriza compatibilidade salarial'),
+        ]
+
+        conn.close()
+        return render_template('empresa/configurar_score.html', pesos=pesos, templates=templates)
+
+    except Exception as e:
+        conn.close()
+        print(f"Erro ao configurar score: {e}")
+        return redirect(url_for('dashboard_empresa'))
 
 
 @app.route('/api/score-detalhes/<int:candidato_id>/<int:vaga_id>')
@@ -2769,6 +2787,7 @@ def favoritar_candidato_geral():
         conn.close()
 
 
+
 @app.route("/empresa/candidatos-favoritos")
 def candidatos_favoritos():
     """Página para visualizar candidatos favoritos"""
@@ -2913,7 +2932,7 @@ def api_busca_filtros():
 
 @app.route('/api/buscar-vagas')
 def api_buscar_vagas():
-    """API para busca avançada de vagas com filtros"""
+    """API para busca avançada de vagas com filters"""
     if 'candidato_id' not in session:
         return jsonify({'error': 'Não autorizado'}), 401
 
@@ -2947,7 +2966,7 @@ def api_buscar_vagas():
 
         params = [session['candidato_id'], session['candidato_id']]
 
-        # Adicionar filtros
+        # Adicionar filters
         if keyword:
             query_base += ' AND (v.titulo LIKE %s OR v.descricao LIKE %s OR v.requisitos LIKE %s)'
             keyword_param = f'%{keyword}%'
@@ -3078,8 +3097,7 @@ def api_analisar_curriculo():
         curriculo_texto = resultado[0]
 
         # Analisar currículo com IA
-        analise = get_ia_assistant().analisar_curriculo(candidato_id,
-                                                         curriculo_texto)
+        analise = get_ia_assistant().analisar_curriculo(candidato_id, curriculo_texto)
 
         return jsonify(analise)
 
@@ -3288,7 +3306,7 @@ def api_toggle_favorito():
         else:
             # Adicionar aos favoritos
             cursor.execute(
-                'INSERT INTO candidato_vaga_favorita (candidato_id, vaga_id, data_adicao) VALUES (%s, %s, datetime("now"))',
+                'INSERT INTO candidato_vaga_favorita (candidato_id, vaga_id, data_adicao) VALUES (%s, %s, NOW())',
                 (candidato_id, vaga_id)
             )
             favorited = True
@@ -3312,4 +3330,3 @@ def api_toggle_favorito():
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000, use_reloader=False)
-
