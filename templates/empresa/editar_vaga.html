@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Vaga{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='style/editar_vaga.css') }}">
+
+
+<div class="container">
+    <div class="form-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="icon-container">
+                <span class="icon">✏️</span>
+            </div>
+            <div>
+                <h1 class="title">
+                    Editar Vaga
+                </h1>
+                <p class="description">Atualize as informações da vaga</p>
+            </div>
+        </div>
+
+        <form method="POST" class="form">
+            <!-- Título da Vaga -->
+            <div class="input-group">
+                <label for="titulo" class="input-label">
+                    📝 Título da Vaga *
+                </label>
+                <input type="text" id="titulo" name="titulo" value="{{ vaga.titulo }}" required
+                       class="input-field"
+                       placeholder="Ex: Desenvolvedor Python Sênior">
+            </div>
+
+            <!-- Descrição -->
+            <div class="input-group">
+                <label for="descricao" class="input-label">
+                    📄 Descrição da Vaga *
+                </label>
+                <textarea id="descricao" name="descricao" rows="4" required
+                          class="input-field"
+                          placeholder="Descreva as principais responsabilidades e atividades...">{{ vaga.descricao }}</textarea>
+            </div>
+
+            <!-- Requisitos -->
+            <div class="input-group">
+                <label for="requisitos" class="input-label">
+                    🎯 Requisitos *
+                </label>
+                <textarea id="requisitos" name="requisitos" rows="4" required
+                          class="input-field"
+                          placeholder="Liste os requisitos obrigatórios e desejáveis...">{{ vaga.requisitos }}</textarea>
+            </div>
+
+            <!-- Salário e Tipo -->
+            <div class="two-column-layout">
+                <div>
+                    <label for="salario_oferecido" class="input-label">
+                        💰 Salário Oferecido (R$) *
+                    </label>
+                    <input type="number" id="salario_oferecido" name="salario_oferecido" step="0.01" 
+                           value="{{ vaga.salario_oferecido }}" required
+                           class="input-field"
+                           placeholder="5000.00">
+                </div>
+
+                <div>
+                    <label for="tipo_vaga" class="input-label">
+                        🏢 Modalidade de Trabalho *
+                    </label>
+                    <select id="tipo_vaga" name="tipo_vaga" required
+                            class="input-field">
+                        <option value="Presencial" {% if vaga.tipo_vaga == 'Presencial' %}selected{% endif %}>🏢 Presencial</option>
+                        <option value="Remota" {% if vaga.tipo_vaga == 'Remota' %}selected{% endif %}>🏠 Remota</option>
+                        <option value="Híbrida" {% if vaga.tipo_vaga == 'Híbrida' %}selected{% endif %}>🔄 Híbrida</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Categoria -->
+            <div class="two-column-layout">
+                <div>
+                    <label for="categoria_id" class="input-label">
+                        🏷️ Categoria
+                    </label>
+                    <select id="categoria_id" name="categoria_id"
+                            class="input-field">
+                        <option value="">Selecione uma categoria</option>
+                        {% for categoria in categorias %}
+                        <option value="{{ categoria.id }}" 
+                                {% if vaga.categoria_id == categoria.id %}selected{% endif %}>
+                            {{ categoria.nome }}
+                        </option>
+                        {% endfor %}
+                        <option value="nova">➕ Criar nova categoria</option>
+                    </select>
+                </div>
+
+                <div id="nova-categoria-div" class="nova-categoria-div">
+                    <label for="nova_categoria" class="input-label">
+                        ✨ Nova Categoria
+                    </label>
+                    <input type="text" id="nova_categoria" name="nova_categoria"
+                           class="input-field"
+                           placeholder="Nome da nova categoria">
+                </div>
+            </div>
+
+            <!-- Urgência -->
+            <div>
+                <label for="urgencia_contratacao" class="input-label">
+                    ⚡ Urgência de Contratação
+                </label>
+                <select id="urgencia_contratacao" name="urgencia_contratacao"
+                        class="input-field">
+                    <option value="" {% if not vaga.urgencia_contratacao %}selected{% endif %}>Não especificada</option>
+                    <option value="Baixa" {% if vaga.urgencia_contratacao == 'Baixa' %}selected{% endif %}>🟢 Baixa</option>
+                    <option value="Média" {% if vaga.urgencia_contratacao == 'Média' %}selected{% endif %}>🟡 Média</option>
+                    <option value="Alta" {% if vaga.urgencia_contratacao == 'Alta' %}selected{% endif %}>🟠 Alta</option>
+                    <option value="Urgente" {% if vaga.urgencia_contratacao == 'Urgente' %}selected{% endif %}>🔴 Urgente</option>
+                </select>
+            </div>
+
+            <!-- Localização -->
+            <div class="localizacao-container">
+                <h3 class="localizacao-title">
+                    <span>📍</span> Localização da Vaga
+                </h3>
+
+                <div class="checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="usar_endereco_empresa" name="usar_endereco_empresa" 
+                               {% if vaga.usar_endereco_empresa %}checked{% endif %}
+                               class="checkbox-input">
+                        <span class="checkbox-text">🏢 Usar endereço da empresa</span>
+                    </label>
+                </div>
+
+                <div class="two-column-layout">
+                    <div>
+                        <label for="localizacao_endereco" class="input-label">
+                            Endereço
+                        </label>
+                        <input type="text" id="localizacao_endereco" name="localizacao_endereco" 
+                               value="{{ vaga.localizacao_endereco or '' }}"
+                               class="input-field"
+                               placeholder="Rua, Av, etc.">
+                    </div>
+
+                    <div>
+                        <label for="localizacao_cidade" class="input-label">
+                            Cidade
+                        </label>
+                        <input type="text" id="localizacao_cidade" name="localizacao_cidade" 
+                               value="{{ vaga.localizacao_cidade or '' }}"
+                               class="input-field"
+                               placeholder="São Paulo">
+                    </div>
+
+                    <div>
+                        <label for="localizacao_estado" class="input-label">
+                            Estado
+                        </label>
+                        <input type="text" id="localizacao_estado" name="localizacao_estado" 
+                               value="{{ vaga.localizacao_estado or '' }}"
+                               class="input-field"
+                               placeholder="SP">
+                    </div>
+
+                    <div>
+                        <label for="localizacao_cep" class="input-label">
+                            CEP
+                        </label>
+                        <input type="text" id="localizacao_cep" name="localizacao_cep" 
+                               value="{{ vaga.localizacao_cep or '' }}"
+                               class="input-field"
+                               placeholder="00000-000">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diferenciais -->
+            <div>
+                <label for="diferenciais" class="input-label">
+                    ⭐ Diferenciais (Opcional)
+                </label>
+                <textarea id="diferenciais" name="diferenciais" rows="3"
+                          class="input-field"
+                          placeholder="Benefícios, certificações desejáveis, idiomas, etc.">{{ vaga.diferenciais or '' }}</textarea>
+            </div>
+
+            <!-- Data de Congelamento -->
+            <div>
+                <label for="data_congelamento_agendado" class="input-label">
+                    📅 Data de Congelamento Agendado (Opcional)
+                </label>
+                <input type="date" id="data_congelamento_agendado" name="data_congelamento_agendado" 
+                       value="{{ vaga.data_congelamento_agendado.strftime('%Y-%m-%d') if vaga.data_congelamento_agendado else '' }}"
+                       min="{{ datetime.now().strftime('%Y-%m-%d') }}"
+                       class="input-field">
+                <p class="info-text">A vaga será automaticamente congelada nesta data</p>
+            </div>
+
+            <!-- Botões -->
+            <div class="button-group">
+                <button type="submit" 
+                        class="submit-button">
+                    <span>💾</span> Atualizar Vaga
+                </button>
+                <a href="{{ url_for('vagas.dashboard_empresa') }}" 
+                   class="cancel-button">
+                    <span>↩️</span> Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="/static/script/empresa/vaga.js"></script>
+{% endblock %}

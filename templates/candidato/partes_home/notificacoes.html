@@ -1,0 +1,46 @@
+
+<!-- Botão de Notificações Melhorado -->
+<div class="notificacoes-container">
+
+    <button onclick="toggleNotificacoes()" class="btn-notificacoes">
+        <img src="{{ url_for('static', filename='/img/sino.png') }}" alt="Ícone" />
+        <span id="badgeNotificacoes" class="notificacoes-badge hidden">0</span>
+    </button>
+    <!-- Painel de Notificações Melhorado -->
+    <div id="painelNotificacoes" class="absolute right-0 top-16 w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 hidden overflow-hidden">
+        <!-- Header do painel -->
+        <div class="bg-gradient-to-r from-purple-500 to-blue-500 text-white p-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">🔔</span>
+                    <h3 class="font-bold text-lg">Notificações</h3>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="marcarTodasComoLidas()" 
+                            class="text-xs bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full transition-all duration-200">
+                        ✓ Marcar todas
+                    </button>
+                    <button onclick="apagarTodasNotificacoes()" 
+                            class="text-xs bg-red-500/20 hover:bg-red-500/30 px-3 py-1 rounded-full transition-all duration-200">
+                        🗑️ Limpar
+                    </button>
+                </div>
+            </div>
+            <div id="contadorNotificacoes" class="text-sm opacity-90 mt-1">
+                0 notificações
+            </div>
+        </div>
+
+        <!-- Lista de notificações -->
+        <div id="listaNotificacoes" class="max-h-96 overflow-y-auto">
+            <div id="notificacoesVazias" class="p-8 text-center text-gray-500">
+                <div class="mb-4">
+                    <span class="text-6xl opacity-50">📭</span>
+                </div>
+                <p class="text-lg font-medium mb-2">Nenhuma notificação</p>
+                <p class="text-sm">Você está em dia! 🎉</p>
+            </div>
+        </div>
+    </div>
+    
+</div>

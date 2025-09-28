@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Todos os Candidatos{% endblock %}
+
+{% block head %}
+   
+{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='style/candidatos_geral.css') }}">
+
+<div class="container">
+    <div class="max-width">
+        
+
+        <!-- Filtros -->
+        <div class="filter-box">
+            <h3 class="text-bold">Filtros de Busca</h3>
+            
+            <div class="grid-filters">
+                <!-- Busca por nome/email -->
+                <div>
+                    <label class="label">Buscar por nome ou email</label>
+                    <input type="text" 
+                           id="searchInput" 
+                           placeholder="Digite nome ou email..."
+                           class="input">
+                </div>
+
+                <!-- Faixa salarial -->
+                <div>
+                    <label class="label">Pretensão Salarial</label>
+                    <select id="salarioFilter" class="input">
+                        <option value="">Todas as faixas</option>
+                        <option value="0-2000">Até R$ 2.000</option>
+                        <option value="2000-5000">R$ 2.000 - R$ 5.000</option>
+                        <option value="5000-8000">R$ 5.000 - R$ 8.000</option>
+                        <option value="8000-12000">R$ 8.000 - R$ 12.000</option>
+                        <option value="12000-999999">Acima de R$ 12.000</option>
+                    </select>
+                </div>
+
+                <!-- Localização -->
+                <div>
+                    <label class="label">Localização</label>
+                    <input type="text" 
+                           id="locationFilter" 
+                           placeholder="Cidade, Estado..."
+                           class="input">
+                </div>
+
+                <!-- Competências -->
+                <div>
+                    <label class="label">Competências</label>
+                    <input type="text" 
+                           id="skillsFilter" 
+                           placeholder="Ex: Python, React, Marketing..."
+                           class="input">
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button onclick="aplicarFiltros()" class="btn-blue">
+                    🔍 Buscar
+                </button>
+                <button onclick="limparFiltros()" class="btn-gray">
+                    🔄 Limpar
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-cards">
+            <div class="card">
+                <div class="flex-row">
+                    <div class="icon-box-blue">
+                        <span class="icon">👥</span>
+                    </div>
+                    <div>
+                        <p class="text-small">Total de Candidatos</p>
+                        <p id="totalCandidatos" class="text-large blue-text">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="flex-row">
+                    <div class="icon-box-green">
+                        <span class="icon">📋</span>
+                    </div>
+                    <div>
+                        <p class="text-small">Com Currículo</p>
+                        <p id="comCurriculo" class="text-large green-text">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="flex-row">
+                    <div class="icon-box-yellow">
+                        <span class="icon">⭐</span>
+                    </div>
+                    <div>
+                        <p class="text-small">Favoritados</p>
+                        <p id="totalFavoritados" class="text-large yellow-text">-</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de candidatos -->
+        <div id="candidatosList">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p class="loading-text">Carregando candidatos...</p>
+            </div>
+        </div>
+
+        <!-- Paginação -->
+        <div id="paginacao" class="pagination hidden">
+            <div class="flex-row">
+                <button onclick="anteriorPagina()" id="btnAnterior" class="btn-pagination">
+                    ← Anterior
+                </button>
+                <span id="infoPagina" class="pagination-info"></span>
+                <button onclick="proximaPagina()" id="btnProximo" class="btn-pagination">
+                    Próximo →
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='script/empresa/candidatos_geral.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='style/cadastro.css') }}">
+    <script type="module" src="{{ url_for('static', filename='script/empresa/cadastro.js') }}"></script>
+
+{% endblock %}
+
+{% block content %}
+
+<div class="page-wrapper">
+  <div class="container">
+
+    <!-- Lado esquerdo: Criar conta -->
+    <div class="form-section">
+      <h2>Criar Conta</h2>
+
+      <form id="registerFormEmpresa" method="POST">
+        <div>
+          <input type="text" id="cnpj" name="cnpj" placeholder="CNPJ" required>
+        </div>
+        <div>
+          <input type="text" id="nome" name="nome" placeholder="Nome da Empresa" required>
+        </div>
+        <div>
+          <input type="email" id="email" name="email" placeholder="E-mail" required>
+        </div>
+
+        <!-- Senhas lado a lado -->
+                <div class="form-row">
+          <div style="flex: 1; display: flex; flex-direction: column;">
+            <input type="password" id="senha" name="senha" placeholder="Senha" required>
+            <div id="msgSenha" class="msg-senha"></div> <!-- Mensagem senha -->
+          </div>
+          <div style="flex: 1; display: flex; flex-direction: column;">
+            <input type="password" id="confirmar_senha" name="confirmar_senha" placeholder="Confirmar Senha" required>
+            <div id="msgConfirmarSenha" class="msg-senha"></div> <!-- Mensagem confirmar senha -->
+          </div>
+        </div>
+
+        <h3>Localização da Empresa</h3>
+        <input type="text" id="cep" name="cep" placeholder="CEP" maxlength="9" required>
+        <input type="text" id="endereco" name="endereco" placeholder="Endereço" required>
+
+        <div class="form-row">
+          <input type="text" id="numero" name="numero" placeholder="Número" required>
+          <input type="text" id="complemento" name="complemento" placeholder="Complemento (opcional)">
+        </div>
+
+        <div id="msgLocalizacao" class="msg-localizacao">
+          <small>ℹ️ Os dados de localização serão utilizados para melhorar o matching de vagas e podem ser reutilizados na criação de vagas.</small>
+        </div>
+
+        <div class="checkbox-label">
+          <input type="checkbox" name="aceita_termos" required>
+          <span>
+            Eu concordo com os 
+            <a href="{{ url_for('politica_privacidade') }}" target="_blank">termos de uso e política de privacidade</a>. 
+            Entendo que os dados dos candidatos serão utilizados exclusivamente para processos seletivos e que seguimos as melhores práticas de proteção de dados.
+          </span>
+        </div>
+
+        <button type="submit">Cadastrar</button>
+      </form>
+    </div>
+
+    <!-- Lado direito: Boas-vindas -->
+    <div class="welcome-section"><a href="{{ url_for('vagas.index') }}" stylesheet="color:white" class="Fechar" >X</a>
+      <img src="{{ url_for('static', filename='/img/logo.png') }}" class="logo">
+      <h1>Bem-Vindo de Volta!</h1>
+      <p>Já possui uma conta? Faça seu login abaixo</p>
+      <a href="{{ url_for('auth.login_empresa') }}"class="login-btn"> Login </a>
+
+      <a href="{{ url_for('auth.cadastro_candidato') }}"class="underline-link">Sou candidato</a>
+    </div>
+
+  </div>
+</div>
+
+
+
+{% endblock %}

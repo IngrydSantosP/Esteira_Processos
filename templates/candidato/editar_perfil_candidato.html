@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Perfil{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='style/editar_perfil.css') }}">
+    <div class="form-container">
+        <!-- Header -->
+        <div class="form-header">
+            <div class="header-content">
+                <a href="{{ url_for('candidaturas.dashboard_candidato') }}" class="back-button">
+                    <span class="back-arrow">X</span>
+                </a>
+            </div>
+
+            <div>
+                            <label for="imagem_perfil" class="label">Foto de Perfil</label>
+                            <div class="image-upload-container">
+                                {% if candidato and candidato|length > 7 and candidato[7] %}
+                                    <img src="{{ candidato[7] }}" alt="Imagem atual" class="image-preview">
+                                {% else %}
+                                {% endif %}
+                                <input type="file" id="imagem_perfil" name="imagem_perfil" accept="image/*" class="file-input">
+                            </div>
+                            <div id="preview_imagem" class="image-preview-container"></div>
+                        </div>
+        </div>
+
+        
+
+        <!-- Formulário -->
+        <div class="form-section">
+            <form method="POST" class="form" enctype="multipart/form-data">
+                <!-- Informações Pessoais -->
+                <div>
+                    <h2 class="section-title">
+                        <span class="section-icon">👤</span>
+                        Informações Pessoais
+                    </h2>
+                    <div class="form-grid">
+                        <div>
+                            <label for="nome" class="label">Nome Completo</label>
+                            <input type="text" id="nome" name="nome" value="{{ candidato[0] if candidato else '' }}" required class="input">
+                        </div>
+                        <div>
+                            <label for="telefone" class="label">Telefone</label>
+                            <input type="tel" id="telefone" name="telefone" value="{{ candidato[1] if candidato and candidato|length > 1 else '' }}" required class="input">
+                        </div>
+                    </div>
+                </div>
+
+                
+
+                <!-- Informações Profissionais -->
+                <div>
+                    <h2 class="section-title">
+                        <span class="section-icon">💼</span>
+                        Informações Profissionais
+                    </h2>
+                    <div class="form-grid">
+                        <div>
+                            <label for="linkedin" class="label">LinkedIn</label>
+                            <input type="url" id="linkedin" name="linkedin" value="{{ candidato[2] if candidato and candidato|length > 2 else '' }}" required class="input">
+                        </div>
+                        <div>
+                            <label for="pretensao_salarial" class="label">Pretensão Salarial (R$)</label>
+                            <input type="number" id="pretensao_salarial" name="pretensao_salarial" value="{{ candidato[3] if candidato and candidato|length > 3 else '' }}" step="0.01" required class="input">
+                        </div>
+                    </div>
+
+                    <div class="textarea-group">
+                        <div>
+                            <label for="experiencia" class="label">Experiência Profissional</label>
+                            <textarea id="experiencia" name="experiencia" rows="4" placeholder="Descreva sua experiência profissional..." class="textarea">{{ candidato[4] if candidato and candidato|length > 4 else '' }}</textarea>
+                        </div>
+
+                        <div>
+                            <label for="competencias" class="label">Competências e Habilidades</label>
+                            <textarea id="competencias" name="competencias" rows="3" placeholder="Liste suas principais competências e habilidades..." class="textarea">{{ candidato[5] if candidato and candidato|length > 5 else '' }}</textarea>
+                        </div>
+
+                        <div>
+                            <label for="resumo_profissional" class="label">Resumo Profissional</label>
+                            <textarea id="resumo_profissional" name="resumo_profissional" rows="3" placeholder="Faça um breve resumo do seu perfil profissional..." class="textarea">{{ candidato[6] if candidato and candidato|length > 6 else '' }}</textarea>
+                        </div>
+
+                        <div>
+                            <label for="formacao" class="label">Formação Acadêmica</label>
+                            <textarea id="formacao" name="formacao" rows="3" placeholder="Descreva sua formação acadêmica..." class="textarea">{{ candidato[7] if candidato|length > 7 else '' }}</textarea>
+                        </div>
+
+                        <div>
+                            <label for="certificacoes" class="label">Certificações e Cursos</label>
+                            <textarea id="certificacoes" name="certificacoes" rows="3" placeholder="Liste suas certificações, cursos complementares..." class="textarea">{{ candidato[12] if candidato|length > 12 else '' }}</textarea>
+                        </div>
+
+                        <div class="form-grid">
+                            <div>
+                                <label for="idiomas" class="label">Idiomas</label>
+                                <textarea id="idiomas" name="idiomas" rows="2" placeholder="Ex: Inglês (fluente), Espanhol (intermediário)..." class="textarea">{{ candidato[13] if candidato|length > 13 else '' }}</textarea>
+                            </div>
+
+                            <div>
+                                <label for="disponibilidade" class="label">Modalidade Preferida</label>
+                                <select id="disponibilidade" name="disponibilidade" class="input">
+                                    <option value="">Selecione...</option>
+                                    <option value="Presencial" {% if candidato|length > 14 and candidato[14] == 'Presencial' %}selected{% endif %}>Presencial</option>
+                                    <option value="Remoto" {% if candidato|length > 14 and candidato[14] == 'Remoto' %}selected{% endif %}>Remoto</option>
+                                    <option value="Híbrido" {% if candidato|length > 14 and candidato[14] == 'Híbrido' %}selected{% endif %}>Híbrido</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="beneficios_desejados" class="label">Benefícios Desejados</label>
+                            <textarea id="beneficios_desejados" name="beneficios_desejados" rows="2" placeholder="Ex: Vale refeição, plano de saúde, horário flexível..." class="textarea">{{ candidato[15] if candidato|length > 15 else '' }}</textarea>
+                        </div>
+
+                        
+                    </div>
+                </div>
+
+                <!-- Endereço -->
+                <div>
+                    <h2 class="section-title">
+                        <span class="section-icon">📍</span>
+                        Endereço
+                    </h2>
+                    <div class="form-grid">
+                        <div>
+                            <label for="cep" class="label">CEP</label>
+                            <input type="text" id="cep" name="cep" value="{{ candidato[11] if candidato and candidato|length > 11 else '' }}" class="input" onblur="aplicarBuscaEndereco()">
+                        </div>
+                        <div>
+                            <label for="endereco" class="label">Endereço</label>
+                            <input type="text" id="endereco" name="endereco" value="{{ candidato[8] if candidato and candidato|length > 8 else '' }}" class="input">
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div>
+                            <label for="complemento" class="label">Complemento</label>
+                            <input type="text" id="complemento" name="complemento" value="{{ candidato[10] if candidato and candidato|length > 10 else '' }}" class="input">
+                        </div>
+                        <div>
+                            <label for="numero" class="label">Número</label>
+                            <input type="number" id="numero" name="numero" value="{{ candidato[9] if candidato and candidato|length > 9 else '' }}" class="input">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botões de Ação -->
+                <div class="form-actions">
+                    <div class="button-group">
+                        <button type="submit" class="submit-button">
+                            <span class="submit-icon">✅</span>
+                            Salvar Alterações
+                        </button>
+                        <a href="{{ url_for('candidaturas.upload_curriculo') }}" class="upload-cv-button">
+                            <span class="cv-icon">📄</span>
+                            Atualizar Currículo
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+<script>
+function aplicarBuscaEndereco() {
+    const cep = document.getElementById('cep').value.replace(/\D/g, '');
+    if (cep.length === 8) {
+        fetch(`https://viacep.com.br/ws/${cep}/json/`)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.erro) {
+                    document.getElementById('endereco').value = data.logradouro;
+                    document.getElementById('complemento').value = data.complemento || '';
+                    document.getElementById('bairro').value = data.bairro;
+                    document.getElementById('cidade').value = data.localidade;
+                    document.getElementById('uf').value = data.uf;
+                } else {
+                    alert("CEP não encontrado.");
+                }
+            })
+            .catch(error => console.error('Erro ao buscar o endereço:', error));
+    } else {
+        alert("CEP inválido.");
+    }
+}
+
+ // Mostrar preview da imagem selecionada
+  const inputImagem = document.getElementById('imagem_perfil');
+  const preview = document.getElementById('preview_imagem');
+
+  inputImagem.addEventListener('change', function () {
+    const file = this.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        preview.innerHTML = `<img src="${e.target.result}" alt="Preview"
+                             class="image-preview"/>`;
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+</script>
+{% endblock %}

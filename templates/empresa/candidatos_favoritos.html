@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Candidatos Favoritos{% endblock %}
+
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='style/empresa_favorito.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="min-h-screen bg-gradient-fundo">
+
+    <div class="container">
+        <!-- Stats Card -->
+        <div class="stats-card">
+            <div class="stats-content">
+                <div class="icon">
+                    <span class="icon-text">⭐</span>
+                </div>
+                <div>
+                    <h2 class="stats-title">Candidatos Favoritos</h2>
+                    <p id="totalFavoritos" class="stats-value">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros de busca -->
+        <div class="filters-card">
+            <div class="filters-content">
+                <div class="input-container">
+                    <input type="text"
+                           id="searchInput"
+                           placeholder="🔍 Buscar por nome do candidato..."
+                           class="search-input">
+                </div>
+                <div class="filter-actions">
+                    <select id="vagaFilter" class="filter-select">
+                        <option value="">Todas as vagas</option>
+                    </select>
+                    <button onclick="aplicarFiltros()" class="filter-button">
+                        Filtrar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de candidatos favoritos -->
+        <div id="candidatosList">
+            <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <p class="loading-text">Carregando candidatos favoritos...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='script/empresa/favoritos.js') }}"></script>
+{% endblock %}

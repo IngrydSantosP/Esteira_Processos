@@ -1,0 +1,150 @@
+
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Candidato{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='style/dashboard.css') }}">
+<!-- Menu config-->
+<div class="profile-wrapper">
+    <div class="profile-container" id="profileContainer">
+        <img src="{{ imagem_perfil or url_for('static', filename='img/user.png') }}"
+             alt="Foto de perfil" id="profileImg" class="logo">
+
+        <div class="dropdown-menu" id="dropdownMenu">
+            <p class="font-bold">
+                {{ candidato_nome }}
+            </p>
+
+            <a href="{{ url_for('candidaturas.editar_perfil_candidato') }}">
+                <span>⚙️</span> Perfil
+            </a>
+
+            <a href="{{ url_for('logout') }}">
+                <span>🚪</span> Sair
+            </a>
+        </div>
+    </div>
+</div>
+
+
+    {% include 'candidato/partes_home/notificacoes.html' %}
+
+
+<!-- Painel infos -->
+<div class="dashboard-main">
+    <div class="dashboard-title-container">
+        <img src="{{ url_for('static', filename='/img/lupa.png') }}" alt="Ícone" class="lupa-icon" />
+        <h2 class="dashboard-title">Painel do Candidato</h2>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-cards"> 
+        <div class="card card-purple">
+            <div class="card-content">
+                <div>
+                    <p class="card-label">Candidaturas</p>
+                    <p class="card-value purple">{{ vagas_candidatadas|length if vagas_candidatadas else 0 }}</p>
+                </div>
+                <div class="card-icon purple-bg">
+                    <img src="{{ url_for('static', filename='/img/target.png') }}" alt="Ícone" />
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-green">
+            <div class="card-content">
+                <div>
+                    <p class="card-label">Vagas Disponíveis</p>
+                    <p class="card-value green">{{ vagas_recomendadas|length if vagas_recomendadas else 0 }}</p>
+                </div>
+                <div class="card-icon green-bg">
+                    <img src="{{ url_for('static', filename='/img/jobs.png') }}" alt="Ícone" />
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-blue">
+            <div class="card-content">
+                <div>
+                    <p class="card-label">Match Médio</p>
+                    <p class="card-value blue">
+                        {% if vagas_candidatadas %}
+                            {{ "%.0f"|format(vagas_candidatadas|map(attribute=4)|sum / vagas_candidatadas|length) }}%
+                        {% else %}
+                            0%
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="card-icon blue-bg">
+                    <img src="{{ url_for('static', filename='/img/match.png') }}" alt="Ícone" />
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-yellow">
+            <div class="card-content">
+                <div>
+                    <p class="card-label">Favoritas</p>
+                    <p class="card-value yellow">{{ vagas_favoritas|length if vagas_favoritas else 0 }}</p>
+                </div>
+                <div class="card-icon yellow-bg">
+                    <img src="{{ url_for('static', filename='/img/favorites.png') }}" alt="Ícone" />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<!-- Filtros -->
+        <div class="filtros">
+            <div class="filtros-container">
+                <div class="filtros-buttons">
+                    <button onclick="showSection('principais')" class="filter-btn filter-active">
+                        🏆 Principais
+                    </button>
+
+                    <button onclick="showSection('todas')" class="filter-btn">
+                        📋 Todas as Vagas
+                    </button>
+                    <button onclick="showSection('candidaturas')" class="filter-btn">
+                        🎯 Minhas Candidaturas
+                    </button>
+                    <button onclick="showSection('favoritas')" class="filter-btn">
+                        ⭐ Favoritas
+                    </button>
+                    <button onclick="showSection('assistente-ia')" class="filter-btn">
+                        🤖 Assistente IA
+                    </button>
+                </div>
+            </div>
+        </div>
+
+<!-- Seção Principais -->
+<div id="section-principais" class="content-section">
+    {% include 'candidato/partes_home/principais.html' %}
+</div>
+<!-- Seção Todas -->
+<div id="section-todas" class="content-section hidden">
+    {% include 'candidato/partes_home/todas_as_vagas.html' %}   
+</div>
+
+<!-- Seção Candidaturas -->
+<div id="section-candidaturas" class="content-section hidden">
+    {% include 'candidato/partes_home/minhas_candidaturas.html' %}
+</div>
+
+<!-- Seção Favoritas -->
+<div id="section-favoritas" class="content-section hidden">
+    {% include 'candidato/partes_home/favoritas.html' %}
+</div>
+
+<!-- Seção Assistente IA -->
+<div id="section-assistente-ia" class="content-section hidden">
+    {% include 'candidato/partes_home/assistente_ia.html' %}
+</div>
+
+<script src="{{ url_for('static', filename='script/candidato/dashboard_candidato.js') }}"></script>
+{% endblock %}

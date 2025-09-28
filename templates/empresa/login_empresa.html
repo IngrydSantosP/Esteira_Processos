@@ -1,0 +1,65 @@
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='style/login.css') }}">
+<div class="container">
+  <div class="login-box">
+
+    <!-- Lado esquerdo - Boas-vindas empresa -->
+    <div class="welcome-side left login-left login-left-empresa">
+      <a href="{{ url_for('vagas.index') }}" class="close-btn">X</a>
+      <h1 class="welcome-title">Olá, empresa!</h1>
+      <p class="welcome-text">Não possui uma conta?</p>
+      <a href="{{ url_for('auth.cadastro_empresa') }}" class="btn-secondary">
+        Cadastrar-se
+      </a>
+    </div>
+
+    <!-- Lado direito - Login empresa -->
+    <div class="form-side login-right login-right-empresa">
+      <h2 class="login-title">Login</h2>
+
+      <form method="POST" class="login-form">
+        <div class="form-group">
+          <label for="cnpj" class="sr-only"></label>
+          <input type="text" id="cnpj" name="cnpj" placeholder="CNPJ" required class="input-field">
+        </div>
+        <div class="form-group">
+          <label for="senha" class="sr-only"></label>
+          <input type="password" id="senha" name="senha" placeholder="Senha" required class="input-field">
+        </div>
+
+        <button type="submit" class="btn-primary">
+          Login
+        </button>
+      </form>
+
+      <div class="register-link">
+        <a href="{{ url_for('auth.cadastro_empresa') }}">Esqueceu a senha? </a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const cnpjInput = document.getElementById('cnpj');
+
+    // Máscara para CNPJ
+    cnpjInput.addEventListener('input', function(e) {
+      let value = e.target.value.replace(/\D/g, ''); // Remove tudo que não for número
+      if (value.length > 14) value = value.slice(0, 14); // Limita a 14 caracteres
+
+      // Formata conforme a máscara do CNPJ
+      if (value.length > 2) value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+      if (value.length > 6) value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+      if (value.length > 10) value = value.replace(/^(\d{2})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3/$4');
+      if (value.length > 14) value = value.replace(/^(\d{2})\.(\d{3})\.(\d{3})\/(\d{4})(\d)/, '$1.$2.$3/$4-$5');
+
+      e.target.value = value;
+    });
+  });
+</script>
+{% endblock %}

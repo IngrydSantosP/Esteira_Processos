@@ -1,0 +1,420 @@
+{% block title %}{{ vaga.titulo }} - {{ empresa.nome }}{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='style/detalhes_vaga.css') }}">
+
+<!-- Botões de Ação no Topo -->
+<div class="topo-acoes">
+    <a href="{{ url_for('vagas.exemplo_score') }}" class="btn-score">
+        <span class="icon-score">📊</span>
+        Ver Como Score é Calculado
+    </a>
+
+    <a href="{{ url_for('candidaturas.dashboard_candidato') }}" class="btn-voltar">
+        <span class="icon-voltar">←</span>
+    </a>
+</div>
+
+<!-- Conteúdo Principal -->
+<div class="conteudo-principal">
+    <div class="container">
+
+        <!-- Header com Score Destacado -->
+        <div class="header-vaga">
+            <div class="header-flex">
+                <div class="header-info">
+                    <div class="vaga-topo">
+                        <div class="logo-vaga">
+                            <span class="icon-briefcase">💼</span>
+                        </div>
+                        <div class="info-vaga">
+                            <h1 class="titulo-vaga">{{ vaga.titulo }}</h1>
+                            <p class="empresa-nome">{{ empresa.nome }}</p>
+                        </div>
+                    </div>
+
+                    <div class="tags-vaga">
+                        <span class="tag-tipo">{{ vaga.tipo_vaga }}</span>
+                        {% if vaga.salario_oferecido %}
+                        <span class="tag-salario">R$ {{ "{:,.2f}".format(vaga.salario_oferecido) }}</span>
+                        {% endif %}
+                        {% if vaga.endereco_vaga %}
+                        <span class="tag-localizacao">📍 {{ vaga.endereco_vaga }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if score %}
+                <div class="score-box">
+                    <div class="score-center">
+                        <div class="score-num">{{ "%.1f"|format(score) }}%</div>
+                        <div class="score-text">Seu Score de Compatibilidade</div>
+
+                        <div class="barra-score">
+                            <div class="barra-fill" style="width: '{{ score }}%'"></div>
+                        </div>
+
+                        {% if score >= 80 %}
+                        <div class="descricao-score">
+                            <span class="icon-excelente">🎯</span>
+                            <span>Excelente compatibilidade!</span>
+                        </div>
+                        <p class="texto-pequeno">Seu perfil está muito alinhado com esta vaga</p>
+                        {% elif score >= 60 %}
+                        <div class="descricao-score">
+                            <span class="icon-bom">⚡</span>
+                            <span>Boa compatibilidade</span>
+                        </div>
+                        <p class="texto-pequeno">Você atende a maioria dos requisitos</p>
+                        {% elif score >= 40 %}
+                        <div class="descricao-score">
+                            <span class="icon-moderado">💡</span>
+                            <span>Compatibilidade moderada</span>
+                        </div>
+                        <p class="texto-pequeno">Considere desenvolver algumas habilidades</p>
+                        {% else %}
+                        <div class="descricao-score">
+                            <span class="icon-crescimento">🔧</span>
+                            <span>Potencial de crescimento</span>
+                        </div>
+                        <p class="texto-pequeno">Esta vaga pode ser um desafio interessante</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="grid-principal">
+            <!-- Conteúdo Principal -->
+            <div class="conteudo-largo">
+
+                <!-- Descrição da Vaga -->
+                <div class="box-descricao">
+                    <h2 class="titulo-secao">
+                        <span class="icone-secao">📋</span>
+                        Descrição da Vaga
+                    </h2>
+                    <div class="texto-secao">
+                        <p>{{ vaga.descricao }}</p>
+                    </div>
+                </div>
+
+                <!-- Requisitos -->
+                <div class="box-requisitos">
+                    <h2 class="titulo-secao">
+                        <span class="icone-secao">🎯</span>
+                        Requisitos
+                    </h2>
+                    <div class="texto-secao">
+                        <div>{{ vaga.requisitos }}</div>
+                    </div>
+                </div>
+
+                {% if ja_candidatado %}
+                <div class="alert-candidatado">
+                    <div>✅ Você já se candidatou!</div>
+                    <p>Sua candidatura foi enviada com sucesso</p>
+                </div>
+                {% else %}
+                <a href="{{ url_for('candidaturas.candidatar', vaga_id=vaga.id) }}" 
+                class="btn-candidatar">
+                    <span class="icon-rocket">🚀</span>
+                    Candidatar-se Agora
+                </a>
+                {% endif %}
+
+                <!-- Diferenciais -->
+                {% if vaga.diferenciais %}
+                <div class="box-diferenciais">
+                    <h2 class="titulo-secao">
+                        <span class="icone-secao">⭐</span>
+                        Diferenciais e Benefícios
+                    </h2>
+                    <div class="texto-secao">
+                        <div>{{ vaga.diferenciais }}</div>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+
+            <!-- Sidebar -->
+            <div class="sidebar">
+
+                {% if score %}
+                <div class="box-analise">
+                    <h3 class="titulo-secao">
+                        <span class="icone-secao">📊</span>
+                        Análise do Seu Score
+                    </h3>
+
+                    <div class="detalhe-score">
+                        <div class="categoria">
+                            <div class="linha-categoria">
+                                <span>Experiência</span>
+                                <span>{{ "%.0f"|format(score|float * 0.3) }}%</span>
+                            </div>
+                            <div class="barra-bg">
+                                <div class="barra-fill" style="width:'{{ score|float * 0.3 }}%'"></div>
+                            </div>
+                        </div>
+
+                        <div class="categoria">
+                            <div class="linha-categoria">
+                                <span>Habilidades</span>
+                                <span>{{ "%.0f"|format(score|float * 0.4) }}%</span>
+                            </div>
+                            <div class="barra-bg">
+                                <div class="barra-fill" style="width:'{{ score|float * 0.4 }}%'"></div>
+                            </div>
+                        </div>
+
+                        <div class="categoria">
+                            <div class="linha-categoria">
+                                <span>Salário</span>
+                                <span>{{ "%.0f"|format(score|float * 0.2) }}%</span>
+                            </div>
+                            <div class="barra-bg">
+                                <div class="barra-fill" style="width:'{{ score|float * 0.2 }}%'"></div>
+                            </div>
+                        </div>
+
+                        <div class="categoria">
+                            <div class="linha-categoria">
+                                <span>Localização</span>
+                                <span>{{ "%.0f"|format(score|float * 0.1) }}%</span>
+                            </div>
+                            <div class="barra-bg">
+                                <div class="barra-fill" style="width:'{{ score|float * 0.1 }}%'"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dica-score">
+                        <p>💡 <strong>Dica:</strong> Scores acima de 70% indicam alta compatibilidade. Continue desenvolvendo suas habilidades para aumentar seu score!</p>
+                    </div>
+                </div>
+                {% endif %}
+                <!-- Informações Adicionais -->
+                {% if vaga.nivel_experiencia or vaga.regime_contratacao or vaga.carga_horaria or vaga.formacao_minima %}
+                <div class="box-info">
+                    <h3 class="titulo-secao">
+                        <span class="icone-secao">📋</span>
+                        Informações Adicionais
+                    </h3>
+
+                    <div class="grid-info">
+                        {% if vaga.nivel_experiencia %}
+                        <div class="item-info">
+                            <span class="icone-item">🎯</span>
+                            <div>
+                                <div class="label-item">Nível de Experiência</div>
+                                <div class="valor-item">{{ vaga.nivel_experiencia }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if vaga.regime_contratacao %}
+                        <div class="item-info">
+                            <span class="icone-item">📝</span>
+                            <div>
+                                <div class="label-item">Regime de Contratação</div>
+                                <div class="valor-item">{{ vaga.regime_contratacao }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if vaga.carga_horaria %}
+                        <div class="item-info">
+                            <span class="icone-item">⏰</span>
+                            <div>
+                                <div class="label-item">Carga Horária</div>
+                                <div class="valor-item">{{ vaga.carga_horaria }} semanais</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if vaga.turno_trabalho %}
+                        <div class="item-info">
+                            <span class="icone-item">🕒</span>
+                            <div>
+                                <div class="label-item">Turno de Trabalho</div>
+                                <div class="valor-item">{{ vaga.turno_trabalho }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if vaga.formacao_minima %}
+                        <div class="item-info">
+                            <span class="icone-item">🎓</span>
+                            <div>
+                                <div class="label-item">Formação Mínima</div>
+                                <div class="valor-item">{{ vaga.formacao_minima }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if vaga.idiomas_exigidos %}
+                        <div class="item-info">
+                            <span class="icone-item">🌍</span>
+                            <div>
+                                <div class="label-item">Idiomas</div>
+                                <div class="valor-item">{{ vaga.idiomas_exigidos }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if vaga.disponibilidade_viagens %}
+                        <div class="item-info">
+                            <span class="icone-item">✈️</span>
+                            <div>
+                                <div class="label-item">Viagens</div>
+                                <div class="valor-item">Disponibilidade para viagens</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Benefícios -->
+                {% if vaga.beneficios %}
+                <div class="box-beneficios">
+                    <h3 class="titulo-secao">
+                        <span class="icone-secao">🎁</span>
+                        Benefícios
+                    </h3>
+                    <div class="texto-secao">
+                        <div>{{ vaga.beneficios }}</div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Informações da Empresa -->
+                <div class="box-empresa">
+                    <h3 class="titulo-secao">
+                        <span class="icone-secao">🏢</span>
+                        Sobre a Empresa
+                    </h3>
+                    <div class="empresa-info">
+                        <div class="empresa-flex">
+                            <div class="empresa-logo">
+                                <span>{{ vaga.empresa_nome }}</span>
+                            </div>
+                            <div>
+                                <button onclick="verVagasEmpresa('{{ empresa.nome }}', '{{ empresa.id }}')">{{ empresa.nome }}</button>
+                                {% if vaga.data_criacao %}
+                                <div class="data-vaga">Vaga publicada em {{ vaga.data_criacao.strftime('%d/%m/%Y') }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <button onclick="verVagasEmpresa('{{ empresa.nome }}', '{{ empresa.id }}')">Ver todas as vagas →</button>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+<!-- Modal Vagas da Empresa -->
+<div id="modalVagasEmpresa" class="modal-empresa hidden">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-topo">
+                <h2 id="tituloModalEmpresa"></h2>
+                <button onclick="fecharModalVagasEmpresa()">×</button>
+            </div>
+        </div>
+        <div id="conteudoVagasEmpresa" class="modal-conteudo"></div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script>
+async function toggleFavorito(vagaId) {
+    try {
+        const response = await fetch('/api/favoritar-vaga', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ vaga_id: vagaId })
+        });
+        const data = await response.json();
+        if (data.success) {
+            const button = event.target.closest('button');
+            const originalText = button.innerHTML;
+            if (data.favorited) {
+                button.innerHTML = '<span class="icon-favorito">💖</span> Adicionado aos Favoritos!';
+                button.className = 'btn-favorito-add';
+            } else {
+                button.innerHTML = '<span class="icon-favorito">💔</span> Removido dos Favoritos';
+                button.className = 'btn-favorito-rem';
+            }
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.className = 'btn-favorito';
+            }, 2000);
+        } else {
+            alert('Erro ao atualizar favoritos: ' + data.error);
+        }
+    } catch (error) { console.error(error); alert('Erro ao processar solicitação'); }
+}
+
+async function verVagasEmpresa(nomeEmpresa, empresaId) {
+    const modal = document.getElementById('modalVagasEmpresa');
+    const titulo = document.getElementById('tituloModalEmpresa');
+    const conteudo = document.getElementById('conteudoVagasEmpresa');
+    titulo.textContent = `Vagas da ${nomeEmpresa}`;
+    conteudo.innerHTML = `<div class="loading"><div class="spinner"></div><p>Carregando vagas...</p></div>`;
+    modal.classList.remove('hidden');
+    try {
+        const response = await fetch(`/api/vagas-empresa/${empresaId}`);
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+        if (data.vagas.length === 0) {
+            conteudo.innerHTML = `<div class="nenhuma-vaga"><div>📭</div><h3>Nenhuma vaga ativa</h3><p>Esta empresa não possui vagas ativas no momento.</p></div>`;
+            return;
+        }
+        let vagasHtml = '<div class="lista-vagas">';
+        data.vagas.forEach(vaga => {
+            const salario = vaga.salario_oferecido ? `R$ ${vaga.salario_oferecido.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'A combinar';
+            const scoreClass = vaga.score >= 80 ? 'score-alto' : vaga.score >= 60 ? 'score-medio' : 'score-baixo';
+            const status = vaga.ja_candidatou ? '<span class="candidatado">Candidatado</span>' : '<span class="disponivel">Disponível</span>';
+            vagasHtml += `<div class="card-vaga">
+                <div class="card-header">
+                    <div class="card-titulo">
+                        <h4>${vaga.titulo}</h4>
+                        <p>${vaga.descricao.substring(0, 150)}${vaga.descricao.length > 150 ? '...' : ''}</p>
+                    </div>
+                    <div class="card-score ${scoreClass}">${vaga.score.toFixed(1)}%</div>
+                </div>
+                <div class="card-tags">
+                    <span class="tag-tipo">${vaga.tipo_vaga}</span>
+                    <span class="tag-salario">${salario}</span>
+                    ${status}
+                </div>
+                <div class="card-actions">
+                    <a href="/vaga/${vaga.id}" class="btn-detalhes">Ver Detalhes</a>
+                    ${!vaga.ja_candidatou ? `<a href="/candidatar/${vaga.id}" class="btn-candidatar">Candidatar-se</a>` : ''}
+                </div>
+            </div>`;
+        });
+        vagasHtml += '</div>';
+        conteudo.innerHTML = vagasHtml;
+    } catch (error) {
+        console.error('Erro ao carregar vagas da empresa:', error);
+        conteudo.innerHTML = `<div class="erro-modal"><div>⚠️</div><h3>Erro ao carregar vagas</h3><p>Não foi possível carregar as vagas desta empresa. Tente novamente.</p><button onclick="verVagasEmpresa('${nomeEmpresa}', ${empresaId})" class="btn-tentar">Tentar Novamente</button></div>`;
+    }
+}
+
+function fecharModalVagasEmpresa() {
+    document.getElementById('modalVagasEmpresa').classList.add('hidden');
+}
+
+document.getElementById('modalVagasEmpresa').addEventListener('click', function(e) {
+    if (e.target === this) fecharModalVagasEmpresa();
+});
+</script>
+
+{% endblock %}
