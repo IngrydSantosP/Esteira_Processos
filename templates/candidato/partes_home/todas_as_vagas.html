@@ -2,30 +2,29 @@
 <!-- Filtros de Busca dentro de Todas as Vagas -->
 <link rel="stylesheet" href="{{ url_for('static', filename='style/todas.css') }}">
 <div class="filtro-container">
-    <h3 class="titulo-filtro">🔍 Busca Avançada</h3>
     <div class="filtro-grid">
         <div>
-            <label class="filtro-label">🔍 Palavra-chave</label>
+            <img src="{{ url_for('static', filename='/img/lupa.png') }}" class="emojis"> Palavra-chave
             <input type="text" id="searchKeyword" placeholder="Ex: desenvolvedor, vendas..."
                    class="filtro-input">
         </div>
 
         <div>
-            <label class="filtro-label">📍 Localização</label>
+            <img src="{{ url_for('static', filename='/img/maps.png') }}" class="emojis"> Localização
             <select id="searchLocation" class="filtro-input">
                 <option value="">Todas as localizações</option>
             </select>
         </div>
 
         <div>
-            <label class="filtro-label">🏷️ Categoria</label>
+            <img src="{{ url_for('static', filename='/img/tag.png') }}" class="emojis"> Categoria
             <select id="searchCategory" class="filtro-input">
                 <option value="">Todas as categorias</option>
             </select>
         </div>
 
         <div>
-            <label class="filtro-label">⚡ Urgência</label>
+            <img src="{{ url_for('static', filename='/img/urgencia.png') }}" class="emojis"> Urgência
             <select id="searchUrgency" class="filtro-input">
                 <option value="">Qualquer urgência</option>
                 <option value="Imediata">Imediata</option>
@@ -35,13 +34,13 @@
         </div>
 
         <div>
-            <label class="filtro-label">💰   Salário Mínimo</label>
+            <img src="{{ url_for('static', filename='/img/money.png') }}" class="emojis"> Salário Mínimo
             <input type="number" id="searchSalary" placeholder="Ex: 3000"
                    class="filtro-input">
         </div>
 
         <div>
-            <label class="filtro-label">💼 Tipo de Vaga</label>
+            <img src="{{ url_for('static', filename='/img/case.png') }}" class="emojis"> Tipo de Vaga
             <select id="searchType" class="filtro-input">
                 <option value="">Todos os tipos</option>
                 <option value="Presencial">Presencial</option>
@@ -53,11 +52,11 @@
 
     <div class="filtro-buttons">
         <button onclick="realizarBusca()" class="btn-buscar">
-            <span>🔍</span>
+            <img src="{{ url_for('static', filename='/img/lupa.png') }}" class="emojis">
             Buscar Vagas
         </button>
         <button onclick="limparFiltros()" class="btn-limpar">
-            <span>🧹</span>
+            <img src="{{ url_for('static', filename='/img/clear.png') }}" class="emojis">
             Limpar Filtros
         </button>
     </div>

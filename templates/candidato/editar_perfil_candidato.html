@@ -35,7 +35,7 @@
                 <!-- Informações Pessoais -->
                 <div>
                     <h2 class="section-title">
-                        <span class="section-icon">👤</span>
+                        <img src="{{ url_for('static', filename='/img/nothing.png') }}" class="emojis">
                         Informações Pessoais
                     </h2>
                     <div class="form-grid">
@@ -55,7 +55,7 @@
                 <!-- Informações Profissionais -->
                 <div>
                     <h2 class="section-title">
-                        <span class="section-icon">💼</span>
+                        <img src="{{ url_for('static', filename='/img/case.png') }}" class="emojis">
                         Informações Profissionais
                     </h2>
                     <div class="form-grid">
@@ -124,7 +124,7 @@
                 <!-- Endereço -->
                 <div>
                     <h2 class="section-title">
-                        <span class="section-icon">📍</span>
+                        <img src="{{ url_for('static', filename='/img/maps.png') }}" class="emojis">
                         Endereço
                     </h2>
                     <div class="form-grid">
@@ -154,11 +154,11 @@
                 <div class="form-actions">
                     <div class="button-group">
                         <button type="submit" class="submit-button">
-                            <span class="submit-icon">✅</span>
-                            Salvar Alterações
+                            <img src="{{ url_for('static', filename='/img/confirm.png') }}" class="emojis">
+                             Salvar Alterações
                         </button>
                         <a href="{{ url_for('candidaturas.upload_curriculo') }}" class="upload-cv-button">
-                            <span class="cv-icon">📄</span>
+                            <img src="{{ url_for('static', filename='/img/report.png') }}" class="emojis">
                             Atualizar Currículo
                         </a>
                     </div>

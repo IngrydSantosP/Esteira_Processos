@@ -11,7 +11,7 @@
         <!-- Header -->
         <div class="header">
             <div class="icon-container">
-                <span class="icon">✏️</span>
+                <img src="{{ url_for('static', filename='/img/pencil.png') }}" class="emojis">
             </div>
             <div>
                 <h1 class="title">
@@ -25,7 +25,7 @@
             <!-- Título da Vaga -->
             <div class="input-group">
                 <label for="titulo" class="input-label">
-                    📝 Título da Vaga *
+                    <img src="{{ url_for('static', filename='/img/edit.png') }}" class="emojis"> Título da Vaga *
                 </label>
                 <input type="text" id="titulo" name="titulo" value="{{ vaga.titulo }}" required
                        class="input-field"
@@ -35,7 +35,7 @@
             <!-- Descrição -->
             <div class="input-group">
                 <label for="descricao" class="input-label">
-                    📄 Descrição da Vaga *
+                    <img src="{{ url_for('static', filename='/img/report.png') }}" class="emojis"> Descrição da Vaga *
                 </label>
                 <textarea id="descricao" name="descricao" rows="4" required
                           class="input-field"
@@ -45,7 +45,7 @@
             <!-- Requisitos -->
             <div class="input-group">
                 <label for="requisitos" class="input-label">
-                    🎯 Requisitos *
+                    <img src="{{ url_for('static', filename='/img/alvo.png') }}" class="emojis"> Requisitos *
                 </label>
                 <textarea id="requisitos" name="requisitos" rows="4" required
                           class="input-field"
@@ -56,7 +56,7 @@
             <div class="two-column-layout">
                 <div>
                     <label for="salario_oferecido" class="input-label">
-                        💰 Salário Oferecido (R$) *
+                        <img src="{{ url_for('static', filename='/img/money.png') }}" class="emojis"> Salário Oferecido (R$) *
                     </label>
                     <input type="number" id="salario_oferecido" name="salario_oferecido" step="0.01" 
                            value="{{ vaga.salario_oferecido }}" required
@@ -66,7 +66,7 @@
 
                 <div>
                     <label for="tipo_vaga" class="input-label">
-                        🏢 Modalidade de Trabalho *
+                        <img src="{{ url_for('static', filename='/img/job.png') }}" class="emojis"> Modalidade de Trabalho *
                     </label>
                     <select id="tipo_vaga" name="tipo_vaga" required
                             class="input-field">
@@ -81,7 +81,7 @@
             <div class="two-column-layout">
                 <div>
                     <label for="categoria_id" class="input-label">
-                        🏷️ Categoria
+                        <img src="{{ url_for('static', filename='/img/tag.png') }}" class="emojis"> Categoria
                     </label>
                     <select id="categoria_id" name="categoria_id"
                             class="input-field">
@@ -109,7 +109,7 @@
             <!-- Urgência -->
             <div>
                 <label for="urgencia_contratacao" class="input-label">
-                    ⚡ Urgência de Contratação
+                    <img src="{{ url_for('static', filename='/img/urgencia.png') }}" class="emojis"> Urgência de Contratação
                 </label>
                 <select id="urgencia_contratacao" name="urgencia_contratacao"
                         class="input-field">
@@ -124,7 +124,7 @@
             <!-- Localização -->
             <div class="localizacao-container">
                 <h3 class="localizacao-title">
-                    <span>📍</span> Localização da Vaga
+                    <img src="{{ url_for('static', filename='/img/maps.png') }}" class="emojis"> Localização da Vaga
                 </h3>
 
                 <div class="checkbox-group">
@@ -132,7 +132,7 @@
                         <input type="checkbox" id="usar_endereco_empresa" name="usar_endereco_empresa" 
                                {% if vaga.usar_endereco_empresa %}checked{% endif %}
                                class="checkbox-input">
-                        <span class="checkbox-text">🏢 Usar endereço da empresa</span>
+                        <span class="checkbox-text"><img src="{{ url_for('static', filename='/img/job.png') }}" class="emojis"> Usar endereço da empresa</span>
                     </label>
                 </div>
 
@@ -182,7 +182,7 @@
             <!-- Diferenciais -->
             <div>
                 <label for="diferenciais" class="input-label">
-                    ⭐ Diferenciais (Opcional)
+                    <img src="{{ url_for('static', filename='/img/diferente.png') }}" class="emojis"> Diferenciais (Opcional)
                 </label>
                 <textarea id="diferenciais" name="diferenciais" rows="3"
                           class="input-field"
@@ -192,7 +192,7 @@
             <!-- Data de Congelamento -->
             <div>
                 <label for="data_congelamento_agendado" class="input-label">
-                    📅 Data de Congelamento Agendado (Opcional)
+                    <img src="{{ url_for('static', filename='/img/calendar.png') }}" class="emojis"> Data de Congelamento Agendado (Opcional)
                 </label>
                 <input type="date" id="data_congelamento_agendado" name="data_congelamento_agendado" 
                        value="{{ vaga.data_congelamento_agendado.strftime('%Y-%m-%d') if vaga.data_congelamento_agendado else '' }}"
@@ -205,11 +205,11 @@
             <div class="button-group">
                 <button type="submit" 
                         class="submit-button">
-                    <span>💾</span> Atualizar Vaga
+                    <img src="{{ url_for('static', filename='/img/confirm.png') }}" class="emojis"> Atualizar Vaga
                 </button>
                 <a href="{{ url_for('vagas.dashboard_empresa') }}" 
                    class="cancel-button">
-                    <span>↩️</span> Cancelar
+                    <img src="{{ url_for('static', filename='/img/cancel.png') }}" class="emojis"> Cancelar
                 </a>
             </div>
         </form>

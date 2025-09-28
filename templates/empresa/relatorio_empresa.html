@@ -8,7 +8,7 @@
       <div class="header-content">
         <div class="header-left">
           <div class="icon">
-            📊
+            <img src="{{ url_for('static', filename='/img/dashboard.png') }}" class="emojis">
           </div>
           <div>
             <h1 class="title">Relatório Estratégico</h1>
@@ -16,7 +16,7 @@
         </div>
         <div class="header-right">
           <button onclick="gerarRelatorioCompleto()" class="btn-relatorio">
-            📋 Relatório Completo
+            <img src="{{ url_for('static', filename='/img/report.png') }}" class="emojis"> Relatório Completo
           </button>
         </div>
       </div>
@@ -24,7 +24,7 @@
 
     <!-- Filtros -->
     <div class="filters">
-      <h3 class="filters-title">🔍 Filtros</h3>
+      <img src="{{ url_for('static', filename='/img/lupa.png') }}" class="emojis"> Filtros
       <div class="filters-content">
         <div class="filter-item">
           <label for="filtroVagas" class="label">Selecionar Vagas (deixe vazio para incluir todas)</label>
@@ -52,26 +52,26 @@
     <div class="charts">
       <!-- Gráfico de Pizza - Distribuição de Candidatos -->
       <div class="chart-container">
-        <h3 class="chart-title">🥧 Distribuição de Candidatos por Vaga</h3>
+        <img src="{{ url_for('static', filename='/img/pizza.png') }}" class="emojis"> Distribuição de Candidatos por Vaga
         <canvas id="grafico-pizza" width="400" height="400"></canvas>
       </div>
 
       <!-- Gráfico de Barras - Score Médio -->
       <div class="chart-container">
-        <h3 class="chart-title">📊 Score Médio por Vaga</h3>
+        <img src="{{ url_for('static', filename='/img/dashboard.png') }}" class="emojis"> Score Médio por Vaga
         <canvas id="grafico-barras" width="400" height="400"></canvas>
       </div>
     </div>
 
     <!-- Gráfico de Linha - Tendência Temporal -->
     <div class="line-chart">
-      <h3 class="chart-title">📈 Tendência de Candidaturas (Últimos 30 dias)</h3>
+      <img src="{{ url_for('static', filename='/img/tendencia.png') }}" class="emojis"> Tendência de Candidaturas (Últimos 30 dias)
       <canvas id="grafico-linha" width="800" height="300"></canvas>
     </div>
 
     <!-- Área de Insights -->
     <div class="insights">
-      <h3 class="insights-title">💡 Insights Automáticos</h3>
+      <img src="{{ url_for('static', filename='/img/lampada.png') }}" class="emojis"> Insights Automáticos
       <div id="insights" class="insights-content">
         <!-- Insights serão carregados via JavaScript -->
       </div>

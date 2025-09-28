@@ -22,13 +22,13 @@
 
             <div class="create-job-flex">
                 <a href="{{ url_for('vagas.criar_vaga') }}" class="create-job-btn">
-                    <span class="create-job-icon">➕</span>
+                    <img src="{{ url_for('static', filename='/img/add.png') }}" class="emojis">
                 </a>
 
                 <!-- Botão Busca Inteligente -->
                 <div class="search-btn-container">
                     <button id="toggleSearchBtn" onclick="toggleAdvancedSearch()" class="search-btn">
-                        <span id="searchIcon" class="search-icon">🔍</span>
+                        <img src="{{ url_for('static', filename='/img/lupa.png') }}" class="emojis">
                     </button>
                 </div>
             </div>
@@ -38,12 +38,12 @@
         <div id="advancedSearchPanel" class="advanced-search-panel hidden">
             <div class="search-fields-container">
                 <div class="search-field">
-                    <label class="search-label">🔍 Palavra-chave</label>
+                    <img src="{{ url_for('static', filename='/img/lupa.png') }}" class="emojis"> Palavra-chave
                     <input type="text" id="searchKeyword" placeholder="Ex: desenvolvedor, vendas..." class="search-input">
                 </div>
 
                 <div class="search-field">
-                    <label class="search-label">📊 Status</label>
+                    <img src="{{ url_for('static', filename='/img/status.png') }}" class="emojis"> Status
                     <select id="searchStatus" class="search-input">
                         <option value="">Todos os status</option>
                         <option value="Ativa">Ativa</option>
@@ -53,7 +53,7 @@
                 </div>
 
                 <div class="search-field">
-                    <label class="search-label">⚡ Urgência</label>
+                    <img src="{{ url_for('static', filename='/img/urgencia.png') }}" class="emojis"> Urgência
                     <select id="searchUrgency" class="search-input">
                         <option value="">Qualquer urgência</option>
                         <option value="Imediata">Imediata</option>
@@ -63,7 +63,7 @@
                 </div>
 
                 <div class="search-field">
-                    <label class="search-label">👥 Candidatos</label>
+                    <img src="{{ url_for('static', filename='/img/nothing.png') }}" class="emojis">Candidatos
                     <select id="searchCandidatos" class="search-input">
                         <option value="">Qualquer quantidade</option>
                         <option value="sem_candidatos">Sem candidatos</option>
@@ -75,11 +75,11 @@
 
             <div class="search-actions">
                 <button onclick="realizarBuscaVagas()" class="search-action-btn">
-                    <span class="search-action-icon">🔍</span>
+                    <img src="{{ url_for('static', filename='/img/lupa.png') }}" class="emojis">
                     Buscar Vagas
                 </button>
                 <button onclick="limparFiltrosBusca()" class="clear-filters-btn">
-                    <span>🧹</span>
+                    <img src="{{ url_for('static', filename='/img/clear.png') }}" class="emojis">
                     Limpar Filtros
                 </button>
             </div>
@@ -89,3 +89,17 @@
 
 <!-- Lista de Vagas -->
 {% include 'partials/lista_vagas.html' %}
+
+<script>
+function toggleAdvancedSearch() {
+    const panel = document.getElementById("advancedSearchPanel");
+
+    if (panel.classList.contains("hidden")) {
+        panel.classList.remove("hidden");
+        setTimeout(() => panel.classList.add("open"), 10); // transição suave
+    } else {
+        panel.classList.remove("open");
+        setTimeout(() => panel.classList.add("hidden"), 300); // espera a transição
+    }
+}
+</script>

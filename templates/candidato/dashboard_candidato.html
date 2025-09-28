@@ -18,11 +18,11 @@
             </p>
 
             <a href="{{ url_for('candidaturas.editar_perfil_candidato') }}">
-                <span>⚙️</span> Perfil
+                <img src="{{ url_for('static', filename='/img/settings.png') }}" class="emojis"> Perfil
             </a>
 
             <a href="{{ url_for('logout') }}">
-                <span>🚪</span> Sair
+                <img src="{{ url_for('static', filename='/img/logout.png') }}" class="emojis"> Sair
             </a>
         </div>
     </div>
@@ -35,7 +35,7 @@
 <!-- Painel infos -->
 <div class="dashboard-main">
     <div class="dashboard-title-container">
-        <img src="{{ url_for('static', filename='/img/lupa.png') }}" alt="Ícone" class="lupa-icon" />
+        <img src="{{ url_for('static', filename='/img/panel.png') }}" alt="Ícone" class="lupa-icon" />
         <h2 class="dashboard-title">Painel do Candidato</h2>
     </div>
 
@@ -48,7 +48,7 @@
                     <p class="card-value purple">{{ vagas_candidatadas|length if vagas_candidatadas else 0 }}</p>
                 </div>
                 <div class="card-icon purple-bg">
-                    <img src="{{ url_for('static', filename='/img/target.png') }}" alt="Ícone" />
+                    <img src="{{ url_for('static', filename='/img/alvo.png') }}" alt="Ícone" />
                 </div>
             </div>
         </div>
@@ -103,20 +103,20 @@
             <div class="filtros-container">
                 <div class="filtros-buttons">
                     <button onclick="showSection('principais')" class="filter-btn filter-active">
-                        🏆 Principais
+                        <img src="{{ url_for('static', filename='/img/principais.png') }}" class="emojis"> Principais
                     </button>
 
                     <button onclick="showSection('todas')" class="filter-btn">
-                        📋 Todas as Vagas
+                        <img src="{{ url_for('static', filename='/img/info.png') }}" class="emojis"> Todas as Vagas
                     </button>
                     <button onclick="showSection('candidaturas')" class="filter-btn">
-                        🎯 Minhas Candidaturas
+                        <img src="{{ url_for('static', filename='/img/alvo.png') }}" class="emojis"> Minhas Candidaturas
                     </button>
                     <button onclick="showSection('favoritas')" class="filter-btn">
-                        ⭐ Favoritas
+                        <img src="{{ url_for('static', filename='/img/favorite.png') }}" class="emojis"> Favoritas
                     </button>
                     <button onclick="showSection('assistente-ia')" class="filter-btn">
-                        🤖 Assistente IA
+                        <img src="{{ url_for('static', filename='/img/robot.png') }}" class="emojis"> Assistente IA
                     </button>
                 </div>
             </div>

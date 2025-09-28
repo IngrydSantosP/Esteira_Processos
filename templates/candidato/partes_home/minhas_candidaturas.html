@@ -3,7 +3,7 @@
 <div>
     <div class="candidaturas-container">
         <div class="candidaturas-header">
-            <span class="candidaturas-icon">🎯</span>
+            <img src="{{ url_for('static', filename='/img/alvo.png') }}" class="emojis">
             <span class="candidaturas-texto">Veja em quais vagas você se candidatou!</span>
         </div>
 
@@ -83,7 +83,7 @@
 {% else %}
 <div class="no-candidature">
     <div class="no-candidature-icon">
-        <span class="text-4xl">📋</span>
+        <img src="{{ url_for('static', filename='/img/info.png') }}" class="emojis">
     </div>
     <h3 class="no-candidature-title">Nenhuma candidatura ainda</h3>
     <p class="no-candidature-text">Explore as vagas recomendadas e candidate-se!</p>

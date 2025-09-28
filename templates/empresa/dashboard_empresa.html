@@ -17,11 +17,11 @@
             </p>
 
             <a href="{{ url_for('vagas.editar_perfil_empresa') }}">
-                <span>⚙️</span> Perfil
+                <img src="{{ url_for('static', filename='/img/settings.png') }}" class="emojis"> Perfil
             </a>
 
             <a href="{{ url_for('logout') }}">
-                <span>🚪</span> Sair
+                <img src="{{ url_for('static', filename='/img/logout.png') }}" class="emojis"> Sair
             </a>
         </div>
     </div>
@@ -44,7 +44,7 @@
                         <p class="card-value purple">{{ vagas|length if vagas else 0 }}</p>
                     </div>
                     <div class="card-icon purple-bg">
-                        <img src="{{ url_for('static', filename='/img/job.png') }}" alt="Ícone" />
+                        <img src="{{ url_for('static', filename='/img/jobs.png') }}" alt="Ícone" />
                     </div>
                 </div>
             </div>
@@ -57,8 +57,8 @@
                             {{ vagas|selectattr('status', 'equalto', 'Ativa')|list|length if vagas else 0 }}
                         </p>
                     </div>
-                    <div class="card-value green">
-                        <img src="{{ url_for('static', filename='/img/check.png') }}" alt="Ícone" />
+                    <div class="card-icon purple-bg">
+                        <img src="{{ url_for('static', filename='/img/report.png') }}" alt="Ícone" />
                     </div>
                 </div>
             </div>
@@ -84,7 +84,7 @@
                         <p class="card-value yellow">{{ vagas|selectattr('status', 'equalto', 'Concluída')|list|length if vagas else 0 }}</p>
                     </div>
                     <div class="card-icon yellow-bg">
-                        <img src="{{ url_for('static', filename='/img/favorites.png') }}" alt="Ícone" />
+                        <img src="{{ url_for('static', filename='/img/verified.png') }}" alt="Ícone" />
                     </div>
                 </div>
             </div>
@@ -97,16 +97,16 @@
     <div class="filtros-container">
         <div class="filtros-buttons">
             <button onclick="showSection('relatorios')" class="filter-btn filter-active">
-                📊 Relatórios
+                <img src="{{ url_for('static', filename='/img/dashboard.png') }}" class="emojis"> Relatórios
             </button>
             <button onclick="showSection('vagas')" class="filter-btn">
-                📋 Vagas
+                <img src="{{ url_for('static', filename='/img/info.png') }}" class="emojis"> Vagas
             </button>
             <button onclick="showSection('candidatos')" class="filter-btn">
-                👥 Candidatos
+                <img src="{{ url_for('static', filename='/img/people.png') }}" class="emojis"> Candidatos
             </button>
             <button onclick="showSection('favoritos')" class="filter-btn">
-                ⭐ Favoritos
+                <img src="{{ url_for('static', filename='/img/favorite.png') }}" class="emojis"> Favoritos
             </button>
         </div>
     </div>
