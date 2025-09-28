@@ -54,7 +54,7 @@ document.getElementById('btnCancelar').addEventListener('click', function() {
     }
 
     // Redirecionar para dashboard
-    window.location.href = "{{ url_for('dashboard_candidato') }}";
+    window.location.href = "{{ url_for('candidaturas.dashboard_candidato') }}";
 });
 
 // Prevenir upload se não há arquivo selecionado

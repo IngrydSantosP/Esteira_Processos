@@ -1,0 +1,72 @@
+
+<!-- Filtros de Busca dentro de Todas as Vagas -->
+<link rel="stylesheet" href="{{ url_for('static', filename='style/todas.css') }}">
+<div class="filtro-container">
+    <h3 class="titulo-filtro">🔍 Busca Avançada</h3>
+    <div class="filtro-grid">
+        <div>
+            <label class="filtro-label">🔍 Palavra-chave</label>
+            <input type="text" id="searchKeyword" placeholder="Ex: desenvolvedor, vendas..."
+                   class="filtro-input">
+        </div>
+
+        <div>
+            <label class="filtro-label">📍 Localização</label>
+            <select id="searchLocation" class="filtro-input">
+                <option value="">Todas as localizações</option>
+            </select>
+        </div>
+
+        <div>
+            <label class="filtro-label">🏷️ Categoria</label>
+            <select id="searchCategory" class="filtro-input">
+                <option value="">Todas as categorias</option>
+            </select>
+        </div>
+
+        <div>
+            <label class="filtro-label">⚡ Urgência</label>
+            <select id="searchUrgency" class="filtro-input">
+                <option value="">Qualquer urgência</option>
+                <option value="Imediata">Imediata</option>
+                <option value="Em até 30 dias">Em até 30 dias</option>
+                <option value="Sem urgência">Sem urgência</option>
+            </select>
+        </div>
+
+        <div>
+            <label class="filtro-label">💰   Salário Mínimo</label>
+            <input type="number" id="searchSalary" placeholder="Ex: 3000"
+                   class="filtro-input">
+        </div>
+
+        <div>
+            <label class="filtro-label">💼 Tipo de Vaga</label>
+            <select id="searchType" class="filtro-input">
+                <option value="">Todos os tipos</option>
+                <option value="Presencial">Presencial</option>
+                <option value="Remoto">Remoto</option>
+                <option value="Híbrida">Híbrida</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="filtro-buttons">
+        <button onclick="realizarBusca()" class="btn-buscar">
+            <span>🔍</span>
+            Buscar Vagas
+        </button>
+        <button onclick="limparFiltros()" class="btn-limpar">
+            <span>🧹</span>
+            Limpar Filtros
+        </button>
+    </div>
+</div>
+
+<!-- Resultados -->
+<div id="todasVagasContainer">
+    <div class="carregando-container">
+        <div class="carregando-spinner"></div>
+        <p class="carregando-texto">Carregando todas as vagas disponíveis...</p>
+    </div>
+</div>

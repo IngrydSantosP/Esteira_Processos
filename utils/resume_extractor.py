@@ -1,28 +1,31 @@
 import os
-import mysql.connector
+from werkzeug.utils import secure_filename 
 from mysql.connector import Error
 from db import get_db_connection
 from werkzeug.utils import secure_filename
 import fitz  # PyMuPDF
 import re
+from routes.arquivos import upload_curriculo  
 
 UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = {'pdf'}
+ALLOWED_EXTENSIONS = {'pdf'}    
 
-# Criar pasta de uploads se não existir
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
-
+# Pasta local para fallback
+FALLBACK_UPLOAD_FOLDER = os.path.join('uploads', 'curriculos_falhos')
+os.makedirs(FALLBACK_UPLOAD_FOLDER, exist_ok=True)
 
 def arquivo_permitido(filename):
-    """Verifica se o arquivo tem extensão permitida"""
+    """
+    Verifica se a extensão do arquivo é permitida (apenas PDF).
+    """
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-def extrair_texto_pdf(caminho_arquivo):
-    """Extrai texto de um arquivo PDF"""
+def extrair_texto_pdf(arquivo_file_storage):
+    """Extrai texto de um arquivo PDF sem salvar localmente"""
     try:
-        doc = fitz.open(caminho_arquivo)
+        arquivo_file_storage.stream.seek(0)  # Garante que está no início
+        doc = fitz.open(stream=arquivo_file_storage.read(), filetype="pdf")
         texto = ""
         for page in doc:
             texto += page.get_text()
@@ -31,6 +34,8 @@ def extrair_texto_pdf(caminho_arquivo):
     except Exception as e:
         print(f"Erro ao extrair texto do PDF: {e}")
         return None
+
+
 
 
 def processar_curriculo(texto_completo):
@@ -214,69 +219,88 @@ def processar_curriculo(texto_completo):
 
 
 def processar_upload_curriculo(request, candidato_id):
-    """Processa o upload de currículo e retorna resultado"""
+    """Processa o upload de currículo com fallback local em caso de falha no Cloudinary"""
     resultado = {'sucesso': False, 'mensagens': [], 'dados_extraidos': None}
 
     try:
         if 'curriculo' not in request.files:
-            resultado['mensagens'].append({
-                'texto': 'Nenhum arquivo selecionado',
-                'tipo': 'error'
-            })
+            resultado['mensagens'].append({'texto': 'Nenhum arquivo selecionado', 'tipo': 'error'})
             return resultado
 
         arquivo = request.files['curriculo']
 
         if arquivo.filename == '':
-            resultado['mensagens'].append({
-                'texto': 'Nenhum arquivo selecionado',
-                'tipo': 'error'
-            })
+            resultado['mensagens'].append({'texto': 'Nenhum arquivo selecionado', 'tipo': 'error'})
             return resultado
 
-        if arquivo and arquivo_permitido(arquivo.filename):
+        if arquivo and arquivo.filename.lower().endswith('.pdf'):
             nome_arquivo = secure_filename(arquivo.filename)
-            caminho_arquivo = os.path.join(
-                UPLOAD_FOLDER, f"candidato_{candidato_id}_{nome_arquivo}")
-            arquivo.save(caminho_arquivo)
 
-            # Extrair texto do PDF
-            texto_pdf = extrair_texto_pdf(caminho_arquivo)
+            # Extrair texto diretamente da memória
+            texto_pdf = extrair_texto_pdf(arquivo)
+            if not texto_pdf:
+                resultado['mensagens'].append({'texto': 'Erro ao extrair texto do arquivo PDF', 'tipo': 'error'})
+                return resultado
 
-            if texto_pdf:
-                # Processar texto do currículo para extrair dados
-                dados_extraidos = processar_curriculo(texto_pdf)
+            # Resetar ponteiro para upload
+            arquivo.seek(0)
 
-                # Salvar caminho do arquivo e dados extraídos no banco
-                conn = get_db_connection()
-                cursor = conn.cursor()
-
-                cursor.execute(
-                    '''
-                    UPDATE candidatos 
-                    SET caminho_curriculo = %s, experiencia = %s, competencias = %s, resumo_profissional = %s, formacao = %s, certificacoes = %s, idiomas = %s, disponibilidade = %s, beneficios_desejados = %s
-                    WHERE id = %s
-                    ''',
-                    (nome_arquivo, dados_extraidos['experiencia'], dados_extraidos['competencias'], dados_extraidos['resumo_profissional'], dados_extraidos['formacao'], dados_extraidos['certificacoes'], dados_extraidos['idiomas'], dados_extraidos['disponibilidade'], dados_extraidos['beneficios_desejados'], candidato_id)
-                )
-
-                conn.commit()
-                conn.close()
-
-                resultado['sucesso'] = True
-                resultado['dados_extraidos'] = dados_extraidos
-                resultado['mensagens'].append({
-                    'texto': 'Currículo processado com sucesso! Revise as informações extraídas:',
-                    'tipo': 'success'
-                })
+            # Tentar upload para Cloudinary
+            upload_resultado = upload_curriculo(arquivo, nome_usuario=f'candidato_{candidato_id}')
+            if upload_resultado['sucesso']:
+                link_curriculo = upload_resultado['url']
             else:
+                # Fallback: salvar localmente
+                fallback_path = os.path.join(FALLBACK_UPLOAD_FOLDER, f"candidato_{candidato_id}_{nome_arquivo}")
+                arquivo.seek(0)
+                arquivo.save(fallback_path)
+
+                link_curriculo = fallback_path  # Salva o caminho local no banco
+
                 resultado['mensagens'].append({
-                    'texto': 'Erro ao extrair texto do arquivo PDF',
-                    'tipo': 'error'
+                    'texto': '⚠️ Upload para o Cloudinary falhou. Currículo salvo localmente.',
+                    'tipo': 'warning'
                 })
+
+            # Processar texto
+            dados_extraidos = processar_curriculo(texto_pdf)
+
+            # Salvar no banco
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                UPDATE candidatos 
+                SET caminho_curriculo = %s, experiencia = %s, competencias = %s, resumo_profissional = %s,
+                    formacao = %s, certificacoes = %s, idiomas = %s, disponibilidade = %s, beneficios_desejados = %s
+                WHERE id = %s
+                ''',
+                (
+                    link_curriculo,
+                    dados_extraidos['experiencia'],
+                    dados_extraidos['competencias'],
+                    dados_extraidos['resumo_profissional'],
+                    dados_extraidos['formacao'],
+                    dados_extraidos['certificacoes'],
+                    dados_extraidos['idiomas'],
+                    dados_extraidos['disponibilidade'],
+                    dados_extraidos['beneficios_desejados'],
+                    candidato_id
+                )
+            )
+            conn.commit()
+            conn.close()
+
+            resultado['sucesso'] = True
+            resultado['dados_extraidos'] = dados_extraidos
+            resultado['mensagens'].append({
+                'texto': 'Currículo processado com sucesso!',
+                'tipo': 'success'
+            })
+
         else:
             resultado['mensagens'].append({
-                'texto': 'Tipo de arquivo não permitido. Use apenas PDF.',
+                'texto': 'Tipo de arquivo não permitido. Envie apenas PDF.',
                 'tipo': 'error'
             })
 
@@ -286,15 +310,7 @@ def processar_upload_curriculo(request, candidato_id):
             'tipo': 'error'
         })
 
-        # Tentar remover arquivo em caso de erro
-        try:
-            if 'caminho_arquivo' in locals() and os.path.exists(caminho_arquivo):
-                os.remove(caminho_arquivo)
-        except:
-            pass
-
     return resultado
-
 
 def finalizar_processamento_curriculo(request, candidato_id):
     """Finaliza o processamento do currículo salvando as informações editadas"""

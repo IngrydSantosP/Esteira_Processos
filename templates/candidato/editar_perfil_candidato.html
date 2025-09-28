@@ -3,114 +3,107 @@
 {% block title %}Editar Perfil{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 py-8">
-    <div class="max-w-4xl mx-auto px-4">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='style/editar_perfil.css') }}">
+    <div class="form-container">
         <!-- Header -->
-        <div class="bg-white rounded-3xl p-8 shadow-lg border border-gray-100 mb-8">
-            <div class="flex justify-between items-center">
-                <div class="flex items-center space-x-4">
-                    <div class="w-16 h-16 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center">
-                        <span class="text-white font-bold text-2xl">⚙️</span>
-                    </div>
-                    <div>
-                        <h1 class="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                            Editar Perfil
-                        </h1>
-                        <p class="text-gray-500">Mantenha suas informações atualizadas</p>
-                    </div>
-                </div>
-                <a href="{{ url_for('dashboard_candidato') }}" 
-                   class="group bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
-                    <span class="transition-transform group-hover:-translate-x-1">←</span>
-                    Voltar ao Dashboard
+        <div class="form-header">
+            <div class="header-content">
+                <a href="{{ url_for('candidaturas.dashboard_candidato') }}" class="back-button">
+                    <span class="back-arrow">X</span>
                 </a>
             </div>
+
+            <div>
+                            <label for="imagem_perfil" class="label">Foto de Perfil</label>
+                            <div class="image-upload-container">
+                                {% if candidato and candidato|length > 7 and candidato[7] %}
+                                    <img src="{{ candidato[7] }}" alt="Imagem atual" class="image-preview">
+                                {% else %}
+                                {% endif %}
+                                <input type="file" id="imagem_perfil" name="imagem_perfil" accept="image/*" class="file-input">
+                            </div>
+                            <div id="preview_imagem" class="image-preview-container"></div>
+                        </div>
         </div>
 
+        
+
         <!-- Formulário -->
-        <div class="bg-white rounded-3xl p-8 shadow-lg border border-gray-100">
-            <form method="POST" class="space-y-8">
+        <div class="form-section">
+            <form method="POST" class="form" enctype="multipart/form-data">
                 <!-- Informações Pessoais -->
                 <div>
-                    <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                        <span class="w-8 h-8 bg-purple-100 rounded-xl flex items-center justify-center">👤</span>
+                    <h2 class="section-title">
+                        <span class="section-icon">👤</span>
                         Informações Pessoais
                     </h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="form-grid">
                         <div>
-                            <label for="nome" class="block text-sm font-semibold text-gray-700 mb-2">Nome Completo</label>
-                            <input type="text" id="nome" name="nome" value="{{ candidato[0] }}" required
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">
+                            <label for="nome" class="label">Nome Completo</label>
+                            <input type="text" id="nome" name="nome" value="{{ candidato[0] if candidato else '' }}" required class="input">
                         </div>
                         <div>
-                            <label for="telefone" class="block text-sm font-semibold text-gray-700 mb-2">Telefone</label>
-                            <input type="tel" id="telefone" name="telefone" value="{{ candidato[1] }}" required
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">
+                            <label for="telefone" class="label">Telefone</label>
+                            <input type="tel" id="telefone" name="telefone" value="{{ candidato[1] if candidato and candidato|length > 1 else '' }}" required class="input">
                         </div>
                     </div>
                 </div>
+
+                
 
                 <!-- Informações Profissionais -->
                 <div>
-                    <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                        <span class="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">💼</span>
+                    <h2 class="section-title">
+                        <span class="section-icon">💼</span>
                         Informações Profissionais
                     </h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div class="form-grid">
                         <div>
-                            <label for="linkedin" class="block text-sm font-semibold text-gray-700 mb-2">LinkedIn</label>
-                            <input type="url" id="linkedin" name="linkedin" value="{{ candidato[2] }}" required
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">
+                            <label for="linkedin" class="label">LinkedIn</label>
+                            <input type="url" id="linkedin" name="linkedin" value="{{ candidato[2] if candidato and candidato|length > 2 else '' }}" required class="input">
                         </div>
                         <div>
-                            <label for="pretensao_salarial" class="block text-sm font-semibold text-gray-700 mb-2">Pretensão Salarial (R$)</label>
-                            <input type="number" id="pretensao_salarial" name="pretensao_salarial" value="{{ candidato[3] }}" step="0.01" required
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">
+                            <label for="pretensao_salarial" class="label">Pretensão Salarial (R$)</label>
+                            <input type="number" id="pretensao_salarial" name="pretensao_salarial" value="{{ candidato[3] if candidato and candidato|length > 3 else '' }}" step="0.01" required class="input">
                         </div>
                     </div>
 
-                    <div class="space-y-6">
+                    <div class="textarea-group">
                         <div>
-                            <label for="experiencia" class="block text-sm font-semibold text-gray-700 mb-2">Experiência Profissional</label>
-                            <textarea id="experiencia" name="experiencia" rows="4" placeholder="Descreva sua experiência profissional..."
-                                      class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 resize-none">{{ candidato[4] }}</textarea>
+                            <label for="experiencia" class="label">Experiência Profissional</label>
+                            <textarea id="experiencia" name="experiencia" rows="4" placeholder="Descreva sua experiência profissional..." class="textarea">{{ candidato[4] if candidato and candidato|length > 4 else '' }}</textarea>
                         </div>
 
                         <div>
-                            <label for="competencias" class="block text-sm font-semibold text-gray-700 mb-2">Competências e Habilidades</label>
-                            <textarea id="competencias" name="competencias" rows="3" placeholder="Liste suas principais competências e habilidades..."
-                                      class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 resize-none">{{ candidato[5] }}</textarea>
+                            <label for="competencias" class="label">Competências e Habilidades</label>
+                            <textarea id="competencias" name="competencias" rows="3" placeholder="Liste suas principais competências e habilidades..." class="textarea">{{ candidato[5] if candidato and candidato|length > 5 else '' }}</textarea>
                         </div>
 
                         <div>
-                            <label for="resumo_profissional" class="block text-sm font-semibold text-gray-700 mb-2">Resumo Profissional</label>
-                            <textarea id="resumo_profissional" name="resumo_profissional" rows="3" placeholder="Faça um breve resumo do seu perfil profissional..."
-                                      class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 resize-none">{{ candidato[6] }}</textarea>
+                            <label for="resumo_profissional" class="label">Resumo Profissional</label>
+                            <textarea id="resumo_profissional" name="resumo_profissional" rows="3" placeholder="Faça um breve resumo do seu perfil profissional..." class="textarea">{{ candidato[6] if candidato and candidato|length > 6 else '' }}</textarea>
                         </div>
 
                         <div>
-                            <label for="formacao" class="block text-sm font-semibold text-gray-700 mb-2">Formação Acadêmica</label>
-                            <textarea id="formacao" name="formacao" rows="3" placeholder="Descreva sua formação acadêmica..."
-                                      class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 resize-none">{{ candidato[7] if candidato|length > 7 else '' }}</textarea>
+                            <label for="formacao" class="label">Formação Acadêmica</label>
+                            <textarea id="formacao" name="formacao" rows="3" placeholder="Descreva sua formação acadêmica..." class="textarea">{{ candidato[7] if candidato|length > 7 else '' }}</textarea>
                         </div>
 
                         <div>
-                            <label for="certificacoes" class="block text-sm font-semibold text-gray-700 mb-2">Certificações e Cursos</label>
-                            <textarea id="certificacoes" name="certificacoes" rows="3" placeholder="Liste suas certificações, cursos complementares..."
-                                      class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 resize-none">{{ candidato[12] if candidato|length > 12 else '' }}</textarea>
+                            <label for="certificacoes" class="label">Certificações e Cursos</label>
+                            <textarea id="certificacoes" name="certificacoes" rows="3" placeholder="Liste suas certificações, cursos complementares..." class="textarea">{{ candidato[12] if candidato|length > 12 else '' }}</textarea>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="form-grid">
                             <div>
-                                <label for="idiomas" class="block text-sm font-semibold text-gray-700 mb-2">Idiomas</label>
-                                <textarea id="idiomas" name="idiomas" rows="2" placeholder="Ex: Inglês (fluente), Espanhol (intermediário)..."
-                                          class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 resize-none">{{ candidato[13] if candidato|length > 13 else '' }}</textarea>
+                                <label for="idiomas" class="label">Idiomas</label>
+                                <textarea id="idiomas" name="idiomas" rows="2" placeholder="Ex: Inglês (fluente), Espanhol (intermediário)..." class="textarea">{{ candidato[13] if candidato|length > 13 else '' }}</textarea>
                             </div>
 
                             <div>
-                                <label for="disponibilidade" class="block text-sm font-semibold text-gray-700 mb-2">Modalidade Preferida</label>
-                                <select id="disponibilidade" name="disponibilidade" 
-                                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">
+                                <label for="disponibilidade" class="label">Modalidade Preferida</label>
+                                <select id="disponibilidade" name="disponibilidade" class="input">
                                     <option value="">Selecione...</option>
                                     <option value="Presencial" {% if candidato|length > 14 and candidato[14] == 'Presencial' %}selected{% endif %}>Presencial</option>
                                     <option value="Remoto" {% if candidato|length > 14 and candidato[14] == 'Remoto' %}selected{% endif %}>Remoto</option>
@@ -120,68 +113,59 @@
                         </div>
 
                         <div>
-                            <label for="beneficios_desejados" class="block text-sm font-semibold text-gray-700 mb-2">Benefícios Desejados</label>
-                            <textarea id="beneficios_desejados" name="beneficios_desejados" rows="2" placeholder="Ex: Vale refeição, plano de saúde, horário flexível..."
-                                      class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 resize-none">{{ candidato[15] if candidato|length > 15 else '' }}</textarea>
+                            <label for="beneficios_desejados" class="label">Benefícios Desejados</label>
+                            <textarea id="beneficios_desejados" name="beneficios_desejados" rows="2" placeholder="Ex: Vale refeição, plano de saúde, horário flexível..." class="textarea">{{ candidato[15] if candidato|length > 15 else '' }}</textarea>
                         </div>
+
+                        
                     </div>
                 </div>
 
-                   <!-- Endereço -->
+                <!-- Endereço -->
                 <div>
-                    <h2 class="text-xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                        <span class="w-8 h-8 bg-green-100 rounded-xl flex items-center justify-center">📍</span>
+                    <h2 class="section-title">
+                        <span class="section-icon">📍</span>
                         Endereço
                     </h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div class="form-grid">
                         <div>
-                            <label for="cep" class="block text-sm font-semibold text-gray-700 mb-2">CEP</label>
-                            <input type="text" id="cep" name="cep" value="{{ candidato[11] }}" 
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
-                                   onblur="aplicarBuscaEndereco()">
+                            <label for="cep" class="label">CEP</label>
+                            <input type="text" id="cep" name="cep" value="{{ candidato[11] if candidato and candidato|length > 11 else '' }}" class="input" onblur="aplicarBuscaEndereco()">
                         </div>
                         <div>
-                            <label for="endereco" class="block text-sm font-semibold text-gray-700 mb-2">Endereço</label>
-                            <input type="text" id="endereco" name="endereco" value="{{ candidato[8] }}" 
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">
+                            <label for="endereco" class="label">Endereço</label>
+                            <input type="text" id="endereco" name="endereco" value="{{ candidato[8] if candidato and candidato|length > 8 else '' }}" class="input">
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="form-grid">
                         <div>
-                            <label for="complemento" class="block text-sm font-semibold text-gray-700 mb-2">Complemento</label>
-                            <input type="text" id="complemento" name="complemento" value="{{ candidato[10] }}" 
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">
+                            <label for="complemento" class="label">Complemento</label>
+                            <input type="text" id="complemento" name="complemento" value="{{ candidato[10] if candidato and candidato|length > 10 else '' }}" class="input">
                         </div>
                         <div>
-                            <label for="numero" class="block text-sm font-semibold text-gray-700 mb-2">Número</label>
-                            <input type="number" id="numero" name="numero" value="{{ candidato[9] }}" 
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200">
+                            <label for="numero" class="label">Número</label>
+                            <input type="number" id="numero" name="numero" value="{{ candidato[9] if candidato and candidato|length > 9 else '' }}" class="input">
                         </div>
                     </div>
                 </div>
 
                 <!-- Botões de Ação -->
-                <div class="border-t border-gray-200 pt-8">
-                    <div class="flex flex-col sm:flex-row gap-4 justify-between">
-                        <div class="flex gap-4">
-                            <button type="submit" 
-                                    class="group bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold px-8 py-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-3">
-                                <span class="transition-transform group-hover:scale-110">✅</span>
-                                Salvar Alterações
-                            </button>
-                            <a href="{{ url_for('upload_curriculo') }}" 
-                               class="group bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold px-8 py-4 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-3">
-                                <span class="transition-transform group-hover:scale-110">📄</span>
-                                Atualizar Currículo
-                            </a>
-                        </div>
+                <div class="form-actions">
+                    <div class="button-group">
+                        <button type="submit" class="submit-button">
+                            <span class="submit-icon">✅</span>
+                            Salvar Alterações
+                        </button>
+                        <a href="{{ url_for('candidaturas.upload_curriculo') }}" class="upload-cv-button">
+                            <span class="cv-icon">📄</span>
+                            Atualizar Currículo
+                        </a>
                     </div>
                 </div>
             </form>
         </div>
     </div>
-</div>
 
 <script>
 function aplicarBuscaEndereco() {
@@ -205,5 +189,21 @@ function aplicarBuscaEndereco() {
         alert("CEP inválido.");
     }
 }
+
+ // Mostrar preview da imagem selecionada
+  const inputImagem = document.getElementById('imagem_perfil');
+  const preview = document.getElementById('preview_imagem');
+
+  inputImagem.addEventListener('change', function () {
+    const file = this.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        preview.innerHTML = `<img src="${e.target.result}" alt="Preview"
+                             class="image-preview"/>`;
+      };
+      reader.readAsDataURL(file);
+    }
+  });
 </script>
 {% endblock %}

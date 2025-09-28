@@ -13,7 +13,7 @@
         </p>
     </div>
 
-    <form method="POST" action="{{ url_for('finalizar_curriculo') }}">
+    <form method="POST" action="{{ url_for('candidaturas.finalizar_curriculo') }}">
 
         <!-- Formação / Educação -->
     <div class="mb-6">
@@ -81,7 +81,7 @@
             <button type="submit" class="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 font-medium flex items-center gap-2">
                 <span>💾</span> Salvar e Finalizar
             </button>
-            <a href="{{ url_for('upload_curriculo') }}" class="bg-gray-600 text-white px-8 py-3 rounded-lg hover:bg-gray-700 font-medium flex items-center gap-2">
+            <a href="{{ url_for('candidaturas.upload_curriculo') }}" class="bg-gray-600 text-white px-8 py-3 rounded-lg hover:bg-gray-700 font-medium flex items-center gap-2">
                 <span>↩️</span> Enviar Novo Currículo
             </a>
         </div>

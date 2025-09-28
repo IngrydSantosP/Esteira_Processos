@@ -1,485 +1,136 @@
-
-
 {% extends "base.html" %}
 
 {% block title %}Dashboard Empresa{% endblock %}
 
 {% block content %}
-<style>
-    .filter-active {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-    }
-    .favorite-btn:hover .tooltiptext {
-        visibility: visible;
-        opacity: 1;
-    }
-    .favorite-btn .tooltiptext {
-        visibility: hidden;
-        width: 120px;
-        background-color: #555;
-        color: #fff;
-        text-align: center;
-        border-radius: 6px;
-        padding: 5px 0;
-        position: absolute;
-        z-index: 1;
-        bottom: 125%;
-        left: 50%;
-        margin-left: -60px;
-        opacity: 0;
-        transition: opacity 0.3s;
-    }
-</style>
 
-<div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
-    <!-- Header da página -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
-        <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 lg:gap-0 mb-6 lg:mb-8">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
-                    <span class="text-white font-bold text-base sm:text-lg">🏢</span>
-                </div>
-                <div>
-                    <h1 class="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                        Meu Dashboard
-                    </h1>
-                    <p class="text-gray-500 text-xs sm:text-sm">Gerencie suas vagas e candidatos</p>
-                </div>
-            </div>
-            <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center">
-                <a href="{{ url_for('criar_vaga') }}"
-                   class="group bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-4 sm:px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center justify-center gap-2 text-sm sm:text-base">
-                    <span class="transition-transform group-hover:rotate-12">➕</span>
-                    <span class="hidden sm:inline">Nova Vaga</span>
-                    <span class="sm:hidden">Nova</span>
-                </a>
-                <a href="{{ url_for('candidatos_geral') }}"
-                   class="group bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white px-4 sm:px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center justify-center gap-2 text-sm sm:text-base">
-                    <span class="transition-transform group-hover:scale-110">👥</span>
-                    Candidatos
-                </a>
-                <a href="{{ url_for('relatorio_empresa') }}"
-                   class="group bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white px-4 sm:px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center justify-center gap-2 text-sm sm:text-base">
-                    <span class="transition-transform group-hover:scale-110">📊</span>
-                    <span class="hidden sm:inline">Relatórios</span>
-                    <span class="sm:hidden">Stats</span>
-                </a>
-            </div>
+<link rel="stylesheet" href="{{ url_for('static', filename='style/dashboard.css') }}">
+
+<div class="profile-wrapper">
+    <div class="profile-container" id="profileContainer">
+        <img src="{{ imagem_perfil or url_for('static', filename='img/user.png') }}"
+             alt="Foto de perfil" id="profileImg" class="logo">
+
+        <div class="dropdown-menu" id="dropdownMenu">
+            <p class="font-bold">
+                {{ empresa_nome }}
+            </p>
+
+            <a href="{{ url_for('vagas.editar_perfil_empresa') }}">
+                <span>⚙️</span> Perfil
+            </a>
+
+            <a href="{{ url_for('logout') }}">
+                <span>🚪</span> Sair
+            </a>
         </div>
+    </div>
+</div>
+
+<!-- Header da página -->
+<div class="dashboard-main">
+    <div class="dashboard-title-container">
+        <img src="{{ url_for('static', filename='/img/panel.png') }}" alt="Ícone" class="lupa-icon" />
+        <h2 class="dashboard-title">Painel do Candidato</h2>
     </div>
 
     <div class="max-w-7xl mx-auto px-4 py-8">
         <!-- Stats Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 hover:border-purple-200">
-                <div class="flex items-center justify-between">
+        <div class="stats-cards">
+            <div class="card card-purple">
+                <div class="card-content">
                     <div>
-                        <p class="text-gray-500 text-sm font-medium">Total de Vagas</p>
-                        <p class="text-3xl font-bold text-purple-600">{{ vagas|length if vagas else 0 }}</p>
+                        <p class="card-label">Total de Vagas</p>
+                        <p class="card-value purple">{{ vagas|length if vagas else 0 }}</p>
                     </div>
-                    <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                        <span class="text-2xl">💼</span>
+                    <div class="card-icon purple-bg">
+                        <img src="{{ url_for('static', filename='/img/job.png') }}" alt="Ícone" />
                     </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 hover:border-green-200">
-                <div class="flex items-center justify-between">
+            <div class="card card-green">
+                <div class="card-content">
                     <div>
-                        <p class="text-gray-500 text-sm font-medium">Vagas Ativas</p>
-                        <p class="text-3xl font-bold text-green-600">
+                        <p class="card-label">Vagas Ativas</p>
+                        <p class="card-value green">
                             {{ vagas|selectattr('status', 'equalto', 'Ativa')|list|length if vagas else 0 }}
                         </p>
                     </div>
-                    <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                        <span class="text-2xl">✅</span>
+                    <div class="card-value green">
+                        <img src="{{ url_for('static', filename='/img/check.png') }}" alt="Ícone" />
                     </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 hover:border-blue-200">
-                <div class="flex items-center justify-between">
+            <div class="card card-blue">
+                <div class="card-content">
                     <div>
-                        <p class="text-gray-500 text-sm font-medium">Total Candidatos</p>
-                        <p class="text-3xl font-bold text-blue-600">
+                        <p class="card-label">Total Candidatos</p>
+                        <p class="card-value blue">
                             {{ (vagas|map(attribute='total_candidatos')|map('int')|sum) if vagas else 0 }}
                         </p>
                     </div>
-                    <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                        <span class="text-2xl">👥</span>
+                    <div class="card-icon blue-bg">
+                        <img src="{{ url_for('static', filename='/img/people.png') }}" alt="Ícone" />
                     </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 hover:border-yellow-200">
-                <div class="flex items-center justify-between">
+            <div class="card card-yellow">
+                <div class="card-content">
                     <div>
-                        <p class="text-gray-500 text-sm font-medium">Concluídas</p>
-                        <p class="text-3xl font-bold text-yellow-600">{{ vagas|selectattr('status', 'equalto', 'Concluída')|list|length if vagas else 0 }}</p>
+                        <p class="card-label">Concluídas</p>
+                        <p class="card-value yellow">{{ vagas|selectattr('status', 'equalto', 'Concluída')|list|length if vagas else 0 }}</p>
                     </div>
-                    <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-                        <span class="text-2xl">🏆</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Filtros e Busca -->
-        <div class="mb-8">
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-                <div class="flex flex-col lg:flex-row gap-4 items-center">
-                    <!-- Filtros -->
-                    <div class="flex flex-wrap gap-3">
-                        <button onclick="filtrarVagas('todas')" class="filter-btn filter-active px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105">
-                            📋 Todas ({{ vagas|length if vagas else 0 }})
-                        </button>
-                        <button onclick="filtrarVagas('Ativa')" class="filter-btn bg-gray-100 text-gray-700 px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105">
-                            ✅ Ativas ({{ vagas|selectattr('status', 'equalto', 'Ativa')|list|length if vagas else 0 }})
-                        </button>
-                        <button onclick="filtrarVagas('Congelada')" class="filter-btn bg-gray-100 text-gray-700 px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105">
-                            ❄️ Congeladas ({{ vagas|selectattr('status', 'equalto', 'Congelada')|list|length if vagas else 0 }})
-                        </button>
-                        <button onclick="filtrarVagas('Concluída')" class="filter-btn bg-gray-100 text-gray-700 px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105">
-                            🏆 Concluídas ({{ vagas|selectattr('status', 'equalto', 'Concluída')|list|length if vagas else 0 }})
-                        </button>
-                    </div>
-
-                    <!-- Botão Busca Inteligente -->
-                    <div class="flex-shrink-0 ml-auto">
-                        <button id="toggleSearchBtn" onclick="toggleAdvancedSearch()"
-                                class="group bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white px-4 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 hover:shadow-lg flex items-center gap-2">
-                            <span id="searchIcon" class="text-xl transition-transform group-hover:rotate-12">🔍</span>
-                            <span class="font-semibold">Busca Inteligente</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Painel de Busca Avançada (inicialmente oculto) -->
-                <div id="advancedSearchPanel" class="hidden mt-6 pt-6 border-t border-gray-200">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">🔍 Palavra-chave</label>
-                            <input type="text" id="searchKeyword" placeholder="Ex: desenvolvedor, vendas..."
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300">
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">📊 Status</label>
-                            <select id="searchStatus" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300">
-                                <option value="">Todos os status</option>
-                                <option value="Ativa">Ativa</option>
-                                <option value="Congelada">Congelada</option>
-                                <option value="Concluída">Concluída</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">⚡ Urgência</label>
-                            <select id="searchUrgency" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300">
-                                <option value="">Qualquer urgência</option>
-                                <option value="Imediata">Imediata</option>
-                                <option value="Em até 30 dias">Em até 30 dias</option>
-                                <option value="Sem urgência">Sem urgência</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">👥 Candidatos</label>
-                            <select id="searchCandidatos" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300">
-                                <option value="">Qualquer quantidade</option>
-                                <option value="sem_candidatos">Sem candidatos</option>
-                                <option value="poucos_candidatos">1-5 candidatos</option>
-                                <option value="muitos_candidatos">5+ candidatos</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-3">
-                        <button onclick="realizarBuscaVagas()"
-                                class="group bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
-                            <span class="transition-transform group-hover:rotate-12">🔍</span>
-                            Buscar Vagas
-                        </button>
-                        <button onclick="limparFiltrosBusca()"
-                                class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
-                            <span>🧹</span>
-                            Limpar Filtros
-                        </button>
+                    <div class="card-icon yellow-bg">
+                        <img src="{{ url_for('static', filename='/img/favorites.png') }}" alt="Ícone" />
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Lista de Vagas -->
-        {% include 'partials/lista_vagas.html' %}
     </div>
 </div>
 
+<!-- Filtros -->
+<div class="filtros">
+    <div class="filtros-container">
+        <div class="filtros-buttons">
+            <button onclick="showSection('relatorios')" class="filter-btn filter-active">
+                📊 Relatórios
+            </button>
+            <button onclick="showSection('vagas')" class="filter-btn">
+                📋 Vagas
+            </button>
+            <button onclick="showSection('candidatos')" class="filter-btn">
+                👥 Candidatos
+            </button>
+            <button onclick="showSection('favoritos')" class="filter-btn">
+                ⭐ Favoritos
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Seções que serão trocadas dinamicamente -->
+<div id="section-relatorios" class="content-section hidden">
+    {% include 'empresa/relatorio_empresa.html' %}
+</div>
+
+<div id="section-vagas" class="content-section hidden">
+    {% include 'empresa/vagas.html' %}
+</div>
+
+<div id="section-candidatos" class="content-section hidden">
+    {% include 'empresa/candidatos_geral.html' %}
+</div>
+
+<div id="section-favoritos" class="content-section hidden">
+    {% include 'empresa/candidatos_favoritos.html' %}
+</div>
+
+<script src="{{ url_for('static', filename='script/empresa/da.js') }}"></script>
 <!-- Inclui o modal e JS separado -->
 {% include 'partials/modal_encerramento.html' %}
 
-<script>
-  // Toggle para a Busca Avançada
-  function toggleAdvancedSearch() {
-    const panel = document.getElementById('advancedSearchPanel');
-    panel.classList.toggle('hidden');
-    const searchIcon = document.getElementById('searchIcon');
-    searchIcon.classList.toggle('rotate-12');
-  }
-
-  // Realizar busca de vagas
-  function realizarBuscaVagas() {
-    const keyword = document.getElementById('searchKeyword').value.toLowerCase();
-    const status = document.getElementById('searchStatus').value;
-    const urgency = document.getElementById('searchUrgency').value;
-    const candidatos = document.getElementById('searchCandidatos').value;
-
-    const cards = document.querySelectorAll('.vaga-card');
-    let visibleCount = 0;
-
-    cards.forEach(card => {
-      let shouldShow = true;
-
-      // Filtro por palavra-chave
-      if (keyword) {
-        const titulo = card.querySelector('h3').textContent.toLowerCase();
-        const descricao = card.querySelector('.vaga-descricao')?.textContent.toLowerCase() || '';
-        if (!titulo.includes(keyword) && !descricao.includes(keyword)) {
-          shouldShow = false;
-        }
-      }
-
-      // Filtro por status
-      if (status && card.getAttribute('data-status') !== status) {
-        shouldShow = false;
-      }
-
-      // Filtro por urgência
-      if (urgency) {
-        const vagaUrgency = card.getAttribute('data-urgencia');
-        if (vagaUrgency !== urgency) {
-          shouldShow = false;
-        }
-      }
-
-      // Filtro por candidatos
-      if (candidatos) {
-        const totalCandidatos = parseInt(card.getAttribute('data-candidatos')) || 0;
-        switch(candidatos) {
-          case 'sem_candidatos':
-            if (totalCandidatos > 0) shouldShow = false;
-            break;
-          case 'poucos_candidatos':
-            if (totalCandidatos === 0 || totalCandidatos > 5) shouldShow = false;
-            break;
-          case 'muitos_candidatos':
-            if (totalCandidatos <= 5) shouldShow = false;
-            break;
-        }
-      }
-
-      if (shouldShow) {
-        card.style.display = 'block';
-        visibleCount++;
-      } else {
-        card.style.display = 'none';
-      }
-    });
-
-    showToast(`${visibleCount} vaga(s) encontrada(s)`, 'success');
-  }
-
-  // Limpar filtros de busca
-  function limparFiltrosBusca() {
-    document.getElementById('searchKeyword').value = '';
-    document.getElementById('searchStatus').value = '';
-    document.getElementById('searchUrgency').value = '';
-    document.getElementById('searchCandidatos').value = '';
-
-    // Mostrar todas as vagas
-    document.querySelectorAll('.vaga-card').forEach(card => {
-      card.style.display = 'block';
-    });
-
-    showToast('Filtros limpos', 'info');
-  }
-
-  function filtrarVagas(status) {
-    const cards = document.querySelectorAll('.vaga-card');
-    let visibleCount = 0;
-
-    cards.forEach(card => {
-      const cardStatus = card.getAttribute('data-status');
-      if (status === 'todas' || cardStatus === status) {
-        card.style.display = 'block';
-        visibleCount++;
-      } else {
-        card.style.display = 'none';
-      }
-    });
-
-    // Atualizar botões com estilo similar ao dashboard candidato
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-      btn.classList.remove('filter-active');
-      btn.classList.add('bg-gray-100', 'text-gray-700');
-    });
-
-    const activeBtn = document.querySelector(`.filter-btn[onclick="filtrarVagas('${status}')"]`);
-    if (activeBtn) {
-      activeBtn.classList.remove('bg-gray-100', 'text-gray-700');
-      activeBtn.classList.add('filter-active');
-    }
-
-    showToast(`${visibleCount} vaga(s) encontrada(s)`, 'info');
-  }
-
-  function createAnnouncer() {
-    const announcer = document.createElement('div');
-    announcer.id = 'filter-announcer';
-    announcer.setAttribute('aria-live', 'polite');
-    announcer.setAttribute('aria-atomic', 'true');
-    announcer.style.position = 'absolute';
-    announcer.style.left = '-10000px';
-    announcer.style.width = '1px';
-    announcer.style.height = '1px';
-    announcer.style.overflow = 'hidden';
-    document.body.appendChild(announcer);
-    return announcer;
-  }
-
-  // Suporte a navegação por teclado nos filtros
-  document.addEventListener('DOMContentLoaded', function() {
-    const filterButtons = document.querySelectorAll('.filter-btn');
-
-    filterButtons.forEach((btn, index) => {
-      btn.addEventListener('keydown', function(e) {
-        switch(e.key) {
-          case 'ArrowLeft':
-          case 'ArrowUp':
-            e.preventDefault();
-            const prevIndex = index > 0 ? index - 1 : filterButtons.length - 1;
-            filterButtons[prevIndex].focus();
-            break;
-          case 'ArrowRight':
-          case 'ArrowDown':
-            e.preventDefault();
-            const nextIndex = index < filterButtons.length - 1 ? index + 1 : 0;
-            filterButtons[nextIndex].focus();
-            break;
-          case 'Enter':
-          case ' ':
-            e.preventDefault();
-            btn.click();
-            break;
-        }
-      });
-    });
-  });
-
-  // Função para reativar vaga (específica do dashboard)
-  async function reativarVaga(vagaId) {
-    if (!confirm('Tem certeza que deseja reativar esta vaga?')) {
-      return;
-    }
-
-    try {
-      const response = await fetch('/encerrar_vaga', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          vaga_id: vagaId,
-          acao: 'reativar'
-        })
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        showToast('Vaga reativada com sucesso!', 'success');
-        setTimeout(() => {
-          location.reload();
-        }, 1000);
-      } else {
-        showToast('Erro ao reativar vaga: ' + (result.error || 'Erro desconhecido'), 'error');
-      }
-    } catch (error) {
-      console.error('Erro ao reativar vaga:', error);
-      showToast('Erro ao reativar vaga. Tente novamente.', 'error');
-    }
-  }
-
-  // Função para abrir modal de encerramento (usar a função do modal)
-  // Esta função já está definida no modal_encerramento.html
-  // Removendo duplicação para evitar conflitos
-
-  // Sistema de favoritos com auto-reload
-  async function toggleFavoriteCandidate(candidatoId, vagaId, button) {
-    const isFavorited = button.dataset.favorited === 'true';
-
-    try {
-      button.classList.add('animate-pulse');
-
-      const response = await fetch('/api/favoritar-candidato', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          candidato_id: candidatoId,
-          vaga_id: vagaId,
-          acao: 'toggle'
-        })
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        button.dataset.favorited = result.favorited;
-        button.textContent = result.favorited ? '❤️' : '🤍';
-        button.className = `favorite-btn text-xl transition-all duration-300 hover:scale-125 ${result.favorited ? 'text-red-500' : 'text-gray-300'}`;
-
-        showToast(result.message, 'success');
-
-        // Reload imediato para refletir mudanças
-        location.reload();
-      } else {
-        showToast(result.message || 'Erro ao favoritar candidato', 'error');
-      }
-    } catch (error) {
-      console.error('Erro ao favoritar:', error);
-      showToast('Erro ao favoritar candidato', 'error');
-    } finally {
-      button.classList.remove('animate-pulse');
-    }
-  }
-
-  // Toast notifications
-  function showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `fixed bottom-4 right-4 z-50 px-6 py-4 rounded-xl shadow-lg transform translate-y-full transition-all duration-300 ${
-      type === 'success' ? 'bg-green-500 text-white' :
-      type === 'error' ? 'bg-red-500 text-white' :
-      'bg-blue-500 text-white'
-    }`;
-    toast.textContent = message;
-
-    document.body.appendChild(toast);
-
-    setTimeout(() => {
-      toast.classList.remove('translate-y-full');
-    }, 100);
-
-    setTimeout(() => {
-      toast.classList.add('translate-y-full');
-      setTimeout(() => {
-        document.body.removeChild(toast);
-      }, 300);
-    }, 3000);
-  }
-</script>
 {% endblock %}

@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Perfil da Empresa{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='style/editar_perfil.css') }}">
+
+
+<div class="container">
+    <div class="form-container">
+        <!-- Header -->
+        <div class="header">
+                <a href="{{ url_for('vagas.dashboard_empresa') }}" class="back-button">
+                    <span class="back-icon">X</span>
+                </a>
+            
+        </div>
+
+        <div class="profile-container" id="profileContainer">
+        <img src="{{ imagem_perfil or url_for('static', filename='img/user.png') }}"
+             alt="Foto de perfil" id="perfilimg" class="perfilimg">
+
+        <div>
+            <label for="imagem_perfil" class="edit-photo-link">Editar foto do perfil</label>
+            <input type="file" id="imagem_perfil" name="imagem_perfil" accept="image/*" class="file-input">
+            <div id="preview_imagem" class="preview"></div>
+        </div>
+
+        <!-- Formulário -->
+         
+        <div class="form">
+            <form method="POST" class="form-fields" enctype="multipart/form-data">
+                <!-- Informações da Empresa -->
+                <div>
+                    <h2 class="section-title">
+                        Informações
+                    </h2>
+                    <div class="form-grid">
+                        <div>
+                            <label for="nome" class="label">Nome da Empresa</label>
+                            <input type="text" id="nome" name="nome" value="{{ empresa[0] }}" required class="input">
+                        </div>
+                        <div>
+                            <label for="email" class="label">E-mail</label>
+                            <input type="email" id="email" name="email" value="{{ empresa[1] }}" required class="input">
+                        </div>
+                       
+                    </div>
+                </div>
+
+                <!-- Localização -->
+                <div>
+                    <div class="form-grid mb-6">
+                        <div>
+                            <label for="cep" class="label">CEP</label>
+                            <input type="text" id="cep" name="cep" value="{{ empresa[5] }}" class="input" onblur="aplicarBuscaEndereco()">
+                        </div>
+                        <div>
+                            <label for="endereco" class="label">Endereço</label>
+                            <input type="text" id="endereco" name="endereco" value="{{ empresa[2] }}" class="input">
+                        </div>
+                    </div>
+
+                    <div class="form-grid mb-6">
+                        <div>
+                            <label for="cidade" class="label">Cidade</label>
+                            <input type="text" id="cidade" name="cidade" value="{{ empresa[3] }}" class="input">
+                        </div>
+                        <div>
+                            <label for="estado" class="label">Estado</label>
+                            <input type="text" id="estado" name="estado" value="{{ empresa[4] }}" class="input">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botões de Ação -->
+                <div class="form-actions">
+                    <div class="action-buttons">
+                        <button type="submit" class="submit-button">
+                            <span class="submit-icon">✅</span>
+                            Salvar Alterações
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function aplicarBuscaEndereco() {
+    const cep = document.getElementById('cep').value.replace(/\D/g, '');
+    if (cep.length === 8) {
+        fetch(`https://viacep.com.br/ws/${cep}/json/`)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.erro) {
+                    document.getElementById('endereco').value = data.logradouro || '';
+                    document.getElementById('cidade').value = data.localidade || '';
+                    document.getElementById('estado').value = data.uf || '';
+                } else {
+                    alert("CEP não encontrado.");
+                }
+            })
+            .catch(error => console.error('Erro ao buscar o endereço:', error));
+    } else {
+        alert("CEP inválido.");
+    }
+}
+
+const inputImagem = document.getElementById('imagem_perfil');
+const preview = document.getElementById('preview_imagem');
+
+inputImagem.addEventListener('change', function () {
+    const file = this.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            preview.innerHTML = `<img src="${e.target.result}" alt="Preview"
+                                 class="image-preview"/>`;
+        };
+        reader.readAsDataURL(file);
+    } else {
+        preview.innerHTML = '';
+    }
+});
+</script>
+
+{% endblock %}

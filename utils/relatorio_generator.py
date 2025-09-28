@@ -1,5 +1,3 @@
-
-import mysql.connector
 from datetime import datetime, timedelta
 import json
 from db import get_db_connection

@@ -2,31 +2,15 @@
 
 {% block title %}Criar Vaga{% endblock %}
 
+{% block scripts %}
+
+
+{% endblock %}
+
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
+<script src="{{ url_for('static', filename='script/empresa/criar_vaga.js') }}"></script>
+<div>
     <!-- Header -->
-    <div class="bg-white shadow-sm border-b">
-        <div class="max-w-7xl mx-auto px-4 py-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <div class="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
-                        <span class="text-white font-bold text-lg">➕</span>
-                    </div>
-                    <div>
-                        <h1 class="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                            Criar Nova Vaga
-                        </h1>
-                        <p class="text-gray-500 text-sm">Cadastre uma nova oportunidade de trabalho</p>
-                    </div>
-                </div>
-                <a href="{{ url_for('dashboard_empresa') }}"
-                   class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-xl transition-all duration-300 flex items-center gap-2">
-                    <span>⬅️</span>
-                    Voltar ao Dashboard
-                </a>
-            </div>
-        </div>
-    </div>
 
     <div class="max-w-5xl mx-auto px-4 py-8">
         <!-- Progress Indicator -->
@@ -62,7 +46,7 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-grid-cols-2 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="md:col-span-2">
                         <label for="titulo" class="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
                             <span>💼</span> Título da Vaga *
@@ -324,7 +308,7 @@
                 </div>
             </div>
 
-            <!-- Seção 3: Metodologia de Score -->
+             <!-- Seção 3: Metodologia de Score -->
             <div id="secao-3" class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hidden">
                 <div class="flex items-center gap-4 mb-6">
                     <div class="w-16 h-16 bg-gradient-to-br from-purple-100 to-pink-100 rounded-2xl flex items-center justify-center">
@@ -475,6 +459,7 @@
                 <button type="button" onclick="proximaSecao()" id="btnProximo"
                         class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-3 px-6 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2">
                     Próximo <span>➡️</span>
+
                 </button>
             </div>
 
@@ -485,7 +470,7 @@
                     <span class="text-xl">🚀</span>
                     Criar Vaga
                 </button>
-                <a href="{{ url_for('dashboard_empresa') }}"
+                <a href="{{ url_for('vagas.dashboard_empresa') }}"
                    class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-4 px-8 rounded-xl font-semibold text-lg transition-all duration-300 text-center flex items-center justify-center gap-3 shadow-lg">
                     <span class="text-xl">❌</span>
                     Cancelar
@@ -494,300 +479,4 @@
         </form>
     </div>
 </div>
-
-<script>
-// Campos obrigatórios ocultos com valores padrão
-const camposOcultos = {
-    'turno_trabalho': 'Comercial',
-    'idiomas_exigidos': '',
-    'disponibilidade_viagens': false,
-    'data_limite_candidatura': null,
-    'data_congelamento_agendado': null
-};
-
-// Adicionar campos ocultos no envio
-document.querySelector('form').addEventListener('submit', function(e) {
-    Object.keys(camposOcultos).forEach(campo => {
-        if (!document.querySelector(`[name="${campo}"]`)) {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = campo;
-            input.value = camposOcultos[campo];
-            this.appendChild(input);
-        }
-    });
-});
-
-function toggleEnderecoField() {
-    const tipoVaga = document.getElementById('tipo_vaga').value;
-    const enderecoContainer = document.getElementById('endereco_container');
-    const camposEndereco = document.querySelectorAll('#campos_endereco_vaga input, #campos_endereco_vaga select');
-
-    if (tipoVaga === 'Presencial' || tipoVaga === 'Híbrida') {
-        enderecoContainer.classList.remove('hidden');
-        camposEndereco.forEach(campo => {
-            campo.required = true;
-        });
-    } else {
-        enderecoContainer.classList.add('hidden');
-        camposEndereco.forEach(campo => {
-            campo.required = false;
-            campo.value = '';
-        });
-    }
-}
-
-function toggleNovaCategoria() {
-    const categoriaSelect = document.getElementById('categoria_id');
-    const novaContainer = document.getElementById('nova_categoria_container');
-    const novaInput = document.getElementById('nova_categoria');
-
-    if (categoriaSelect.value === 'nova') {
-        novaContainer.classList.remove('hidden');
-        novaInput.required = true;
-        novaInput.focus();
-    } else {
-        novaContainer.classList.add('hidden');
-        novaInput.required = false;
-        novaInput.value = '';
-    }
-}
-
-function toggleEnderecoEmpresa() {
-    const checkbox = document.getElementById('usar_endereco_empresa');
-    const camposEndereco = document.getElementById('campos_endereco_vaga');
-
-    if (checkbox.checked) {
-        fetch('/empresa/endereco')
-            .then(response => response.json())
-            .then(data => {
-                if (data.endereco) {
-                    document.getElementById('localizacao_endereco').value = data.endereco || '';
-                    document.getElementById('localizacao_cidade').value = data.cidade || '';
-                    document.getElementById('localizacao_estado').value = data.estado || '';
-                }
-            })
-            .catch(error => console.error('Erro ao buscar endereço:', error));
-
-        camposEndereco.style.opacity = '0.6';
-        camposEndereco.style.pointerEvents = 'none';
-    } else {
-        camposEndereco.style.opacity = '1';
-        camposEndereco.style.pointerEvents = 'auto';
-        document.getElementById('localizacao_endereco').value = '';
-        document.getElementById('localizacao_cidade').value = '';
-        document.getElementById('localizacao_estado').value = '';
-    }
-}
-
-// Sistema de navegação por seções
-let currentStep = 1;
-const totalSteps = 3;
-
-function mostrarSecao(step) {
-    if (step < 1 || step > totalSteps) return;
-
-    for (let i = 1; i <= totalSteps; i++) {
-        const secao = document.getElementById(`secao-${i}`);
-        if (secao) {
-            secao.style.display = i === step ? 'block' : 'none';
-        }
-    }
-
-    atualizarProgresso(step);
-    atualizarNavegacao(step);
-    currentStep = step;
-
-    // Scroll suave para o topo da seção
-    window.scrollTo({top: 200, behavior: 'smooth'});
-}
-
-function atualizarProgresso(activeStep) {
-    for (let i = 1; i <= totalSteps; i++) {
-        const stepEl = document.getElementById(`step-${i}`);
-        if (!stepEl) continue;
-
-        const circle = stepEl.querySelector('div');
-        const label = stepEl.querySelector('span');
-
-        if (i <= activeStep) {
-            if (i === 1) {
-                circle.className = 'w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg';
-                label.className = 'ml-3 text-sm font-medium text-green-600';
-            } else if (i === 2) {
-                circle.className = 'w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg';
-                label.className = 'ml-3 text-sm font-medium text-blue-600';
-            } else if (i === 3) {
-                // Cor roxa para a seção 3
-                circle.className = 'w-10 h-10 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg';
-                label.className = 'ml-3 text-sm font-medium text-purple-600';
-            }
-        } else {
-            circle.className = 'w-10 h-10 bg-gray-300 text-gray-500 rounded-full flex items-center justify-center font-bold text-sm';
-            label.className = 'ml-3 text-sm font-medium text-gray-500';
-        }
-    }
-}
-
-
-function atualizarNavegacao(step) {
-    const btnAnterior = document.getElementById('btnAnterior');
-    const btnProximo = document.getElementById('btnProximo');
-    const actionButtons = document.getElementById('actionButtons');
-
-    btnAnterior.style.display = step > 1 ? 'flex' : 'none';
-
-    if (step < totalSteps) {
-        btnProximo.style.display = 'flex';
-        actionButtons.style.display = 'none';
-    } else {
-        btnProximo.style.display = 'none';
-        actionButtons.style.display = 'flex';
-    }
-}
-
-function proximaSecao() {
-    if (currentStep < totalSteps && validarSecaoAtual()) {
-        mostrarSecao(currentStep + 1);
-    }
-}
-
-function secaoAnterior() {
-    if (currentStep > 1) {
-        mostrarSecao(currentStep - 1);
-    }
-}
-
-function validarSecaoAtual() {
-    const secaoAtual = document.getElementById(`secao-${currentStep}`);
-    if (!secaoAtual) return true;
-
-    const camposObrigatorios = secaoAtual.querySelectorAll('input[required], select[required], textarea[required]');
-
-    for (let campo of camposObrigatorios) {
-        if (!campo.value.trim()) {
-            campo.focus();
-            campo.classList.add('border-red-500');
-            setTimeout(() => campo.classList.remove('border-red-500'), 3000);
-            showToast('Por favor, preencha todos os campos obrigatórios.', 'error');
-            return false;
-        }
-    }
-
-    // Validações específicas
-    if (currentStep === 1) {
-        const tipoVaga = document.getElementById('tipo_vaga').value;
-
-        if ((tipoVaga === 'Presencial' || tipoVaga === 'Híbrida')) {
-            const endereco = document.getElementById('localizacao_endereco').value;
-            const cidade = document.getElementById('localizacao_cidade').value;
-            const estado = document.getElementById('localizacao_estado').value;
-
-            if (!endereco || !cidade || !estado) {
-                showToast('Endereço é obrigatório para vagas presenciais/híbridas.', 'error');
-                return false;
-            }
-        }
-    }
-
-    if (currentStep === 3) {
-        const total = parseInt(document.getElementById('total-peso').textContent);
-        if (total !== 100) {
-            showToast('Os pesos devem somar exatamente 100%.', 'error');
-            return false;
-        }
-    }
-
-    return true;
-}
-
-function showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    const bgColor = type === 'error' ? 'bg-red-500' : type === 'success' ? 'bg-green-500' : 'bg-blue-500';
-
-    toast.className = `fixed bottom-4 right-4 z-50 px-6 py-4 rounded-xl shadow-lg text-white ${bgColor} transform translate-y-full transition-all duration-300`;
-    toast.textContent = message;
-
-    document.body.appendChild(toast);
-    setTimeout(() => toast.classList.remove('translate-y-full'), 100);
-
-    setTimeout(() => {
-        toast.classList.add('translate-y-full');
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
-
-// Funções para metodologia de score
-function atualizarPeso(tipo, valor) {
-    document.getElementById(`valor_${tipo}`).textContent = valor;
-    calcularTotalPesos();
-}
-
-function calcularTotalPesos() {
-    const pesos = ['salarial', 'requisitos', 'experiencia', 'diferenciais', 'localizacao', 'formacao'];
-    let total = 0;
-    
-    pesos.forEach(peso => {
-        total += parseInt(document.getElementById(`peso_${peso}`).value);
-    });
-    
-    document.getElementById('total-peso').textContent = total;
-    
-    const statusPeso = document.getElementById('status-peso');
-    const barraProgresso = document.getElementById('barra-progresso');
-    
-    if (total === 100) {
-        statusPeso.textContent = '✅ Válido (100%)';
-        statusPeso.className = 'text-sm font-bold text-green-600';
-        barraProgresso.style.width = '100%';
-        barraProgresso.className = 'bg-gradient-to-r from-green-500 to-emerald-500 h-3 rounded-full transition-all duration-300';
-    } else if (total < 100) {
-        statusPeso.textContent = `⚠️ Incompleto (${total}%)`;
-        statusPeso.className = 'text-sm font-bold text-yellow-600';
-        barraProgresso.style.width = `${total}%`;
-        barraProgresso.className = 'bg-gradient-to-r from-yellow-500 to-orange-500 h-3 rounded-full transition-all duration-300';
-    } else {
-        statusPeso.textContent = `❌ Excesso (${total}%)`;
-        statusPeso.className = 'text-sm font-bold text-red-600';
-        barraProgresso.style.width = '100%';
-        barraProgresso.className = 'bg-gradient-to-r from-red-500 to-red-600 h-3 rounded-full transition-all duration-300';
-    }
-}
-
-function aplicarTemplateScore() {
-    const template = document.getElementById('template_score').value;
-    const templates = {
-        'equilibrado': {salarial: 20, requisitos: 40, experiencia: 15, diferenciais: 10, localizacao: 10, formacao: 5},
-        'tecnico': {salarial: 10, requisitos: 50, experiencia: 25, diferenciais: 10, localizacao: 5, formacao: 0},
-        'startup': {salarial: 30, requisitos: 30, experiencia: 10, diferenciais: 20, localizacao: 10, formacao: 0},
-        'tradicional': {salarial: 15, requisitos: 35, experiencia: 20, diferenciais: 5, localizacao: 15, formacao: 10},
-        'remoto': {salarial: 25, requisitos: 45, experiencia: 20, diferenciais: 10, localizacao: 0, formacao: 0},
-        'vendas': {salarial: 25, requisitos: 25, experiencia: 20, diferenciais: 20, localizacao: 10, formacao: 0},
-        'gestao': {salarial: 15, requisitos: 30, experiencia: 30, diferenciais: 15, localizacao: 5, formacao: 5}
-    };
-    
-    if (template && templates[template]) {
-        Object.keys(templates[template]).forEach(peso => {
-            const input = document.getElementById(`peso_${peso}`);
-            input.value = templates[template][peso];
-            atualizarPeso(peso, templates[template][peso]);
-        });
-    }
-}
-
-function resetarPesos() {
-    const pesosDefault = {salarial: 20, requisitos: 40, experiencia: 15, diferenciais: 10, localizacao: 10, formacao: 5};
-    Object.keys(pesosDefault).forEach(peso => {
-        const input = document.getElementById(`peso_${peso}`);
-        input.value = pesosDefault[peso];
-        atualizarPeso(peso, pesosDefault[peso]);
-    });
-    document.getElementById('template_score').value = 'equilibrado';
-}
-
-// Inicialização
-document.addEventListener('DOMContentLoaded', function() {
-    mostrarSecao(1);
-});
-</script>
-{% endblock %}
+{% endblock %}  

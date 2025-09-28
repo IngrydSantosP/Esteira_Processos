@@ -1,69 +1,61 @@
 <!-- Lista de Vagas -->
-<div class="space-y-6" id="lista-vagas" role="tabpanel">
-    <h2 class="text-2xl font-bold text-gray-800 mb-4">Suas Vagas</h2>
+<link rel="stylesheet" href="{{ url_for('static', filename='style/vagas.css') }}">
+<div class="vaga-list-container" id="lista-vagas" role="tabpanel">
+    <h2 class="vaga-list-title">Suas Vagas</h2>
 
     {% if vagas %}
-        <div class="grid gap-6">
+        <div class="vaga-grid">
             {% for vaga in vagas %}
-            <div class="vaga-card bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300 overflow-hidden"
-                 data-status="{{ vaga.status }}">
-                <div class="p-6">
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="flex-1">
-                            <div class="flex items-center gap-3 mb-2">
-                                <h3 class="text-xl font-bold text-gray-900">{{ vaga.titulo }}</h3>
-                                <span class="px-3 py-1 rounded-full text-sm font-medium
-                                    {% if vaga.status == 'Ativa' %}bg-green-100 text-green-800{% endif %}
-                                    {% if vaga.status == 'Congelada' %}bg-blue-100 text-blue-800{% endif %}
-                                    {% if vaga.status == 'Concluída' %}bg-purple-100 text-purple-800{% endif %}
-                                    {% if not vaga.status %}bg-green-100 text-green-800{% endif %}">
+            <div class="vaga-card" data-status="{{ vaga.status }}">
+                <div class="vaga-card-content">
+                    <div class="vaga-card-header">
+                        <div class="vaga-card-info">
+                            <div class="vaga-title-status">
+                                <h3 class="vaga-title">{{ vaga.titulo }}</h3>
+                                <span class="vaga-status
+                                    {% if vaga.status == 'Ativa' %}status-active{% endif %}
+                                    {% if vaga.status == 'Congelada' %}status-frozen{% endif %}
+                                    {% if vaga.status == 'Concluída' %}status-completed{% endif %}
+                                    {% if not vaga.status %}status-active{% endif %}">
                                     {{ vaga.status if vaga.status else 'Ativa' }}
                                 </span>
                             </div>
-                            <p class="text-gray-600 mb-3 line-clamp-2">{{ vaga.descricao }}</p>
-                            <div class="flex flex-wrap gap-4 text-sm text-gray-500 mb-2">
-                                <span class="flex items-center gap-1">
+                            <p class="vaga-description">{{ vaga.descricao }}</p>
+                            <div class="vaga-details">
+                                <span class="vaga-salary">
                                     <span>💰</span> R$ {{ "{:,.2f}".format(vaga.salario_oferecido) }}
                                 </span>
-                                <span class="flex items-center gap-1">
+                                <span class="vaga-type">
                                     <span>📍</span> {{ vaga.tipo_vaga }}
                                 </span>
                                 {% if vaga.endereco_vaga and vaga.tipo_vaga in ['Presencial', 'Híbrida'] %}
-                                <span class="flex items-center gap-1">
+                                <span class="vaga-address">
                                     <span>🏢</span> {{ vaga.endereco_vaga[:30] }}{% if vaga.endereco_vaga|length > 30 %}...{% endif %}
                                 </span>
                                 {% endif %}
-                                <span class="flex items-center gap-1">
+                                <span class="vaga-date">
                                     <span>📅</span> {{ vaga.data_criacao }}
                                 </span>
                             </div>
                         </div>
-                        <div class="flex gap-2 ml-4">
-                            <a href="{{ url_for('api_candidatos_vaga', vaga_id=vaga.id) }}"
-                               class="bg-blue-100 hover:bg-blue-200 text-blue-600 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-                               aria-label="Ver candidatos da vaga {{ vaga.titulo }}">
+                        <div class="vaga-actions">
+                            <a href="{{ url_for('api_candidatos_vaga', vaga_id=vaga.id) }}" class="vaga-action-btn view-candidates">
                                 Ver Candidatos
                             </a>
 
                             {% if vaga.status != 'Concluída' %}
-                                <a href="{{ url_for('editar_vaga', vaga_id=vaga.id) }}"
-                                   class="bg-purple-100 hover:bg-purple-200 text-purple-600 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-                                   aria-label="Editar vaga {{ vaga.titulo }}">
+                                <a href="{{ url_for('vagas.editar_vaga', vaga_id=vaga.id) }}" class="vaga-action-btn edit-vaga">
                                     Editar
                                 </a>
                             {% endif %}
 
                             {% if vaga.status == 'Ativa' or not vaga.status %}
-                                <button onclick="abrirModalEncerramento({{ vaga.id }}, '{{ vaga.titulo }}')"
-                                        class="bg-orange-100 hover:bg-orange-200 text-orange-600 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-                                        aria-label="Encerrar vaga {{ vaga.titulo }}">
+                                <button onclick="abrirModalEncerramento('{{ vaga.id }}', '{{ vaga.titulo }}')" class="vaga-action-btn close-vaga">
                                     Encerrar
                                 </button>
                             {% elif vaga.status == 'Congelada' %}
-                                <button onclick="reativarVaga({{ vaga.id }})"
-                                        class="bg-green-100 hover:bg-green-200 text-green-600 px-3 py-2 rounded-lg text-sm font-medium transition-colors hover:scale-105 transform duration-200"
-                                        aria-label="Reativar vaga {{ vaga.titulo }}">
-                                    <span class="flex items-center gap-1">
+                                <button onclick="reativarVaga('{{ vaga.id }}')" class="vaga-action-btn reactivate-vaga">
+                                    <span class="vaga-reactivate-icon">
                                         <span>🔄</span>
                                         Reativar
                                     </span>
@@ -75,12 +67,12 @@
                     <!-- Feedback de IA -->
                     {% if vaga.status == 'Concluída' %}
                         <!-- Feedback especial para vagas concluídas -->
-                        <div class="bg-green-50 border border-green-200 rounded-xl p-4">
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="text-green-600 text-lg">🎉</span>
-                                <h4 class="font-semibold text-green-800">Contratação Realizada</h4>
+                        <div class="vaga-completed-feedback">
+                            <div class="feedback-header">
+                                <span class="feedback-icon">🎉</span>
+                                <h4 class="feedback-title">Contratação Realizada</h4>
                             </div>
-                            <div class="text-sm text-green-700 space-y-1">
+                            <div class="feedback-body">
                                 {% if vaga.candidato_contratado and vaga.candidato_contratado.nome %}
                                 <p><strong>Candidato:</strong> {{ vaga.candidato_contratado.nome }}</p>
                                 {% if vaga.candidato_contratado.posicao %}
@@ -92,31 +84,31 @@
                                 {% if vaga.data_contratacao %}
                                 <p><strong>Data da contratação:</strong> {{ vaga.data_contratacao }}</p>
                                 {% endif %}
-                                <p class="text-sm text-gray-600 mt-2">
+                                <p class="total-candidates">
                                     Total de candidatos: {{ vaga.total_candidatos or 0 }}
                                 </p>
                             </div>
                         </div>
                     {% else %}
-                        <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-4 border border-purple-100">
-                            <div class="flex items-center gap-3">
-                                <span class="text-2xl">{{ vaga.feedback_ia.icone }}</span>
-                                <div class="flex-1">
-                                    <p class="font-medium {{ vaga.feedback_ia.cor }}">
+                        <div class="vaga-feedback">
+                            <div class="feedback-content">
+                                <span class="feedback-icon">{{ vaga.feedback_ia.icone }}</span>
+                                <div class="feedback-text">
+                                    <p class="feedback-message {{ vaga.feedback_ia.cor }}">
                                         {{ vaga.feedback_ia.texto }}
                                     </p>
-                                    <div class="text-sm text-gray-500 mt-1">
+                                    <div class="feedback-details">
                                         <p>{{ vaga.total_candidatos or 0 }} candidato(s) total</p>
                                         {% if vaga.total_candidatos and vaga.total_candidatos > 0 %}
-                                        <div class="flex gap-4 mt-1">
+                                        <div class="candidate-rating">
                                             {% if vaga.candidatos_80_plus > 0 %}
-                                            <span class="text-green-600">🎯 {{ vaga.candidatos_80_plus }} excelente(s)</span>
+                                            <span class="excellent-candidate">🎯 {{ vaga.candidatos_80_plus }} excelente(s)</span>
                                             {% endif %}
                                             {% if vaga.candidatos_60_79 > 0 %}
-                                            <span class="text-yellow-600">⚡ {{ vaga.candidatos_60_79 }} bom(ns)</span>
+                                            <span class="good-candidate">⚡ {{ vaga.candidatos_60_79 }} bom(ns)</span>
                                             {% endif %}
                                             {% if vaga.candidatos_abaixo_60 > 0 %}
-                                            <span class="text-gray-500">📝 {{ vaga.candidatos_abaixo_60 }} básico(s)</span>
+                                            <span class="basic-candidate">📝 {{ vaga.candidatos_abaixo_60 }} básico(s)</span>
                                             {% endif %}
                                         </div>
                                         {% endif %}
@@ -130,14 +122,13 @@
             {% endfor %}
         </div>
     {% else %}
-        <div class="text-center py-12">
-            <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span class="text-4xl">💼</span>
+        <div class="vaga-empty-state">
+            <div class="vaga-empty-icon">
+                <span class="vaga-empty-icon-content">💼</span>
             </div>
-            <h3 class="text-xl font-medium text-gray-700 mb-2">Nenhuma vaga criada ainda</h3>
-            <p class="text-gray-500 mb-6">Comece criando sua primeira vaga para atrair candidatos qualificados.</p>
-            <a href="{{ url_for('criar_vaga') }}" 
-               class="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105">
+            <h3 class="vaga-empty-title">Nenhuma vaga criada ainda</h3>
+            <p class="vaga-empty-description">Comece criando sua primeira vaga para atrair candidatos qualificados.</p>
+            <a href="{{ url_for('vagas.criar_vaga') }}" class="vaga-create-btn">
                 Criar Primeira Vaga
             </a>
         </div>

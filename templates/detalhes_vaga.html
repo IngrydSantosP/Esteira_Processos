@@ -1,517 +1,410 @@
-{% extends "base.html" %}
-
 {% block title %}{{ vaga.titulo }} - {{ empresa.nome }}{% endblock %}
 
 {% block content %}
 
-     <!-- Botões de Ação no Topo -->
-        <div class="flex flex-wrap gap-4 justify-center mt-6">
-            {% if ja_candidatado %}
-            <div class="bg-green-50 border border-green-200 rounded-xl px-6 py-3 text-center">
-                <div class="text-green-600 font-semibold">✅ Você já se candidatou!</div>
-                <p class="text-sm text-green-700">Sua candidatura foi enviada com sucesso</p>
-            </div>
-            {% else %}
-            <a href="{{ url_for('candidatar', vaga_id=vaga.id) }}" 
-               class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-3 group">
-                <span class="text-xl group-hover:scale-110 transition-transform">🚀</span>
-                Candidatar-se Agora
-            </a>
-            {% endif %}
+<link rel="stylesheet" href="{{ url_for('static', filename='style/detalhes_vaga.css') }}">
 
-            <button onclick="toggleFavorito({{ vaga.id }})" 
-                    class="bg-pink-100 hover:bg-pink-200 text-pink-700 font-semibold py-4 px-6 rounded-xl transition-all duration-300 flex items-center gap-2 group">
-                <span class="text-lg group-hover:scale-110 transition-transform">❤️</span>
-                Adicionar aos Favoritos
-            </button>
+<!-- Botões de Ação no Topo -->
+<div class="topo-acoes">
+    <a href="{{ url_for('vagas.exemplo_score') }}" class="btn-score">
+        <span class="icon-score">📊</span>
+        Ver Como Score é Calculado
+    </a>
 
-            <button onclick="window.open('/exemplo-score', '_blank')"
-                    class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-semibold py-4 px-6 rounded-xl transition-all duration-300 flex items-center gap-2 group">
-                <span class="text-lg group-hover:scale-110 transition-transform">📊</span>
-                Ver Como Score é Calculado
-            </button>
+    <a href="{{ url_for('candidaturas.dashboard_candidato') }}" class="btn-voltar">
+        <span class="icon-voltar">←</span>
+    </a>
+</div>
 
-            <a href="{{ url_for('dashboard_candidato') }}" 
-               class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-4 px-6 rounded-xl transition-all duration-300 flex items-center gap-2 group">
-                <span class="group-hover:-translate-x-1 transition-transform">←</span>
-                Voltar ao Dashboard
-            </a>
-        </div>
-    </div>
+<!-- Conteúdo Principal -->
+<div class="conteudo-principal">
+    <div class="container">
 
-<div class="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 py-8">
-    <div class="max-w-6xl mx-auto px-4">
         <!-- Header com Score Destacado -->
-        <div class="bg-white rounded-3xl p-8 shadow-lg border border-gray-100 mb-8">
-            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-                <div class="flex-1">
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-12 h-12 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center">
-                            <span class="text-white font-bold text-xl">💼</span>
+        <div class="header-vaga">
+            <div class="header-flex">
+                <div class="header-info">
+                    <div class="vaga-topo">
+                        <div class="logo-vaga">
+                            <span class="icon-briefcase">💼</span>
                         </div>
-                        <div>
-                            <h1 class="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                                {{ vaga.titulo }}
-                            </h1>
-                            <p class="text-lg text-gray-600">{{ empresa.nome }}</p>
+                        <div class="info-vaga">
+                            <h1 class="titulo-vaga">{{ vaga.titulo }}</h1>
+                            <p class="empresa-nome">{{ empresa.nome }}</p>
                         </div>
                     </div>
 
-                    <div class="flex flex-wrap gap-3 mb-4">
-                        <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                            {{ vaga.tipo_vaga }}
-                        </span>
+                    <div class="tags-vaga">
+                        <span class="tag-tipo">{{ vaga.tipo_vaga }}</span>
                         {% if vaga.salario_oferecido %}
-                        <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                            R$ {{ "{:,.2f}".format(vaga.salario_oferecido) }}
-                        </span>
+                        <span class="tag-salario">R$ {{ "{:,.2f}".format(vaga.salario_oferecido) }}</span>
                         {% endif %}
                         {% if vaga.endereco_vaga %}
-                        <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
-                            📍 {{ vaga.endereco_vaga }}
-                        </span>
+                        <span class="tag-localizacao">📍 {{ vaga.endereco_vaga }}</span>
                         {% endif %}
                     </div>
                 </div>
 
-                <!-- Score Visualização -->
                 {% if score %}
-                <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 text-white min-w-[280px]">
-                    <div class="text-center">
-                        <div class="text-4xl font-bold mb-2">{{ "%.1f"|format(score) }}%</div>
-                        <div class="text-lg font-medium mb-3">Seu Score de Compatibilidade</div>
+                <div class="score-box">
+                    <div class="score-center">
+                        <div class="score-num">{{ "%.1f"|format(score) }}%</div>
+                        <div class="score-text">Seu Score de Compatibilidade</div>
 
-                        <!-- Barra de Score Visual -->
-                        <div class="w-full bg-white/20 rounded-full h-3 mb-3">
-                            <div class="bg-white rounded-full h-3 transition-all duration-1000" 
-                                 style="width: {{ score }}%"></div>
+                        <div class="barra-score">
+                            <div class="barra-fill" style="width: '{{ score }}%'"></div>
                         </div>
 
-                        <!-- Interpretação do Score -->
                         {% if score >= 80 %}
-                        <div class="flex items-center justify-center gap-2 text-sm">
-                            <span class="text-2xl">🎯</span>
+                        <div class="descricao-score">
+                            <span class="icon-excelente">🎯</span>
                             <span>Excelente compatibilidade!</span>
                         </div>
-                        <p class="text-xs mt-2 opacity-90">Seu perfil está muito alinhado com esta vaga</p>
+                        <p class="texto-pequeno">Seu perfil está muito alinhado com esta vaga</p>
                         {% elif score >= 60 %}
-                        <div class="flex items-center justify-center gap-2 text-sm">
-                            <span class="text-2xl">⚡</span>
+                        <div class="descricao-score">
+                            <span class="icon-bom">⚡</span>
                             <span>Boa compatibilidade</span>
                         </div>
-                        <p class="text-xs mt-2 opacity-90">Você atende a maioria dos requisitos</p>
+                        <p class="texto-pequeno">Você atende a maioria dos requisitos</p>
                         {% elif score >= 40 %}
-                        <div class="flex items-center justify-center gap-2 text-sm">
-                            <span class="text-2xl">💡</span>
+                        <div class="descricao-score">
+                            <span class="icon-moderado">💡</span>
                             <span>Compatibilidade moderada</span>
                         </div>
-                        <p class="text-xs mt-2 opacity-90">Considere desenvolver algumas habilidades</p>
+                        <p class="texto-pequeno">Considere desenvolver algumas habilidades</p>
                         {% else %}
-                        <div class="flex items-center justify-center gap-2 text-sm">
-                            <span class="text-2xl">🔧</span>
+                        <div class="descricao-score">
+                            <span class="icon-crescimento">🔧</span>
                             <span>Potencial de crescimento</span>
                         </div>
-                        <p class="text-xs mt-2 opacity-90">Esta vaga pode ser um desafio interessante</p>
+                        <p class="texto-pequeno">Esta vaga pode ser um desafio interessante</p>
                         {% endif %}
                     </div>
                 </div>
                 {% endif %}
             </div>
         </div>
+        <div class="grid-principal">
+            <!-- Conteúdo Principal -->
+            <div class="conteudo-largo">
 
-    <div class="grid lg:grid-cols-3 gap-8">
-        <!-- Conteúdo Principal -->
-        <div class="lg:col-span-2 space-y-8">
-            <!-- Descrição da Vaga -->
-            <div class="bg-white rounded-3xl p-8 shadow-lg border border-gray-100">
-                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                    <span class="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">📋</span>
-                    Descrição da Vaga
-                </h2>
-                <div class="prose prose-gray max-w-none">
-                    <p class="text-gray-700 leading-relaxed whitespace-pre-line">{{ vaga.descricao }}</p>
+                <!-- Descrição da Vaga -->
+                <div class="box-descricao">
+                    <h2 class="titulo-secao">
+                        <span class="icone-secao">📋</span>
+                        Descrição da Vaga
+                    </h2>
+                    <div class="texto-secao">
+                        <p>{{ vaga.descricao }}</p>
+                    </div>
                 </div>
+
+                <!-- Requisitos -->
+                <div class="box-requisitos">
+                    <h2 class="titulo-secao">
+                        <span class="icone-secao">🎯</span>
+                        Requisitos
+                    </h2>
+                    <div class="texto-secao">
+                        <div>{{ vaga.requisitos }}</div>
+                    </div>
+                </div>
+
+                {% if ja_candidatado %}
+                <div class="alert-candidatado">
+                    <div>✅ Você já se candidatou!</div>
+                    <p>Sua candidatura foi enviada com sucesso</p>
+                </div>
+                {% else %}
+                <a href="{{ url_for('candidaturas.candidatar', vaga_id=vaga.id) }}" 
+                class="btn-candidatar">
+                    <span class="icon-rocket">🚀</span>
+                    Candidatar-se Agora
+                </a>
+                {% endif %}
+
+                <!-- Diferenciais -->
+                {% if vaga.diferenciais %}
+                <div class="box-diferenciais">
+                    <h2 class="titulo-secao">
+                        <span class="icone-secao">⭐</span>
+                        Diferenciais e Benefícios
+                    </h2>
+                    <div class="texto-secao">
+                        <div>{{ vaga.diferenciais }}</div>
+                    </div>
+                </div>
+                {% endif %}
+
             </div>
 
-            <!-- Requisitos -->
-            <div class="bg-white rounded-3xl p-8 shadow-lg border border-gray-100">
-                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                    <span class="w-8 h-8 bg-purple-100 rounded-xl flex items-center justify-center">🎯</span>
-                    Requisitos
-                </h2>
-                <div class="prose prose-gray max-w-none">
-                    <div class="text-gray-700 leading-relaxed whitespace-pre-line">{{ vaga.requisitos }}</div>
-                </div>
-            </div>
+            <!-- Sidebar -->
+            <div class="sidebar">
 
-            <!-- Diferenciais -->
-            {% if vaga.diferenciais %}
-            <div class="bg-white rounded-3xl p-8 shadow-lg border border-gray-100">
-                <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-3">
-                    <span class="w-8 h-8 bg-green-100 rounded-xl flex items-center justify-center">⭐</span>
-                    Diferenciais e Benefícios
-                </h2>
-                <div class="prose prose-gray max-w-none">
-                    <div class="text-gray-700 leading-relaxed whitespace-pre-line">{{ vaga.diferenciais }}</div>
-                </div>
-            </div>
-            {% endif %}
-        </div>
+                {% if score %}
+                <div class="box-analise">
+                    <h3 class="titulo-secao">
+                        <span class="icone-secao">📊</span>
+                        Análise do Seu Score
+                    </h3>
 
-        <!-- Sidebar -->
-        <div class="space-y-6">
-            <!-- Análise Detalhada do Score -->
-            {% if score %}
-            <div class="bg-white rounded-3xl p-6 shadow-lg border border-gray-100">
-                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <span class="w-6 h-6 bg-indigo-100 rounded-lg flex items-center justify-center">📊</span>
-                    Análise do Seu Score
-                </h3>
-
-                <div class="space-y-4">
-                    <!-- Detalhamento por categoria (simulado) -->
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm text-gray-600">Experiência</span>
-                            <span class="text-sm font-medium">{{ "%.0f"|format(score|float * 0.3) }}%</span>
+                    <div class="detalhe-score">
+                        <div class="categoria">
+                            <div class="linha-categoria">
+                                <span>Experiência</span>
+                                <span>{{ "%.0f"|format(score|float * 0.3) }}%</span>
+                            </div>
+                            <div class="barra-bg">
+                                <div class="barra-fill" style="width:'{{ score|float * 0.3 }}%'"></div>
+                            </div>
                         </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-gradient-to-r from-blue-500 to-purple-500 rounded-full h-2" 
-                                 style="width: {{ score|float * 0.3 }}%"></div>
+
+                        <div class="categoria">
+                            <div class="linha-categoria">
+                                <span>Habilidades</span>
+                                <span>{{ "%.0f"|format(score|float * 0.4) }}%</span>
+                            </div>
+                            <div class="barra-bg">
+                                <div class="barra-fill" style="width:'{{ score|float * 0.4 }}%'"></div>
+                            </div>
+                        </div>
+
+                        <div class="categoria">
+                            <div class="linha-categoria">
+                                <span>Salário</span>
+                                <span>{{ "%.0f"|format(score|float * 0.2) }}%</span>
+                            </div>
+                            <div class="barra-bg">
+                                <div class="barra-fill" style="width:'{{ score|float * 0.2 }}%'"></div>
+                            </div>
+                        </div>
+
+                        <div class="categoria">
+                            <div class="linha-categoria">
+                                <span>Localização</span>
+                                <span>{{ "%.0f"|format(score|float * 0.1) }}%</span>
+                            </div>
+                            <div class="barra-bg">
+                                <div class="barra-fill" style="width:'{{ score|float * 0.1 }}%'"></div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm text-gray-600">Habilidades</span>
-                            <span class="text-sm font-medium">{{ "%.0f"|format(score|float * 0.4) }}%</span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-gradient-to-r from-green-500 to-teal-500 rounded-full h-2" 
-                                 style="width: {{ score|float * 0.4 }}%"></div>
-                        </div>
-                    </div>
-
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm text-gray-600">Salário</span>
-                            <span class="text-sm font-medium">{{ "%.0f"|format(score|float * 0.2) }}%</span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full h-2" 
-                                 style="width: {{ score|float * 0.2 }}%"></div>
-                        </div>
-                    </div>
-
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm text-gray-600">Localização</span>
-                            <span class="text-sm font-medium">{{ "%.0f"|format(score|float * 0.1) }}%</span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-gradient-to-r from-pink-500 to-red-500 rounded-full h-2" 
-                                 style="width: {{ score|float * 0.1 }}%"></div>
-                        </div>
+                    <div class="dica-score">
+                        <p>💡 <strong>Dica:</strong> Scores acima de 70% indicam alta compatibilidade. Continue desenvolvendo suas habilidades para aumentar seu score!</p>
                     </div>
                 </div>
+                {% endif %}
+                <!-- Informações Adicionais -->
+                {% if vaga.nivel_experiencia or vaga.regime_contratacao or vaga.carga_horaria or vaga.formacao_minima %}
+                <div class="box-info">
+                    <h3 class="titulo-secao">
+                        <span class="icone-secao">📋</span>
+                        Informações Adicionais
+                    </h3>
 
-                <div class="mt-4 p-3 bg-blue-50 rounded-xl">
-                    <p class="text-xs text-blue-800">
-                        💡 <strong>Dica:</strong> Scores acima de 70% indicam alta compatibilidade. 
-                        Continue desenvolvendo suas habilidades para aumentar seu score!
-                    </p>
+                    <div class="grid-info">
+                        {% if vaga.nivel_experiencia %}
+                        <div class="item-info">
+                            <span class="icone-item">🎯</span>
+                            <div>
+                                <div class="label-item">Nível de Experiência</div>
+                                <div class="valor-item">{{ vaga.nivel_experiencia }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if vaga.regime_contratacao %}
+                        <div class="item-info">
+                            <span class="icone-item">📝</span>
+                            <div>
+                                <div class="label-item">Regime de Contratação</div>
+                                <div class="valor-item">{{ vaga.regime_contratacao }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if vaga.carga_horaria %}
+                        <div class="item-info">
+                            <span class="icone-item">⏰</span>
+                            <div>
+                                <div class="label-item">Carga Horária</div>
+                                <div class="valor-item">{{ vaga.carga_horaria }} semanais</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if vaga.turno_trabalho %}
+                        <div class="item-info">
+                            <span class="icone-item">🕒</span>
+                            <div>
+                                <div class="label-item">Turno de Trabalho</div>
+                                <div class="valor-item">{{ vaga.turno_trabalho }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if vaga.formacao_minima %}
+                        <div class="item-info">
+                            <span class="icone-item">🎓</span>
+                            <div>
+                                <div class="label-item">Formação Mínima</div>
+                                <div class="valor-item">{{ vaga.formacao_minima }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if vaga.idiomas_exigidos %}
+                        <div class="item-info">
+                            <span class="icone-item">🌍</span>
+                            <div>
+                                <div class="label-item">Idiomas</div>
+                                <div class="valor-item">{{ vaga.idiomas_exigidos }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if vaga.disponibilidade_viagens %}
+                        <div class="item-info">
+                            <span class="icone-item">✈️</span>
+                            <div>
+                                <div class="label-item">Viagens</div>
+                                <div class="valor-item">Disponibilidade para viagens</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
-            </div>
-            {% endif %}
+                {% endif %}
 
-            <!-- Informações Adicionais da Vaga -->
-            {% if vaga.nivel_experiencia or vaga.regime_contratacao or vaga.carga_horaria or vaga.formacao_minima %}
-            <div class="bg-white rounded-3xl p-6 shadow-lg border border-gray-100">
-                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <span class="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">📋</span>
-                    Informações Adicionais
-                </h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {% if vaga.nivel_experiencia %}
-                    <div class="flex items-center gap-3">
-                        <span class="text-2xl">🎯</span>
-                        <div>
-                            <div class="text-sm text-gray-500">Nível de Experiência</div>
-                            <div class="font-semibold text-gray-800">{{ vaga.nivel_experiencia }}</div>
-                        </div>
+                <!-- Benefícios -->
+                {% if vaga.beneficios %}
+                <div class="box-beneficios">
+                    <h3 class="titulo-secao">
+                        <span class="icone-secao">🎁</span>
+                        Benefícios
+                    </h3>
+                    <div class="texto-secao">
+                        <div>{{ vaga.beneficios }}</div>
                     </div>
-                    {% endif %}
-
-                    {% if vaga.regime_contratacao %}
-                    <div class="flex items-center gap-3">
-                        <span class="text-2xl">📝</span>
-                        <div>
-                            <div class="text-sm text-gray-500">Regime de Contratação</div>
-                            <div class="font-semibold text-gray-800">{{ vaga.regime_contratacao }}</div>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    {% if vaga.carga_horaria %}
-                    <div class="flex items-center gap-3">
-                        <span class="text-2xl">⏰</span>
-                        <div>
-                            <div class="text-sm text-gray-500">Carga Horária</div>
-                            <div class="font-semibold text-gray-800">{{ vaga.carga_horaria }} semanais</div>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    {% if vaga.turno_trabalho %}
-                    <div class="flex items-center gap-3">
-                        <span class="text-2xl">🕒</span>
-                        <div>
-                            <div class="text-sm text-gray-500">Turno de Trabalho</div>
-                            <div class="font-semibold text-gray-800">{{ vaga.turno_trabalho }}</div>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    {% if vaga.formacao_minima %}
-                    <div class="flex items-center gap-3">
-                        <span class="text-2xl">🎓</span>
-                        <div>
-                            <div class="text-sm text-gray-500">Formação Mínima</div>
-                            <div class="font-semibold text-gray-800">{{ vaga.formacao_minima }}</div>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    {% if vaga.idiomas_exigidos %}
-                    <div class="flex items-center gap-3">
-                        <span class="text-2xl">🌍</span>
-                        <div>
-                            <div class="text-sm text-gray-500">Idiomas</div>
-                            <div class="font-semibold text-gray-800">{{ vaga.idiomas_exigidos }}</div>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    {% if vaga.disponibilidade_viagens %}
-                    <div class="flex items-center gap-3">
-                        <span class="text-2xl">✈️</span>
-                        <div>
-                            <div class="text-sm text-gray-500">Viagens</div>
-                            <div class="font-semibold text-gray-800">Disponibilidade para viagens</div>
-                        </div>
-                    </div>
-                    {% endif %}
                 </div>
-            </div>
-            {% endif %}
+                {% endif %}
 
-            <!-- Benefícios -->
-            {% if vaga.beneficios %}
-            <div class="bg-white rounded-3xl p-6 shadow-lg border border-gray-100">
-                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <span class="w-6 h-6 bg-green-100 rounded-lg flex items-center justify-center">🎁</span>
-                    Benefícios
-                </h3>
-                <div class="prose prose-gray max-w-none">
-                    <div class="text-gray-700 leading-relaxed whitespace-pre-line">{{ vaga.beneficios }}</div>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Informações da Empresa -->
-            <div class="bg-white rounded-3xl p-6 shadow-lg border border-gray-100">
-                <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                    <span class="w-6 h-6 bg-purple-100 rounded-lg flex items-center justify-center">🏢</span>
-                    Sobre a Empresa
-                </h3>
-                <div class="space-y-3">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
-                                <span class="text-white font-bold">{{ vaga.empresa_nome }}</span>
+                <!-- Informações da Empresa -->
+                <div class="box-empresa">
+                    <h3 class="titulo-secao">
+                        <span class="icone-secao">🏢</span>
+                        Sobre a Empresa
+                    </h3>
+                    <div class="empresa-info">
+                        <div class="empresa-flex">
+                            <div class="empresa-logo">
+                                <span>{{ vaga.empresa_nome }}</span>
                             </div>
                             <div>
-                                <button onclick="verVagasEmpresa('{{ empresa.nome }}', {{ empresa.id }})"
-                                        class="font-semibold text-gray-800 hover:text-purple-600 transition-colors duration-200 text-left">
-                                    {{ empresa.nome }}
-                                </button>
+                                <button onclick="verVagasEmpresa('{{ empresa.nome }}', '{{ empresa.id }}')">{{ empresa.nome }}</button>
                                 {% if vaga.data_criacao %}
-                                <div class="text-sm text-gray-500">Vaga publicada em {{ vaga.data_criacao.strftime('%d/%m/%Y') }}</div>
+                                <div class="data-vaga">Vaga publicada em {{ vaga.data_criacao.strftime('%d/%m/%Y') }}</div>
                                 {% endif %}
                             </div>
                         </div>
-                        <button onclick="verVagasEmpresa('{{ empresa.nome }}', {{ empresa.id }})"
-                                class="text-sm text-purple-600 hover:text-purple-800 font-medium transition-colors duration-200">
-                            Ver todas as vagas →
-                        </button>
+                        <button onclick="verVagasEmpresa('{{ empresa.nome }}', '{{ empresa.id }}')">Ver todas as vagas →</button>
                     </div>
                 </div>
             </div>
+            
         </div>
     </div>
 </div>
 
-<!-- Modal para Vagas da Empresa -->
-<div id="modalVagasEmpresa" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-        <div class="p-6 border-b border-gray-200">
-            <div class="flex justify-between items-center">
-                <h2 id="tituloModalEmpresa" class="text-2xl font-bold text-gray-800"></h2>
-                <button onclick="fecharModalVagasEmpresa()" class="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+<!-- Modal Vagas da Empresa -->
+<div id="modalVagasEmpresa" class="modal-empresa hidden">
+    <div class="modal-box">
+        <div class="modal-header">
+            <div class="modal-topo">
+                <h2 id="tituloModalEmpresa"></h2>
+                <button onclick="fecharModalVagasEmpresa()">×</button>
             </div>
         </div>
-        <div id="conteudoVagasEmpresa" class="p-6 overflow-y-auto max-h-[70vh]">
-            <div class="text-center py-8">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-                <p class="mt-4 text-gray-600">Carregando vagas...</p>
-            </div>
-        </div>
+        <div id="conteudoVagasEmpresa" class="modal-conteudo"></div>
     </div>
 </div>
 
+<!-- Scripts -->
 <script>
 async function toggleFavorito(vagaId) {
     try {
         const response = await fetch('/api/favoritar-vaga', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ vaga_id: vagaId })
         });
-
         const data = await response.json();
-
         if (data.success) {
-            // Mostrar feedback visual
             const button = event.target.closest('button');
             const originalText = button.innerHTML;
-
             if (data.favorited) {
-                button.innerHTML = '<span class="text-lg">💖</span> Adicionado aos Favoritos!';
-                button.className = 'w-full bg-pink-100 text-pink-700 font-semibold py-3 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-2';
+                button.innerHTML = '<span class="icon-favorito">💖</span> Adicionado aos Favoritos!';
+                button.className = 'btn-favorito-add';
             } else {
-                button.innerHTML = '<span class="text-lg">💔</span> Removido dos Favoritos';
-                button.className = 'w-full bg-gray-100 text-gray-700 font-semibold py-3 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-2';
+                button.innerHTML = '<span class="icon-favorito">💔</span> Removido dos Favoritos';
+                button.className = 'btn-favorito-rem';
             }
-
-            // Voltar ao estado original após 2 segundos
             setTimeout(() => {
                 button.innerHTML = originalText;
-                button.className = 'w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 group';
+                button.className = 'btn-favorito';
             }, 2000);
         } else {
             alert('Erro ao atualizar favoritos: ' + data.error);
         }
-    } catch (error) {
-        console.error('Erro:', error);
-        alert('Erro ao processar solicitação');
-    }
+    } catch (error) { console.error(error); alert('Erro ao processar solicitação'); }
 }
 
 async function verVagasEmpresa(nomeEmpresa, empresaId) {
     const modal = document.getElementById('modalVagasEmpresa');
     const titulo = document.getElementById('tituloModalEmpresa');
     const conteudo = document.getElementById('conteudoVagasEmpresa');
-
     titulo.textContent = `Vagas da ${nomeEmpresa}`;
-    conteudo.innerHTML = `
-        <div class="text-center py-8">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
-            <p class="mt-4 text-gray-600">Carregando vagas...</p>
-        </div>
-    `;
-
+    conteudo.innerHTML = `<div class="loading"><div class="spinner"></div><p>Carregando vagas...</p></div>`;
     modal.classList.remove('hidden');
-
     try {
         const response = await fetch(`/api/vagas-empresa/${empresaId}`);
         const data = await response.json();
-
-        if (data.error) {
-            throw new Error(data.error);
-        }
-
+        if (data.error) throw new Error(data.error);
         if (data.vagas.length === 0) {
-            conteudo.innerHTML = `
-                <div class="text-center py-12">
-                    <div class="text-6xl mb-4">📭</div>
-                    <h3 class="text-xl font-semibold text-gray-800 mb-2">Nenhuma vaga ativa</h3>
-                    <p class="text-gray-600">Esta empresa não possui vagas ativas no momento.</p>
-                </div>
-            `;
+            conteudo.innerHTML = `<div class="nenhuma-vaga"><div>📭</div><h3>Nenhuma vaga ativa</h3><p>Esta empresa não possui vagas ativas no momento.</p></div>`;
             return;
         }
-
-        let vagasHtml = '<div class="grid gap-4">';
-
+        let vagasHtml = '<div class="lista-vagas">';
         data.vagas.forEach(vaga => {
-            const salarioFormatado = vaga.salario_oferecido ? 
-                `R$ ${vaga.salario_oferecido.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 
-                'A combinar';
-
-            const scoreClass = vaga.score >= 80 ? 'text-green-600' : 
-                              vaga.score >= 60 ? 'text-yellow-600' : 'text-red-600';
-
-            const statusBadge = vaga.ja_candidatou ? 
-                '<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">Candidatado</span>' :
-                '<span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">Disponível</span>';
-
-            vagasHtml += `
-                <div class="bg-gray-50 rounded-2xl p-6 hover:shadow-lg transition-shadow duration-300">
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="flex-1">
-                            <h4 class="text-lg font-bold text-gray-800 mb-2">${vaga.titulo}</h4>
-                            <p class="text-gray-600 text-sm mb-3">${vaga.descricao.substring(0, 150)}${vaga.descricao.length > 150 ? '...' : ''}</p>
-                        </div>
-                        <div class="ml-4 text-right">
-                            <div class="text-2xl font-bold ${scoreClass} mb-1">${vaga.score.toFixed(1)}%</div>
-                            <div class="text-xs text-gray-500">Compatibilidade</div>
-                        </div>
+            const salario = vaga.salario_oferecido ? `R$ ${vaga.salario_oferecido.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'A combinar';
+            const scoreClass = vaga.score >= 80 ? 'score-alto' : vaga.score >= 60 ? 'score-medio' : 'score-baixo';
+            const status = vaga.ja_candidatou ? '<span class="candidatado">Candidatado</span>' : '<span class="disponivel">Disponível</span>';
+            vagasHtml += `<div class="card-vaga">
+                <div class="card-header">
+                    <div class="card-titulo">
+                        <h4>${vaga.titulo}</h4>
+                        <p>${vaga.descricao.substring(0, 150)}${vaga.descricao.length > 150 ? '...' : ''}</p>
                     </div>
-
-                    <div class="flex flex-wrap gap-2 mb-4">
-                        <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium">
-                            ${vaga.tipo_vaga}
-                        </span>
-                        <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                            ${salarioFormatado}
-                        </span>
-                        ${statusBadge}
-                    </div>
-
-                    <div class="flex gap-3">
-                        <a href="/vaga/${vaga.id}" 
-                           class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-300 text-center">
-                            Ver Detalhes
-                        </a>
-                        ${!vaga.ja_candidatou ? `
-                            <a href="/candidatar/${vaga.id}" 
-                               class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-300">
-                                Candidatar-se
-                            </a>
-                        ` : ''}
-                    </div>
+                    <div class="card-score ${scoreClass}">${vaga.score.toFixed(1)}%</div>
                 </div>
-            `;
+                <div class="card-tags">
+                    <span class="tag-tipo">${vaga.tipo_vaga}</span>
+                    <span class="tag-salario">${salario}</span>
+                    ${status}
+                </div>
+                <div class="card-actions">
+                    <a href="/vaga/${vaga.id}" class="btn-detalhes">Ver Detalhes</a>
+                    ${!vaga.ja_candidatou ? `<a href="/candidatar/${vaga.id}" class="btn-candidatar">Candidatar-se</a>` : ''}
+                </div>
+            </div>`;
         });
-
         vagasHtml += '</div>';
         conteudo.innerHTML = vagasHtml;
-
     } catch (error) {
         console.error('Erro ao carregar vagas da empresa:', error);
-        conteudo.innerHTML = `
-            <div class="text-center py-12">
-                <div class="text-6xl mb-4">⚠️</div>
-                <h3 class="text-xl font-semibold text-gray-800 mb-2">Erro ao carregar vagas</h3>
-                <p class="text-gray-600">Não foi possível carregar as vagas desta empresa. Tente novamente.</p>
-                <button onclick="verVagasEmpresa('${nomeEmpresa}', ${empresaId})" 
-                        class="mt-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg">
-                    Tentar Novamente
-                </button>
-            </div>
-        `;
+        conteudo.innerHTML = `<div class="erro-modal"><div>⚠️</div><h3>Erro ao carregar vagas</h3><p>Não foi possível carregar as vagas desta empresa. Tente novamente.</p><button onclick="verVagasEmpresa('${nomeEmpresa}', ${empresaId})" class="btn-tentar">Tentar Novamente</button></div>`;
     }
 }
 
@@ -519,11 +412,9 @@ function fecharModalVagasEmpresa() {
     document.getElementById('modalVagasEmpresa').classList.add('hidden');
 }
 
-// Fechar modal ao clicar fora
 document.getElementById('modalVagasEmpresa').addEventListener('click', function(e) {
-    if (e.target === this) {
-        fecharModalVagasEmpresa();
-    }
+    if (e.target === this) fecharModalVagasEmpresa();
 });
 </script>
+
 {% endblock %}

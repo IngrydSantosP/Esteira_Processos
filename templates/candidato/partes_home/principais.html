@@ -1,0 +1,85 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='style/partes.css') }}">
+
+<div id="section-principais" class="secao-vagas">
+    {% if vagas_recomendadas %}
+        
+
+            <div class="lista-vagas">
+                {% for vaga in vagas_recomendadas %}
+                    <div class="card-vaga">
+                        <!-- Ajuste: separa conteudo da ação -->
+                        <div class="conteudo-vaga">
+                            <!-- Coluna principal com detalhes da vaga -->
+                            <div class="cabecalho-vaga">
+                                <div class="icone-vaga">
+                                    <img src="{{ url_for('static', filename='/img/vaga_job.png') }}" />
+                                </div>
+                                <div class="info-vaga">
+                                    <div class="titulo-favorito">
+                                        <a href="{{ url_for('vagas.detalhes_vaga', vaga_id=vaga[0]) }}" class="link-vaga">
+                                            <h3 class="nome-vaga">
+                                                {{ vaga[1] }}
+                                            </h3>
+                                        </a>
+                                        <button
+                                            onclick="toggleFavorite('{{ vaga[0] }}', this)"
+                                            class="botao-favorito {% if vaga[10] %}favorito{% else %}nao-favorito{% endif %}"
+                                            data-favorited="{{ vaga[10]|lower }}"
+                                            title="{% if vaga[10] %}Remover dos favoritos{% else %}Adicionar aos favoritos{% endif %}">
+                                            {% if vaga[10] %}
+                                                <img class="star" src="{{ url_for('static', filename='/img/starf.png') }}"/>
+                                            {% else %}
+                                                <img class="star" src="{{ url_for('static', filename='/img/staro.png') }}"/>
+                                            {% endif %}
+                                        </button>
+                                    </div>
+
+                                    <!-- Linha com ícones e textos lado a lado -->
+                                    <div class="linha-detalhes">
+                                        <img class="icones" src="{{ url_for('static', filename='/img/business.png') }}" /> {{ vaga[5] }}
+                                        <img class="icones" src="{{ url_for('static', filename='/img/money.png') }}" /> R$ {{ "%.2f"|format(vaga[4]) }}
+                                        <img class="icones" src="{{ url_for('static', filename='/img/case.png') }}" /> Remoto
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Fora da conteudo-vaga: cola no final -->
+                        <div class="coluna-acao">
+                            <div class="compatibilidade-nova">
+                                <span>{{ "%.0f"|format(vaga[9]) }}%</span> Compatibilidade
+                            </div>
+
+                            <div class="botoes-vaga">
+                                <a href="{{ url_for('candidaturas.candidatar', vaga_id=vaga[0]) }}"
+                                   class="botao-candidatar">
+                                    <img class="icones" src="{{ url_for('static', filename='/img/rocket.png') }}"/>Candidatar-se
+                                </a>
+
+                                <a href="{{ url_for('vagas.detalhes_vaga', vaga_id=vaga[0]) }}" class="botao-saiba-mais">
+                                    <img class="icones" src="{{ url_for('static', filename='/img/info.png') }}"/>Saiba mais
+                                </a>    
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% else %}
+        <!-- Mensagem de nenhuma vaga -->
+        <div class="sem-vagas">
+            <div class="icone-sem-vaga">
+                <span class="emoji-sem-vaga">🔍</span>
+            </div>
+            <h3 class="titulo-sem-vaga">Nenhuma vaga disponível no momento</h3>
+            <p class="texto-sem-vaga">
+                Complete seu perfil para receber melhores recomendações e aumentar suas chances!
+            </p>
+            <a href="{{ url_for('candidaturas.editar_perfil_candidato') }}"
+               class="botao-completar-perfil">
+                <span>⚙️</span>
+                Completar Perfil
+            </a>
+        </div>
+    {% endif %}
+</div>
