@@ -1,0 +1,8 @@
+python -m venv venv
+venv\Scripts\activate
+pip install flask pymupdf python-dotenv 
+pip install mysql-connector-python
+pip install cloudinary
+pip install schedule
+python app.py
+

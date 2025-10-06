@@ -1,7 +1,7 @@
+
 <!-- Lista de Vagas -->
 <link rel="stylesheet" href="{{ url_for('static', filename='style/vagas.css') }}">
 <div class="vaga-list-container" id="lista-vagas" role="tabpanel">
-    <h2 class="vaga-list-title">Suas Vagas</h2>
 
     {% if vagas %}
         <div class="vaga-grid">
@@ -23,23 +23,23 @@
                             <p class="vaga-description">{{ vaga.descricao }}</p>
                             <div class="vaga-details">
                                 <span class="vaga-salary">
-                                    <span>💰</span> R$ {{ "{:,.2f}".format(vaga.salario_oferecido) }}
+                                    <img src="{{ url_for('static', filename='/img/money.png') }}" class="emojis"> R$ {{ "{:,.2f}".format(vaga.salario_oferecido) }}
                                 </span>
                                 <span class="vaga-type">
-                                    <span>📍</span> {{ vaga.tipo_vaga }}
+                                    <img src="{{ url_for('static', filename='/img/maps.png') }}" class="emojis"> {{ vaga.tipo_vaga }}
                                 </span>
                                 {% if vaga.endereco_vaga and vaga.tipo_vaga in ['Presencial', 'Híbrida'] %}
                                 <span class="vaga-address">
-                                    <span>🏢</span> {{ vaga.endereco_vaga[:30] }}{% if vaga.endereco_vaga|length > 30 %}...{% endif %}
+                                    <img src="{{ url_for('static', filename='/img/business.png') }}" class="emojis"> {{ vaga.endereco_vaga[:30] }}{% if vaga.endereco_vaga|length > 30 %}...{% endif %}
                                 </span>
                                 {% endif %}
                                 <span class="vaga-date">
-                                    <span>📅</span> {{ vaga.data_criacao }}
+                                    <img src="{{ url_for('static', filename='/img/calendar.png') }}" class="emojis"> {{ vaga.data_criacao }}
                                 </span>
                             </div>
                         </div>
                         <div class="vaga-actions">
-                            <a href="{{ url_for('api_candidatos_vaga', vaga_id=vaga.id) }}" class="vaga-action-btn view-candidates">
+                            <a href="{{ url_for('candidaturas.candidatos_vaga', vaga_id=vaga.id) }}" class="vaga-action-btn view-candidates">
                                 Ver Candidatos
                             </a>
 
@@ -56,7 +56,7 @@
                             {% elif vaga.status == 'Congelada' %}
                                 <button onclick="reativarVaga('{{ vaga.id }}')" class="vaga-action-btn reactivate-vaga">
                                     <span class="vaga-reactivate-icon">
-                                        <span>🔄</span>
+                                        <img src="{{ url_for('static', filename='/img/girar.png') }}" class="emojis">
                                         Reativar
                                     </span>
                                 </button>
@@ -69,7 +69,7 @@
                         <!-- Feedback especial para vagas concluídas -->
                         <div class="vaga-completed-feedback">
                             <div class="feedback-header">
-                                <span class="feedback-icon">🎉</span>
+                                <img src="{{ url_for('static', filename='/img/parabens.png') }}" class="emojis">
                                 <h4 class="feedback-title">Contratação Realizada</h4>
                             </div>
                             <div class="feedback-body">
@@ -102,13 +102,13 @@
                                         {% if vaga.total_candidatos and vaga.total_candidatos > 0 %}
                                         <div class="candidate-rating">
                                             {% if vaga.candidatos_80_plus > 0 %}
-                                            <span class="excellent-candidate">🎯 {{ vaga.candidatos_80_plus }} excelente(s)</span>
+                                            <span class="excellent-candidate"><img src="{{ url_for('static', filename='/img/alvo.png') }}" class="emojis"> {{ vaga.candidatos_80_plus }} excelente(s)</span>
                                             {% endif %}
                                             {% if vaga.candidatos_60_79 > 0 %}
-                                            <span class="good-candidate">⚡ {{ vaga.candidatos_60_79 }} bom(ns)</span>
+                                            <span class="good-candidate"><img src="{{ url_for('static', filename='/img/urgencia.png') }}" class="emojis"> {{ vaga.candidatos_60_79 }} bom(ns)</span>
                                             {% endif %}
                                             {% if vaga.candidatos_abaixo_60 > 0 %}
-                                            <span class="basic-candidate">📝 {{ vaga.candidatos_abaixo_60 }} básico(s)</span>
+                                            <span class="basic-candidate"><img src="{{ url_for('static', filename='/img/edit.png') }}" class="emojis"> {{ vaga.candidatos_abaixo_60 }} básico(s)</span>
                                             {% endif %}
                                         </div>
                                         {% endif %}
@@ -124,7 +124,7 @@
     {% else %}
         <div class="vaga-empty-state">
             <div class="vaga-empty-icon">
-                <span class="vaga-empty-icon-content">💼</span>
+                <img src="{{ url_for('static', filename='/img/jobs.png') }}" class="emojis">
             </div>
             <h3 class="vaga-empty-title">Nenhuma vaga criada ainda</h3>
             <p class="vaga-empty-description">Comece criando sua primeira vaga para atrair candidatos qualificados.</p>

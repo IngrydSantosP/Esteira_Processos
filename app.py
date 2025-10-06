@@ -10,7 +10,7 @@ from functools import lru_cache
 from datetime import datetime, timedelta, timezone
 import os
 
-from db import mysql, get_db_connection
+from db import get_db_connection
 from config import get_config
 from routes.auth import auth_bp
 from routes.vagas import vagas_bp
@@ -162,48 +162,56 @@ def inject_user_data():
 
 
 
-@app.route('/upload-curriculo', methods=['POST'])
+@app.route('/upload-curriculo', methods=['GET', 'POST'])
 def upload_curriculo_route():
     if 'candidato_id' not in session:
-        return jsonify({'sucesso': False, 'erro': 'Usuário não autenticado'}), 401
+        flash('Faça login para acessar esta página.', 'error')
+        return redirect(url_for('auth.login_candidato'))
 
-    if 'curriculo' not in request.files:
-        return jsonify({'sucesso': False, 'erro': 'Nenhum arquivo enviado'}), 400
+    if request.method == 'POST':
+        if 'curriculo' not in request.files:
+            flash('Nenhum arquivo enviado.', 'error')
+            return redirect(request.url)
 
-    arquivo = request.files['curriculo']
-    if arquivo.filename == '':
-        return jsonify({'sucesso': False, 'erro': 'Nome do arquivo vazio'}), 400
+        arquivo = request.files['curriculo']
+        if arquivo.filename == '':
+            flash('Nome do arquivo vazio.', 'error')
+            return redirect(request.url)
 
-    # Pode validar a extensão se quiser (pdf, doc, etc)
-    if not arquivo.filename.lower().endswith('.pdf'):
-        return jsonify({'sucesso': False, 'erro': 'Apenas arquivos PDF são permitidos'}), 400
+        if not arquivo.filename.lower().endswith('.pdf'):
+            flash('Apenas arquivos PDF são permitidos.', 'error')
+            return redirect(request.url)
 
-    nome_usuario = f"curriculo_{session['candidato_id']}_{secure_filename(arquivo.filename)}"
+        nome_usuario = f"curriculo_{session['candidato_id']}_{secure_filename(arquivo.filename)}"
+        resultado = upload_curriculo(arquivo, nome_usuario)
 
-    resultado = upload_curriculo(arquivo, nome_usuario)
+        if resultado['sucesso']:
+            try:
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute("""
+                    INSERT INTO curriculos (candidato_id, url, public_id, tipo_arquivo, tamanho_bytes)
+                    VALUES (%s, %s, %s, %s, %s)
+                    ON DUPLICATE KEY UPDATE url=VALUES(url), public_id=VALUES(public_id), tipo_arquivo=VALUES(tipo_arquivo), tamanho_bytes=VALUES(tamanho_bytes);
+                """, (
+                    session['candidato_id'],
+                    resultado['url'],
+                    resultado['public_id'],
+                    resultado.get('tipo'),
+                    resultado.get('tamanho_bytes')
+                ))
+                conn.commit()
+                flash('Currículo enviado com sucesso!', 'success')
+                return redirect(url_for('candidaturas.dashboard_candidato'))
+            except Exception as e:
+                flash(f'Erro ao salvar no banco de dados: {e}', 'error')
+            finally:
+                if conn:
+                    conn.close()
+        else:
+            flash(f"Erro no upload: {resultado['erro']}", 'error')
 
-    if resultado['sucesso']:
-        # Salvar no banco
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO curriculos (candidato_id, url, public_id, tipo_arquivo, tamanho_bytes)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (
-            session['candidato_id'],
-            resultado['url'],
-            resultado['public_id'],
-            resultado.get('tipo'),
-            resultado.get('tamanho_bytes')
-        ))
-        conn.commit()
-        cursor.close()
-        conn.close()
-
-        return jsonify({'sucesso': True, 'url': resultado['url']})
-
-    else:
-        return jsonify({'sucesso': False, 'erro': resultado['erro']}), 500
+    return render_template('candidato/upload_curriculo.html')
 
 
 
@@ -449,11 +457,7 @@ def encerrar_vaga():
     if not vaga_id or not acao:
         return jsonify({'error': 'Dados incompletos'}), 400
 
-    # Usar nova conexão com timeout maior e WAL mode
-    conn = mysql.connect('recrutamentodb', timeout=60.0)
-    conn.execute('PRAGMA journal_mode=WAL')
-    conn.execute('PRAGMA busy_timeout=60000')
-    conn.execute('PRAGMA synchronous=NORMAL')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
@@ -523,7 +527,7 @@ def encerrar_vaga():
                     print(f"📝 Notificação criada para candidato {cid}: {sucesso_notif}")
 
                     # Buscar email em nova conexão
-                    conn_email = mysql.connect('recrutamentodb', timeout=30.0)
+                    conn_email = get_db_connection()
                     cursor_email = conn_email.cursor()
                     cursor_email.execute('SELECT email FROM candidatos WHERE id = %s', (cid, ))
                     email_result = cursor_email.fetchone()
@@ -589,7 +593,7 @@ def encerrar_vaga():
                                                           'vaga_reativada')
 
                     # Buscar email em nova conexão
-                    conn_email = mysql.connect('recrutamentodb', timeout=30.0)
+                    conn_email = get_db_connection()
                     cursor_email = conn_email.cursor()
                     cursor_email.execute('SELECT email FROM candidatos WHERE id = %s', (cid, ))
                     email_result = cursor_email.fetchone()

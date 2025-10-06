@@ -62,10 +62,10 @@
 
             <div class="button-group">
                 <button onclick="aplicarFiltros()" class="btn-blue">
-                    🔍 Buscar
+                    <img src="{{ url_for('static', filename='/img/lupa.png') }}" class="emojis"> Buscar
                 </button>
                 <button onclick="limparFiltros()" class="btn-gray">
-                    🔄 Limpar
+                    <img src="{{ url_for('static', filename='/img/girar.png') }}" class="emojis"> Limpar
                 </button>
             </div>
         </div>
@@ -75,7 +75,7 @@
             <div class="card">
                 <div class="flex-row">
                     <div class="icon-box-blue">
-                        <span class="icon">👥</span>
+                        <img src="{{ url_for('static', filename='/img/people.png') }}" class="emojis">
                     </div>
                     <div>
                         <p class="text-small">Total de Candidatos</p>
@@ -87,7 +87,7 @@
             <div class="card">
                 <div class="flex-row">
                     <div class="icon-box-green">
-                        <span class="icon">📋</span>
+                        <img src="{{ url_for('static', filename='/img/report.png') }}" class="emojis">
                     </div>
                     <div>
                         <p class="text-small">Com Currículo</p>
@@ -99,7 +99,7 @@
             <div class="card">
                 <div class="flex-row">
                     <div class="icon-box-yellow">
-                        <span class="icon">⭐</span>
+                        <img src="{{ url_for('static', filename='/img/favorite.png') }}" class="emojis">
                     </div>
                     <div>
                         <p class="text-small">Favoritados</p>

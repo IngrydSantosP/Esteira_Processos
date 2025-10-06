@@ -6,86 +6,81 @@
 
 <link rel="stylesheet" href="{{ url_for('static', filename='style/editar_perfil.css') }}">
 
+<div class="form-container">
 
-<div class="container">
-    <div class="form-container">
+    <!-- Formulário -->
+    <form method="POST"
+          action="{{ url_for('vagas.editar_perfil_empresa') }}"
+          enctype="multipart/form-data"
+          class="form">
+
         <!-- Header -->
-        <div class="header">
+        <div class="form-header">
+            <div class="header-content">
                 <a href="{{ url_for('vagas.dashboard_empresa') }}" class="back-button">
-                    <span class="back-icon">X</span>
+                    <span class="back-arrow">x</span>
                 </a>
+            </div>
+
+            <!-- Foto de perfil -->
+        <div class="profile-container">
             
-        </div>
-
-        <div class="profile-container" id="profileContainer">
-        <img src="{{ imagem_perfil or url_for('static', filename='img/user.png') }}"
-             alt="Foto de perfil" id="perfilimg" class="perfilimg">
-
-        <div>
-            <label for="imagem_perfil" class="edit-photo-link">Editar foto do perfil</label>
-            <input type="file" id="imagem_perfil" name="imagem_perfil" accept="image/*" class="file-input">
+            <div class="image-upload-container">
+                {% if empresa and empresa['imagem_perfil'] %}
+                    <div class="profile-image">
+                        <img src="{{ empresa['imagem_perfil'] }}" alt="Imagem atual" class="image-preview">
+                    </div>
+                {% endif %}
+                <input type="file" id="imagem_perfil" name="imagem_perfil" accept="image/*" class="file-input">
+            </div>
+            <label for="imagem_perfil" class="label">Foto de Perfil</label>
             <div id="preview_imagem" class="preview"></div>
         </div>
 
-        <!-- Formulário -->
-         
-        <div class="form">
-            <form method="POST" class="form-fields" enctype="multipart/form-data">
-                <!-- Informações da Empresa -->
-                <div>
-                    <h2 class="section-title">
-                        Informações
-                    </h2>
-                    <div class="form-grid">
-                        <div>
-                            <label for="nome" class="label">Nome da Empresa</label>
-                            <input type="text" id="nome" name="nome" value="{{ empresa[0] }}" required class="input">
-                        </div>
-                        <div>
-                            <label for="email" class="label">E-mail</label>
-                            <input type="email" id="email" name="email" value="{{ empresa[1] }}" required class="input">
-                        </div>
-                       
-                    </div>
-                </div>
-
-                <!-- Localização -->
-                <div>
-                    <div class="form-grid mb-6">
-                        <div>
-                            <label for="cep" class="label">CEP</label>
-                            <input type="text" id="cep" name="cep" value="{{ empresa[5] }}" class="input" onblur="aplicarBuscaEndereco()">
-                        </div>
-                        <div>
-                            <label for="endereco" class="label">Endereço</label>
-                            <input type="text" id="endereco" name="endereco" value="{{ empresa[2] }}" class="input">
-                        </div>
-                    </div>
-
-                    <div class="form-grid mb-6">
-                        <div>
-                            <label for="cidade" class="label">Cidade</label>
-                            <input type="text" id="cidade" name="cidade" value="{{ empresa[3] }}" class="input">
-                        </div>
-                        <div>
-                            <label for="estado" class="label">Estado</label>
-                            <input type="text" id="estado" name="estado" value="{{ empresa[4] }}" class="input">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Botões de Ação -->
-                <div class="form-actions">
-                    <div class="action-buttons">
-                        <button type="submit" class="submit-button">
-                            <img src="{{ url_for('static', filename='/img/confirm.png') }}" class="emojis">
-                            Salvar Alterações
-                        </button>
-                    </div>
-                </div>
-            </form>
+        <!-- Informações da Empresa -->
+        <h2 class="section-title">Informações</h2>
+        <div class="form-grid">
+            <div>
+                <label for="nome" class="label">Nome da Empresa</label>
+                <input type="text" id="nome" name="nome" value="{{ empresa['nome'] if empresa else '' }}" required class="input">
+            </div>
+            <div>
+                <label for="email" class="label">E-mail</label>
+                <input type="email" id="email" name="email" value="{{ empresa['email'] if empresa else '' }}" required class="input">
+            </div>
         </div>
-    </div>
+
+        <!-- Localização -->
+        <h2 class="section-title">Localização</h2>
+        <div class="form-grid">
+            <div>
+                <label for="cep" class="label">CEP</label>
+                <input type="text" id="cep" name="cep" value="{{ empresa['cep'] if empresa else '' }}" class="input" onblur="aplicarBuscaEndereco()">
+            </div>
+            <div>
+                <label for="endereco" class="label">Endereço</label>
+                <input type="text" id="endereco" name="endereco" value="{{ empresa['endereco'] if empresa else '' }}" class="input">
+            </div>
+        </div>
+        <div class="form-grid">
+            <div>
+                <label for="cidade" class="label">Cidade</label>
+                <input type="text" id="cidade" name="cidade" value="{{ empresa['cidade'] if empresa else '' }}" class="input">
+            </div>
+            <div>
+                <label for="estado" class="label">Estado</label>
+                <input type="text" id="estado" name="estado" value="{{ empresa['estado'] if empresa else '' }}" class="input">
+            </div>
+        </div>
+
+        <!-- Botões -->
+        <div class="form-actions">
+            <button type="submit" class="submit-button">
+                <img src="{{ url_for('static', filename='/img/confirm.png') }}" class="emojis">
+                Salvar Alterações
+            </button>
+        </div>
+    </form>
 </div>
 
 <script>
@@ -109,6 +104,7 @@ function aplicarBuscaEndereco() {
     }
 }
 
+// Preview da imagem antes de enviar
 const inputImagem = document.getElementById('imagem_perfil');
 const preview = document.getElementById('preview_imagem');
 
@@ -117,8 +113,7 @@ inputImagem.addEventListener('change', function () {
     if (file) {
         const reader = new FileReader();
         reader.onload = function (e) {
-            preview.innerHTML = `<img src="${e.target.result}" alt="Preview"
-                                 class="image-preview"/>`;
+            preview.innerHTML = `<img src="${e.target.result}" alt="Preview" class="image-preview"/>`;
         };
         reader.readAsDataURL(file);
     } else {
