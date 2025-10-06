@@ -1,0 +1,574 @@
+/* Reseta a margem e o padding no body */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: radial-gradient(
+    circle at 0% 0%,
+    rgba(202, 231, 157, 0.55),
+    rgba(70, 130, 180, 0.55),
+    rgba(144, 238, 144, 0.55),
+    rgba(202, 231, 157, 0.55)
+  );
+  min-height: 100vh;
+}
+
+/* Título da dashboard */
+.dashboard-title {
+  font-size: 28px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10px;
+  text-align: left;
+  padding-top: 10px;
+}
+
+.dashboard-title-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;  /* Ajuste o espaço entre o ícone e o título */
+}
+
+/* Estilo do ícone da lupa */
+.lupa-icon {
+    width: 24px;  /* Ajuste o tamanho da lupa */
+    height: 24px; /* Ajuste o tamanho da lupa */
+    object-fit: contain;  /* Garante que o ícone não distorça */
+}
+
+/* Container para o painel */
+.dashboard-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  background: white;
+  padding: 20px 20px;
+  margin: 20px 0 0 60px;
+  width: calc(100% - 40px);
+  max-width: 1200px;
+  border-radius: 16px;
+  box-sizing: border-box;
+}
+
+
+/* Stats Cards */
+.stats-cards {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+/* Card estilos */
+.card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-radius: 10px;
+  width: 230px;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  font-family: Arial, sans-serif;
+  background-color: #E5E9F2;
+  margin-bottom: 25px;
+}
+
+.card .card-content {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.card .card-icon {
+  margin-left: 10%;
+  width: 80px;
+  height: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  padding: 10px;
+}
+
+.card .card-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.card .card-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #333;
+}
+
+/* Ajustes para responsividade */
+@media (max-width: 768px) {
+  .dashboard-main {
+    flex-direction: column;
+    max-width: none;
+    gap: 20px;
+  }
+
+  .stats-cards {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .card {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+/* Filtros */
+.filtros {
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 30px;
+  margin-left: 0;
+}
+
+.filtros-container {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  padding-left: 20px;
+  margin: 0 20px 20px 20px
+}
+
+.filtros-buttons {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: white;
+  color: #1a1a1a;
+  font-weight: 600;
+  font-size: 14px;
+  border: none;
+  border-radius: 25px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.filter-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.filter-active {
+  background-color: #004080;  /* Cor de fundo para a opção ativa */
+  color: white;               /* Cor do texto */
+  font-weight: 700;           /* Deixar o texto em negrito */
+  border: 2px solid #003366; /* Borda mais forte para destacar */
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2); /* Sombra leve para destacar ainda mais */
+}
+
+/* ===== VAGAS RECOMENDADAS CARDS ===== */
+.card-vaga {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: calc(100% - 40px);  /* Reduz a largura total */
+  margin: 0 20px 20px 20px;  /* Margem esquerda e direita de 20px */
+  min-height: 150px;
+}
+
+
+/* Ajustando o layout do cabeçalho da vaga */
+.cabecalho-vaga {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+}
+
+
+.icone-vaga img {
+  width: 80px;  /* Reduzido o tamanho do ícone */
+  height: 80px;
+  border-radius: 6px;
+  padding: 6px;
+}
+
+.info-vaga {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.titulo-favorito {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Título da vaga */
+.nome-vaga {
+  margin: 0;
+  font-size: 18px; /* Aumentado o tamanho do título da vaga */
+  font-weight: bold;
+  color: #333;
+}
+
+/* Detalhes da vaga */
+.linha-detalhes {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #555;
+  gap: 4px;
+}
+
+.linha-detalhes img {
+  width: 16px;  /* Tamanho do ícone */
+  height: 16px; /* Tamanho do ícone */
+  margin-right: 0; /* Menor espaçamento entre ícone e texto */
+}
+
+.linha-detalhes img:last-child {
+  margin-right: 0; /* Remove a margem direita do último ícone */
+}
+
+/* Lado direito do card (compatibilidade e botão) */
+.coluna-acao {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  justify-content: center; /* Alinhar os itens ao centro verticalmente */
+}
+
+/* Match e posição */
+.compatibilidade-nova {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.compatibilidade-nova span {
+  display: inline-block;
+  background: linear-gradient(90deg, #FFB74D, #FF7043);
+  color: white;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 14px;
+  padding: 6px 10px;
+}
+
+/* Posição fixa antes do match */
+.compatibilidade-nova::before {
+  content: "1º Posição";
+  display: inline-block;
+  background: linear-gradient(90deg, #64B5F6, #81C784);
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+/* Botões de ação */
+.botoes-vaga {
+  display: flex;
+  gap: 10px;
+}
+
+.botao-candidatar,
+.botao-saiba-mais,
+.botao-cancelar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: bold;
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: all 0.2s ease-in-out;
+}
+
+.botao-candidatar {
+  background: linear-gradient(to right, #a0f0c1, #3edc81);
+  color: #000;
+}
+
+.botao-candidatar:hover {
+  filter: brightness(1.1);
+}
+
+.botao-saiba-mais {
+  background: #d3cce3;
+  color: #000;
+}
+
+.botao-saiba-mais:hover {
+  filter: brightness(1.05);
+}
+
+.botao-cancelar {
+  background: #e53935;
+  color: #fff;
+}
+
+.botao-cancelar:hover {
+  background: #c62828;
+}
+
+.botoes-vaga .icones {
+  width: 16px;
+  height: 16px;
+}
+
+.star {
+  width: 18px;  /* Reduz o tamanho da estrela */
+  height: 18px; /* Reduz o tamanho da estrela */
+  object-fit: contain; /* Garante que a imagem se ajuste dentro da caixa */
+}
+
+/* Perfil */
+.profile-wrapper {
+  position: absolute;
+  top: 40px;
+  right: 20px;
+  z-index: 1000;
+}
+
+.profile-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+#profileImg {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #3B4CCA;
+  background-color: white;
+  display: block;
+}
+
+#profileImg[src$="user.png"] {
+  border: none;
+  filter: invert(0);
+  width: 48px;
+  height: 48px;
+  background-color: transparent;
+}
+
+/* Dropdown */
+.dropdown-menu {
+  position: absolute;
+  top: 60px;
+  right: 0;
+  background: #fff;
+  border-radius: 15px;
+  padding: 12px 20px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.1);
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 170px;
+  z-index: 10;
+}
+
+.dropdown-menu::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  right: 15px;
+  width: 14px;
+  height: 14px;
+  background: white;
+  transform: rotate(45deg);
+  box-shadow: -2px -2px 3px rgb(0 0 0 / 0.05);
+  border-radius: 3px;
+}
+
+.profile-container:hover .dropdown-menu {
+  display: flex;
+}
+
+.dropdown-menu p {
+  margin: 0;
+  font-weight: 700;
+  color: #1f2937;
+  text-align: center;
+}
+
+.dropdown-menu a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #e0e7ff;
+  padding: 10px 15px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: #1e40af;
+  font-weight: 700;
+  transition: background-color 0.2s ease;
+}
+
+.dropdown-menu a:hover {
+  background: #c7d2fe;
+}
+
+/* Notificações */
+.notificacoes-container {
+  position: absolute;
+  top: 40px;
+  right: 80px;
+  z-index: 1000;
+}
+
+.btn-notificacoes {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-notificacoes img {
+  width: 28px;
+  height: 28px;
+  display: block;
+}
+
+.notificacoes-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: #e63946;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  user-select: none;
+}
+
+.painel-notificacoes {
+  display: none;
+  position: absolute;
+  top: 60px;
+  right: 80px;
+  width: 320px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+  overflow: hidden;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  z-index: 2000;
+  flex-direction: column;
+}
+
+.painel-notificacoes.ativo {
+  display: flex;
+}
+
+.painel-notificacoes-header {
+  background: linear-gradient(90deg, #8a79d5, #a38de0);
+  padding: 16px 20px;
+  color: white;
+  font-weight: 700;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.3);
+}
+
+.painel-notificacoes-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 20px;
+}
+
+.painel-notificacoes-header-left img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  margin-right: 8px;
+}
+
+.candidaturas-container {
+  background-color: rgba(128, 128, 128, 0.1); /* Fundo cinza com opacidade */
+  padding: 10px 15px; /* Diminuindo o padding ainda mais */
+  border-radius: 16px; /* Canto arredondado */
+  width: auto; /* Deixa a largura ajustável */
+  max-width: 100%; /* Garantir que a largura ocupe 100% do espaço disponível */
+  margin: 0 20px 20px 20px
+}
+
+.vagas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px; /* Adds space between each card */
+}
+
+.candidaturas-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: Arial, sans-serif;
+  font-size: 16px;
+  font-weight: bold;
+  color: #1f2937; /* cor do texto semelhante à da imagem */
+}
+
+.candidaturas-icon {
+  font-size: 18px;
+}
+
+.hidden {
+    display: none;
+}
+
+.linha-detalhes-container {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.linha-detalhes img.icones {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.emojis 
+{ 
+width: 1.5em; 
+height: 1.5em; 
+display: inline-block;
+}

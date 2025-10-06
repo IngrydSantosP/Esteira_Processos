@@ -1,0 +1,250 @@
+/* Resetando alguns estilos padrão */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Estilo geral do contêiner */
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px 0;
+    font-family: 'Roboto', sans-serif;
+    background: #F5F9FC; /* Cor de fundo suave */
+}
+
+/* Título e quantidade de vagas favoritas */
+.title {
+    font-size: 26px;
+    color: #2E4D6C;
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+}
+
+.star-icon {
+    margin-right: 10px;
+    color: #FFD700;
+}
+
+.badge {
+    font-size: 16px;
+    color: #A3B6C5;
+}
+
+/* Layout da grid de vagas */
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    margin-top: 30px;
+}
+
+/* Estilo de cada item de vaga */
+.job-item {
+    background: #FFFFFF;
+    border: 1px solid #E3ECF1;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    padding: 20px;
+    transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.job-item:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Detalhes da vaga */
+.job-details {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Informações do cabeçalho da vaga */
+.job-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.icon-container {
+    display: flex;
+    align-items: center;
+}
+
+.job-content {
+    flex: 1;
+}
+
+.job-title h3 {
+    font-size: 18px;
+    color: #2E4D6C;
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+.job-title a {
+    text-decoration: none;
+    color: inherit;
+}
+
+.favorite-btn {
+    background: none;
+    border: none;
+    color: #FFD700;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.company-info, .salary-info {
+    color: #7D8D9C;
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.company-icon, .salary-icon {
+    margin-right: 5px;
+}
+
+/* Status de candidatura */
+.application-status {
+    margin-top: 10px;
+}
+
+.status-text {
+    font-size: 14px;
+    color: #4CAF50;
+}
+
+.position {
+    font-weight: 600;
+}
+
+/* Descrição da vaga */
+.job-description {
+    margin-top: 10px;
+}
+
+.description-text {
+    font-size: 14px;
+    color: #5A6872;
+}
+
+/* Caixa de match */
+.match-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 25px;
+}
+
+.match-score {
+    display: flex;
+    align-items: center;
+}
+
+.score-text {
+    font-size: 28px;
+    color: #FF5722;
+    font-weight: bold;
+    margin-right: 10px;
+}
+
+.match-label {
+    font-size: 14px;
+    color: #A3B6C5;
+}
+
+.apply-btn {
+    background-color: #FF5722;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-size: 14px;
+    text-align: center;
+    transition: background-color 0.3s;
+}
+
+.apply-btn:hover {
+    background-color: #E64A19;
+}
+
+.applied-status {
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    color: #4CAF50;
+}
+
+.explore-btn {
+    padding: 12px 24px;
+    background-color: #FF5722;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+.explore-btn:hover {
+    background-color: #E64A19;
+}
+
+.no-favorites {
+    text-align: center;
+    padding: 40px;
+    background-color: #F9FAFC;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.no-favorites-icon {
+    font-size: 40px;
+    color: #FFD700;
+}
+
+.no-favorites-title {
+    font-size: 24px;
+    color: #2E4D6C;
+    margin-top: 20px;
+    font-weight: 600;
+}
+
+.no-favorites-text {
+    font-size: 16px;
+    color: #A3B6C5;
+    margin-bottom: 20px;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .grid-container {
+        grid-template-columns: 1fr;
+    }
+
+    .job-item {
+        margin-bottom: 20px;
+    }
+
+    .match-container {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .apply-btn {
+        margin-top: 10px;
+    }
+}
+
+.emojis 
+{ 
+width: 1.5em; 
+height: 1.5em; 
+display: inline-block;
+}

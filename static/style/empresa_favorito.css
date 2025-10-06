@@ -1,0 +1,197 @@
+/* Definir o fundo do site */
+.bg-gradient-fundo {
+    background: linear-gradient(135deg, #f3f4f6, #e2e8f0);
+    min-height: 100vh;
+}
+
+/* Estilo da caixa de filtro de pesquisa */
+.filters-card {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.filters-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.search-input {
+    width: 70%;
+    padding: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.filter-select {
+    padding: 10px;
+    border-radius: 5px;
+    font-size: 14px;
+    border: 1px solid #e2e8f0;
+}
+
+.filter-button {
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.filter-button:hover {
+    background-color: #45a049;
+}
+
+/* Estilo da lista de candidatos favoritos */
+.candidato-favorito-card {
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 15px;
+    margin-bottom: 20px;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.candidato-favorito-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Estilo do título e informações dos candidatos */
+.candidato-favorito-card h3 {
+    font-size: 18px;
+    font-weight: bold;
+    color: #2d3748;
+}
+
+.candidato-favorito-card p {
+    color: #4a5568;
+    margin-bottom: 10px;
+}
+
+.text-purple-600 {
+    color: #6b46c1;
+}
+
+/* Estilo para os ícones de candidatos e outras informações */
+.w-16 {
+    width: 64px;
+}
+
+.h-16 {
+    height: 64px;
+}
+
+.bg-gradient-to-br {
+    background: linear-gradient(to bottom right, #f6ad55, #ed8936);
+}
+
+/* Estilo dos botões de remover e ver vaga */
+.favorite-btn,
+.bg-gradient-to-r {
+    font-size: 20px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.favorite-btn:hover,
+.bg-gradient-to-r:hover {
+    transform: scale(1.1);
+}
+
+.bg-gradient-to-r {
+    padding: 10px 15px;
+    border-radius: 5px;
+    color: white;
+    text-align: center;
+}
+
+.bg-gradient-to-r.from-yellow-500 {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+}
+
+.bg-gradient-to-r.from-blue-500 {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.bg-gradient-to-r.from-green-500 {
+    background: linear-gradient(135deg, #10b981, #34d399);
+}
+
+/* Estilos do contador de favoritos */
+.stats-card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.stats-content {
+    display: flex;
+    align-items: center;
+}
+
+.icon-text {
+    font-size: 30px;
+    color: #fbbf24;
+}
+
+.stats-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: #2d3748;
+}
+
+.stats-value {
+    font-size: 20px;
+    font-weight: bold;
+    color: #4CAF50;
+    margin-left: 10px;
+}
+
+/* Spinner de carregamento */
+.loading-spinner {
+    border: 4px solid #f3f4f6;
+    border-top: 4px solid #4CAF50;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Caixa de erro ao carregar favoritos */
+.text-center {
+    text-align: center;
+}
+
+.bg-white {
+    background-color: white;
+    border-radius: 10px;
+}
+
+.text-gray-600 {
+    color: #718096;
+}
+
+.text-gray-500 {
+    color: #a0aec0;
+}
+
+.text-xl {
+    font-size: 20px;
+}
+
+.text-4xl {
+    font-size: 40px;
+}

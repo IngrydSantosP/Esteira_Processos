@@ -1,0 +1,23 @@
+    .icone-contratado { color: #16a34a; font-size: 1.2em; margin-right: 8px; }
+    .icone-nao-lida { color: red; font-size: 1em; margin-right: 8px; }
+    .icone-congelada { color: #3b82f6; font-size: 1.2em; margin-right: 8px; }
+    .icone-excluida { color: #ef4444; font-size: 1.2em; margin-right: 8px; }
+    .filter-active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    .notification-dot {
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    .favorite-btn {
+        transition: all 0.3s ease-in-out;
+    }
+    .favorite-btn:hover {
+        transform: scale(1.2);
+    }

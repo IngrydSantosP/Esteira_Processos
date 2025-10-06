@@ -1,0 +1,226 @@
+/* Estilos gerais */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: radial-gradient(
+  circle at 0% 0%,
+  rgba(202, 231, 157, 0.55),
+  rgba(70, 130, 180, 0.55),
+  rgba(144, 238, 144, 0.55),
+  rgba(202, 231, 157, 0.55)
+);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.container {
+  display: flex;
+  flex-direction: row;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  max-width: 960px;
+  width: 100%;
+  overflow: hidden;
+  align-items: stretch; /* <- força as colunas a terem a mesma altura */
+}
+
+.logo {
+  width: 300px;     
+  height: auto;     
+  display: block;   
+  margin-bottom: 20px; 
+}
+
+/* Coluna do formulário */
+.form-section {
+  width: 50%;
+  padding: 40px;
+  background-color: #ffffff;
+  box-sizing: border-box;
+}
+
+.form-section h2 {
+  color: #042440;
+  text-align: center;
+  font-size: 28px;
+  margin-bottom: 24px;
+}
+
+.form-section h3 {
+  color: #042440;
+  margin: 32px 0 12px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="tel"],
+input[type="number"],
+input[type="url"] {
+  width: 100%;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  border: none;
+  border-radius: 999px;
+  background-color: #dce3ff;
+  font-size: 14px;
+  color: #333;
+}
+
+input::placeholder {
+  color: #7C71B2;
+}
+
+.form-row {
+  display: flex;
+  gap: 16px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 24px;
+}
+
+.checkbox-label input[type="checkbox"] {
+  margin-top: 4px;
+}
+
+/* Botão de cadastrar */
+button[type="submit"] {
+  width: 100%;
+  padding: 12px;
+  background-color: #042440;
+  color: white;
+  font-weight: bold;
+  border: none;
+  border-radius: 999px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+button[type="submit"]:hover {
+  background-color: #6955b5;
+}
+
+/* Mensagem de localização */
+#msgLocalizacao {
+  font-size: 12px;
+  color: gray;
+  display: none;
+  margin-top: 8px;
+}
+
+#msgLocalizacao.show {
+  display: block;
+}
+
+/* Coluna da direita (boas-vindas) */
+.welcome-section {
+  width: 50%;
+  background: linear-gradient(180deg, #cae79d, #90ee90, #4682b4);
+  color: white;
+  padding: 40px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.welcome-section .Fechar {
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  text-decoration: none;
+  font-size: 20px;
+  color: white;
+  font-weight: bold;
+}
+
+.welcome-section h1 {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.welcome-section p {
+  font-size: 14px;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.welcome-section a.login-btn {
+  background-color: #042440;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+.welcome-section a.login-btn:hover {
+  background-color: #f0f0f0;
+}
+
+.welcome-section a.underline-link {
+  margin-top: 16px;
+  font-size: 13px;
+  color: white;
+  text-decoration: underline;
+  transition: color 0.3s;
+}
+
+.welcome-section a.underline-link:hover {
+  color: #dce3ff;
+}
+
+/* Responsivo */
+@media screen and (max-width: 768px) {
+  .container {
+    flex-direction: column;
+    border-radius: 0;
+    max-width: 100%;
+    height: auto;
+  }
+
+.form-section,
+.welcome-section {
+  flex: 1; /* cada coluna ocupa 50% do container */
+  padding: 40px;
+  box-sizing: border-box;
+}
+
+  .welcome-section {
+    border-top-left-radius: 2rem;
+    border-top-right-radius: 2rem;
+  }
+}
+
+.msg-senha {
+  font-size: 12px;
+  color: red; /* ou outra cor que queira */
+  height: 16px; /* deixa espaço mesmo sem texto */
+  margin-top: 4px;
+  min-height: 16px;
+}
+
+.emojis 
+{ 
+width: 1.5em; 
+height: 1.5em; 
+display: inline-block;
+}

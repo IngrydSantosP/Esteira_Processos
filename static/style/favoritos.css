@@ -1,0 +1,205 @@
+/* Container geral da seção de favoritos */
+.vagas-favoritas-wrapper {
+    max-width: 95vw; /* Quase encostando nas bordas da tela */
+    margin: 40px auto;
+    padding: 30px;
+    background-color: rgba(249, 250, 251, 0.4); /* Cor quase transparente */
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03); /* Suave sombra */
+}
+
+/* Cabeçalho */
+.vagas-favoritas-wrapper .title-container {
+    margin-bottom: 24px;
+}
+
+.vagas-favoritas-wrapper .title {
+    display: flex;
+    align-items: center;
+    font-size: 24px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.vagas-favoritas-wrapper .title  {
+    font-size: 22px;
+    margin-right: 8px;  
+}
+
+.vagas-favoritas-wrapper .badge {
+    font-size: 14px;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+/* Lista de vagas */
+.grid-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Cada vaga */
+.job-item {
+    background: #ffffff;
+    padding: 20px 24px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* Lado esquerdo: detalhes da vaga */
+.job-details {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+}
+
+.job-title {
+    display: flex;
+    align-items: center; /* vertical centralizado */
+    gap: 8px;
+}
+
+.job-title-text {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+    display: flex;
+    align-items: center; /* vertical centralizado */
+    line-height: 1.2;
+}
+
+.favorite-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    margin-left: 8px;
+    cursor: pointer;
+    color: #facc15;
+    padding: 0;
+}
+
+/* Empresa, salário, localização etc */
+.company-info,
+.salary-info {
+    font-size: 14px;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+/* Status de candidatura */
+.application-status {
+    background-color: #e0f2fe;
+    color: #0369a1;
+    font-size: 14px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+/* Posição */
+.position {
+    background-color: #cbd5e1;
+    color: #1e293b;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    margin-left: 8px;
+    font-weight: 500;
+}
+
+/* Lado direito: match + botão */
+.match-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 120px;
+}
+
+/* Match */
+.match-score {
+    background: linear-gradient(to right, #f97316, #fb923c);
+    color: white;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-weight: bold;
+    font-size: 14px;
+    text-align: center;
+}
+
+.match-score .match-label {
+    font-size: 12px;
+    margin: 0;
+}
+
+/* Botão de candidatura */
+.apply-btn {
+    background-color: #10b981;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background-color 0.2s ease;
+}
+
+.apply-btn:hover {
+    background-color: #059669;
+}
+
+/* Botão de status "Candidatado" */
+.applied-status {
+    background-color: #d1fae5;
+    color: #065f46;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Ícone da vaga - imagem alinhada ao lado esquerdo do título */
+.icon-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px; /* tamanho do ícone */
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.icon-container img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+.emojis 
+{ 
+width: 1.5em; 
+height: 1.5em; 
+display: inline-block;
+}

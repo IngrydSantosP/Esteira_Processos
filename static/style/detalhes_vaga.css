@@ -1,0 +1,240 @@
+/* ====== ESTILOS GERAIS ====== */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(to bottom right, #d8f5dd, #c3d4f0);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px 20px;
+}
+
+/* ====== HEADER DA VAGA ====== */
+.header-vaga {
+    background-color: #e3ecfb;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.header-flex {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.header-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.vaga-topo {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.logo-vaga {
+    font-size: 30px;
+}
+
+.info-vaga h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: bold;
+    color: #1d2b50;
+}
+
+.info-vaga p {
+    font-size: 14px;
+    color: #555;
+    margin: 4px 0;
+}
+
+.tags-vaga {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.tag-tipo, .tag-salario, .tag-localizacao {
+    background-color: #fff;
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 13px;
+    color: #333;
+}
+
+/* ====== SCORE BOX ====== */
+.score-box {
+    background-color: #d4fadb;
+    border-radius: 10px;
+    padding: 20px;
+    min-width: 250px;
+    text-align: center;
+}
+
+.score-num {
+    font-size: 26px;
+    background: #0ca244;
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-weight: bold;
+    display: inline-block;
+}
+
+.score-text {
+    margin-top: 10px;
+    font-weight: bold;
+    color: #0ca244;
+}
+
+.barra-score {
+    width: 100%;
+    height: 8px;
+    background: #cdecdc;
+    border-radius: 5px;
+    margin: 12px 0;
+}
+
+.barra-fill {
+    height: 100%;
+    background-color: #0ca244;
+    border-radius: 5px;
+}
+
+/* ====== GRID PRINCIPAL ====== */
+.grid-principal {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
+.conteudo-largo > div,
+.sidebar > div {
+    background-color: #ffffff;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+}
+
+/* ====== TÍTULOS DAS SEÇÕES ====== */
+.titulo-secao {
+    font-size: 16px;
+    font-weight: bold;
+    color: #1d2b50;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.texto-secao {
+    font-size: 14px;
+    color: #444;
+    line-height: 1.6;
+}
+
+/* ====== ALERTA DE CANDIDATURA ====== */
+.alert-candidatado {
+    background: #e6fff2;
+    border: 2px solid #0ca244;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    color: #0ca244;
+    font-weight: bold;
+}
+
+.alert-candidatado p {
+    margin-top: 10px;
+    color: #444;
+}
+
+/* ====== BOTÃO CANDIDATAR ====== */
+.btn-candidatar {
+    display: inline-block;
+    background-color: #0ca244;
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-weight: bold;
+    text-decoration: none;
+    margin-top: 15px;
+}
+
+/* ====== BOX DE ANÁLISE ====== */
+.box-analise .categoria {
+    margin-bottom: 15px;
+}
+
+.linha-categoria {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: #444;
+    margin-bottom: 6px;
+}
+
+.barra-bg {
+    width: 100%;
+    background: #eee;
+    height: 8px;
+    border-radius: 5px;
+}
+
+.barra-bg .barra-fill {
+    height: 8px;
+    background: #0ca244;
+    border-radius: 5px;
+}
+
+.dica-score {
+    background: #f0f9ff;
+    padding: 10px;
+    margin-top: 15px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #333;
+}
+
+/* ====== BOX INFORMAÇÕES ====== */
+.grid-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.item-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.label-item {
+    font-weight: bold;
+    color: #333;
+}
+
+.valor-item {
+    font-size: 14px;
+    color: #0ca244;
+}
+
+/* ====== RESPONSIVO ====== */
+@media (max-width: 900px) {
+    .grid-principal {
+        grid-template-columns: 1fr;
+    }
+
+    .score-box {
+        width: 100%;
+        margin-top: 20px;
+    }
+}

@@ -1,0 +1,161 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: radial-gradient(
+    circle at 0% 0%,
+    rgba(202, 231, 157, 0.55),
+    rgba(70, 130, 180, 0.55),
+    rgba(144, 238, 144, 0.55),
+    rgba(202, 231, 157, 0.55)
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-box {
+  width: 700px;
+  display: flex;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+}
+
+/* Lado com formulário - pode ser .login-left ou .login-right com classe .form-side */
+.form-side {
+  flex: 1;
+  background: #fff;
+  padding: 40px 50px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* ALTERAÇÃO: centralizar verticalmente */
+  align-items: center; /* centralizar horizontalmente */
+  color: #000;
+  position: relative;
+  border-radius: 0; /* sem arredondar para ficar alinhado */
+  text-align: center; /* centraliza textos e links */
+}
+
+.form-side .login-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 25px;
+}
+
+.form-side .input-field {
+  width: 250px;
+  height: 32px;
+  border-radius: 15px;
+  border: none;
+  background: #dbe2ff;
+  padding-left: 15px;
+  margin-bottom: 15px;
+  font-size: 14px;
+  color: #555;
+  outline: none;
+  transition: background-color 0.3s ease;
+}
+
+.form-side .input-field::placeholder {
+  color: #7a82a6;
+}
+
+.form-side .btn-primary {
+  width: 130px;
+  height: 35px;
+  background: #071b34;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 5px;
+  margin-bottom: 10px;
+  transition: background-color 0.3s ease;
+}
+
+.form-side .btn-primary:hover {
+  background: #0a2c59;
+}
+
+.form-side .register-link {
+  font-weight: 700;
+  font-size: 13px;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.form-side .register-link a {
+  color: #071b34;
+  text-decoration: underline;
+  cursor: pointer;
+  display: inline-block;
+  padding-top: 5px;
+}
+
+/* Lado com boas-vindas - pode ser .login-right ou .login-left com classe .welcome-side */
+.welcome-side {
+  flex: 1;
+  background: linear-gradient(180deg, #b7e191 0%, #599ec6 100%);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 30px;
+  position: relative;
+  border-radius: 0 10px 10px 0;
+  text-align: center;
+}
+
+.welcome-side.left {
+  border-radius: 10px 0 0 10px;
+}
+
+.welcome-side .close-btn {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  font-weight: 700;
+  font-size: 18px;
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.welcome-side .welcome-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.welcome-side .welcome-text {
+  font-size: 14px;
+  margin-bottom: 20px;
+  opacity: 0.8;
+}
+
+.welcome-side .btn-secondary {
+  background: #071b34;
+  padding: 8px 20px;
+  border-radius: 20px;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.welcome-side .btn-secondary:hover {
+  background: #0a2c59;
+}
