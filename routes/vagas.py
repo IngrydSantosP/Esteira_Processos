@@ -433,19 +433,20 @@ def editar_perfil_empresa():
         return redirect(url_for("auth.login_empresa"))
 
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary=True)
     empresa_id = session["empresa_id"]
 
-    imagem_perfil_url = None  # <-- garante que a variável existe
-
     if request.method == "POST":
+        # Campos do formulário
         nome = request.form["nome"]
         email = request.form["email"]
-        endereco = request.form["endereco"]
-        estado = request.form["estado"]
-        cidade = request.form["cidade"]
-        cep = request.form["cep"]
+        endereco = request.form.get("endereco")
+        estado = request.form.get("estado")
+        cidade = request.form.get("cidade")
+        cep = request.form.get("cep")
 
+        # Processamento da imagem igual ao candidato
+        imagem_perfil_url = None
         if "imagem_perfil" in request.files:
             imagem_file = request.files["imagem_perfil"]
             if imagem_file and imagem_file.filename != "":
@@ -456,23 +457,21 @@ def editar_perfil_empresa():
                 else:
                     flash(f"Erro ao enviar imagem: {resultado['erro']}", "danger")
 
-        if imagem_perfil_url:
-            update_query = """
-                UPDATE empresas
-                SET nome = %s, email = %s, endereco = %s, estado = %s, cidade = %s, cep = %s,
-                    imagem_perfil = %s
-                WHERE id = %s
-            """
-            params = (nome, email, endereco, estado, cidade, cep, imagem_perfil_url, empresa_id)
-        else:
-            update_query = """
-                UPDATE empresas
-                SET nome = %s, email = %s, endereco = %s, estado = %s, cidade = %s, cep = %s
-                WHERE id = %s
-            """
-            params = (nome, email, endereco, estado, cidade, cep, empresa_id)
+        # Construir query de atualização
+        update_query = """
+            UPDATE empresas
+            SET nome=%s, email=%s, endereco=%s, estado=%s, cidade=%s, cep=%s
+        """
+        params = [nome, email, endereco, estado, cidade, cep]
 
-        cursor.execute(update_query, params)
+        if imagem_perfil_url:
+            update_query += ", imagem_perfil=%s"
+            params.append(imagem_perfil_url)
+
+        update_query += " WHERE id=%s"
+        params.append(empresa_id)
+
+        cursor.execute(update_query, tuple(params))
         conn.commit()
         conn.close()
 
@@ -483,8 +482,7 @@ def editar_perfil_empresa():
     cursor.execute(
         """
         SELECT nome, email, endereco, estado, cidade, cep, imagem_perfil
-        FROM empresas
-        WHERE id = %s
+        FROM empresas WHERE id = %s
         """,
         (empresa_id,),
     )

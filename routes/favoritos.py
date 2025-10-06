@@ -99,7 +99,7 @@ def api_candidatos_favoritos():
     cursor = conn.cursor()
 
     try:
-         # Verifica se a tabela 'empresa_favorito_candidato_geral' existe
+         # Verifica se a tabela 'empresa_favoritoo_candidat_geral' existe
         cursor.execute("""
             SELECT COUNT(*) FROM information_schema.tables 
             WHERE table_schema = DATABASE() AND table_name = 'empresa_favorito_candidato_geral'

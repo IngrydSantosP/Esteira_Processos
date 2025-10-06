@@ -9,6 +9,7 @@ import os
 
 candidaturas_bp = Blueprint("candidaturas", __name__)
 
+# Rota para exibir a página HTML
 @candidaturas_bp.route("/candidatos_vaga/<int:vaga_id>")
 def candidatos_vaga(vaga_id):
     if "empresa_id" not in session:
@@ -33,12 +34,12 @@ def candidatos_vaga(vaga_id):
         # Buscar candidatos
         cursor.execute("""
             SELECT c.id, c.nome, c.email, c.telefone, c.linkedin, 
-                    ca.score, ca.posicao, ca.data_candidatura, c.endereco,
-                    CASE WHEN ecf.id IS NOT NULL THEN 1 ELSE 0 END as is_favorito
+                   ca.score, ca.posicao, ca.data_candidatura, c.endereco,
+                   CASE WHEN ecf.id IS NOT NULL THEN 1 ELSE 0 END as is_favorito
             FROM candidaturas ca
             JOIN candidatos c ON ca.candidato_id = c.id
             LEFT JOIN empresa_candidato_favorito ecf 
-                    ON ecf.candidato_id = c.id AND ecf.vaga_id = %s AND ecf.empresa_id = %s
+                   ON ecf.candidato_id = c.id AND ecf.vaga_id = %s AND ecf.empresa_id = %s
             WHERE ca.vaga_id = %s
             ORDER BY ca.score DESC
         """, (vaga_id, empresa_id, vaga_id))
@@ -59,15 +60,7 @@ def candidatos_vaga(vaga_id):
                 "is_favorito": bool(c[9])
             })
 
-        # Se a URL receber %sjson=1, retorna JSON
-        if request.args.get("json") == "1":
-            return jsonify({
-                "candidatos": candidatos,
-                "vaga_titulo": vaga[0],
-                "total": len(candidatos)
-            })
-
-        # Caso contrário, renderiza o template
+        # Renderiza o template com os dados
         return render_template(
             "empresa/candidatos_vaga.html",
             vaga_titulo=vaga[0],
@@ -82,6 +75,70 @@ def candidatos_vaga(vaga_id):
     finally:
         conn.close()
 
+# Rota para a API (resposta JSON)
+@candidaturas_bp.route("/api/json/candidatos_vaga/<int:vaga_id>")
+def candidatos_vaga_json(vaga_id):
+    if "empresa_id" not in session:
+        return redirect(url_for("auth.login_empresa"))
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        empresa_id = session["empresa_id"]
+
+        # Buscar dados da vaga
+        cursor.execute(
+            "SELECT titulo FROM vagas WHERE id = %s AND empresa_id = %s",
+            (vaga_id, empresa_id)
+        )
+        vaga = cursor.fetchone()
+        if not vaga:
+            flash("Vaga não encontrada", "error")
+            return redirect(url_for("dashboard_empresa.dashboard_empresa"))
+
+        # Buscar candidatos
+        cursor.execute("""
+            SELECT c.id, c.nome, c.email, c.telefone, c.linkedin, 
+                   ca.score, ca.posicao, ca.data_candidatura, c.endereco,
+                   CASE WHEN ecf.id IS NOT NULL THEN 1 ELSE 0 END as is_favorito
+            FROM candidaturas ca
+            JOIN candidatos c ON ca.candidato_id = c.id
+            LEFT JOIN empresa_candidato_favorito ecf 
+                   ON ecf.candidato_id = c.id AND ecf.vaga_id = %s AND ecf.empresa_id = %s
+            WHERE ca.vaga_id = %s
+            ORDER BY ca.score DESC
+        """, (vaga_id, empresa_id, vaga_id))
+
+        candidatos_raw = cursor.fetchall()
+        candidatos = []
+        for c in candidatos_raw:
+            candidatos.append({
+                "id": c[0],
+                "nome": c[1],
+                "email": c[2],
+                "telefone": c[3] or "Não informado",
+                "linkedin": c[4] or "Não informado",
+                "score": round(float(c[5]), 1),
+                "posicao": c[6] or 0,
+                "endereco": c[8] or "",
+                "data_candidatura": c[7].strftime("%Y-%m-%d") if c[7] else "N/A",
+                "is_favorito": bool(c[9])
+            })
+
+        # Retorna os dados no formato JSON
+        return jsonify({
+            "candidatos": candidatos,
+            "vaga_titulo": vaga[0],
+            "total": len(candidatos)
+        })
+
+    except Exception as e:
+        print(f"Erro na rota candidatos_vaga_json: {e}")
+        flash("Erro ao carregar página de candidatos", "error")
+        return redirect(url_for("dashboard_empresa.dashboard_empresa"))
+    finally:
+        conn.close()
 
 def get_avaliador(modo='local'):
     """Cache de avaliadores para evitar recriar objetos"""
@@ -112,7 +169,9 @@ def dashboard_candidato():
 
     if not candidato_info or not candidato_info[1]:  # resumo_profissional vazio
         conn.close()
-        return redirect(url_for('upload_curriculo'))
+        return redirect(url_for('candidaturas.upload_curriculo'))
+
+
 
     # Pega com segurança
     candidato_nome = candidato_info[4] if len(candidato_info) > 4 else "Candidato"
@@ -387,133 +446,88 @@ def editar_perfil_candidato():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    if request.method == "POST":
-        nome = request.form["nome"]
-        telefone = request.form["telefone"]
-        linkedin = request.form["linkedin"]
-        pretensao_salarial = float(request.form["pretensao_salarial"])
-        experiencia = request.form["experiencia"]
-        competencias = request.form["competencias"]
-        resumo_profissional = request.form["resumo_profissional"]
+    try:
+        if request.method == "POST":
+            # Campos do formulário
+            nome = request.form["nome"]
+            telefone = request.form["telefone"]
+            linkedin = request.form["linkedin"]
+            pretensao_salarial = float(request.form["pretensao_salarial"])
+            experiencia = request.form["experiencia"]
+            competencias = request.form["competencias"]
+            resumo_profissional = request.form["resumo_profissional"]
+            formacao = request.form.get("formacao")
+            certificacoes = request.form.get("certificacoes")
+            idiomas = request.form.get("idiomas")
+            disponibilidade = request.form.get("disponibilidade")
+            beneficios_desejados = request.form.get("beneficios_desejados")
+            cep = request.form.get("cep")
+            endereco = request.form.get("endereco")
+            numero = request.form.get("numero")
+            complemento = request.form.get("complemento")
 
-        # Verifica se imagem foi enviada
-        imagem_perfil_url = None
-        if 'imagem_perfil' in request.files:
-            imagem_file = request.files['imagem_perfil']
-            if imagem_file and imagem_file.filename != '':
-                from routes.arquivos import upload_imagem_perfil  # ajuste conforme seu projeto
-                resultado = upload_imagem_perfil(imagem_file, nome_usuario=f"candidato_{session['candidato_id']}")
-                if resultado['sucesso']:
-                    imagem_perfil_url = resultado['url']
+            # Verifica se imagem foi enviada
+            imagem_perfil_url = None
+            imagem_file = request.files.get("imagem_perfil")
+            if imagem_file and imagem_file.filename != "":
+                from routes.arquivos import upload_imagem_perfil
+                resultado = upload_imagem_perfil(
+                    imagem_file,
+                    nome_usuario=f"candidato_{session['candidato_id']}"
+                )
+                if resultado["sucesso"]:
+                    imagem_perfil_url = resultado["url"]
                 else:
                     flash(f"Erro ao enviar imagem: {resultado['erro']}", "danger")
 
-        # Monta a query dinamicamente
-        if imagem_perfil_url:
+            # Atualiza no banco
             update_query = """
                 UPDATE candidatos
-                SET nome = %s, telefone = %s, linkedin = %s, pretensao_salarial = %s,
-                    experiencia = %s, competencias = %s, resumo_profissional = %s,
-                    imagem_perfil = %s
-                WHERE id = %s
+                SET nome=%s, telefone=%s, linkedin=%s, pretensao_salarial=%s,
+                    experiencia=%s, competencias=%s, resumo_profissional=%s,
+                    formacao=%s, certificacoes=%s, idiomas=%s,
+                    disponibilidade=%s, beneficios_desejados=%s,
+                    cep=%s, endereco=%s, numero=%s, complemento=%s,
+                    data_ultima_atualizacao=NOW()
             """
-            params = (
+            params = [
                 nome, telefone, linkedin, pretensao_salarial,
                 experiencia, competencias, resumo_profissional,
-                imagem_perfil_url, session["candidato_id"]
-            )
-        else:
-            update_query = """
-                UPDATE candidatos
-                SET nome = %s, telefone = %s, linkedin = %s, pretensao_salarial = %s,
-                    experiencia = %s, competencias = %s, resumo_profissional = %s
-                WHERE id = %s
-            """
-            params = (
-                nome, telefone, linkedin, pretensao_salarial,
-                experiencia, competencias, resumo_profissional,
-                session["candidato_id"]
-            )
+                formacao, certificacoes, idiomas,
+                disponibilidade, beneficios_desejados,
+                cep, endereco, numero, complemento
+            ]
 
-        cursor.execute(update_query, params)
-        conn.commit()
+            if imagem_perfil_url:
+                update_query += ", imagem_perfil=%s"
+                params.append(imagem_perfil_url)
+
+            update_query += " WHERE id=%s"
+            params.append(session["candidato_id"])
+
+            cursor.execute(update_query, tuple(params))
+            conn.commit()
+
+            flash("Perfil atualizado com sucesso!", "success")
+            return redirect(url_for("candidaturas.dashboard_candidato"))
+
+        # GET: busca os dados atuais do candidato
+        cursor.execute(
+            """
+            SELECT nome, telefone, linkedin, pretensao_salarial,
+                   experiencia, competencias, resumo_profissional,
+                   imagem_perfil, formacao, certificacoes, idiomas,
+                   disponibilidade, beneficios_desejados,
+                   cep, endereco, numero, complemento
+            FROM candidatos WHERE id = %s
+            """, (session["candidato_id"],)
+        )
+        candidato = cursor.fetchone()
+        return render_template("candidato/editar_perfil_candidato.html", candidato=candidato)
+
+    finally:
+        cursor.close()
         conn.close()
-
-        flash("Perfil atualizado com sucesso!", "success")
-        return redirect(url_for("candidaturas.dashboard_candidato"))
-
-    # GET
-    cursor.execute(
-        """
-        SELECT nome, telefone, linkedin, pretensao_salarial,
-                experiencia, competencias, resumo_profissional, imagem_perfil
-        FROM candidatos WHERE id = %s
-        """, (session["candidato_id"], )
-    )
-    candidato = cursor.fetchone()
-    conn.close()
-
-    return render_template("candidato/editar_perfil_candidato.html", imagem_perfil=candidato["imagem_perfil"], candidato=candidato)
-
-
-@candidaturas_bp.route("/baixar_curriculo/<int:candidato_id>")
-def baixar_curriculo(candidato_id):
-    if "empresa_id" not in session:
-        return redirect(url_for("auth.login_empresa"))
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    # Verificar se a empresa tem acesso ao candidato (através de candidatura)
-    cursor.execute(
-        """
-        SELECT COUNT(*) FROM candidaturas ca
-        JOIN vagas v ON ca.vaga_id = v.id
-        WHERE ca.candidato_id = %s AND v.empresa_id = %s
-    """, (candidato_id, session["empresa_id"]))
-
-    if cursor.fetchone()[0] == 0:
-        flash("Acesso negado ao currículo", "error")
-        return redirect(url_for("vagas.dashboard_empresa"))
-
-    # Buscar dados do candidato
-    cursor.execute(
-        """
-        SELECT nome, caminho_curriculo
-        FROM candidatos WHERE id = %s
-    """, (candidato_id, ))
-
-    candidato = cursor.fetchone()
-    conn.close()
-
-    if not candidato:
-        flash("Candidato não encontrado", "error")
-        return redirect(url_for("vagas.dashboard_empresa"))
-
-    # Verificar se o arquivo do currículo existe
-    if not candidato[1]:
-        flash("Currículo não disponível para download", "error")
-        return redirect(url_for("vagas.dashboard_empresa"))
-
-    caminho_curriculo = os.path.join("uploads", candidato[1])
-
-    if not os.path.exists(caminho_curriculo):
-        flash("Arquivo do currículo não encontrado", "error")
-        return redirect(url_for("vagas.dashboard_empresa"))
-
-    nome_download = f"curriculo_{candidato[0].replace(' ', '_')}.pdf"
-
-    return send_file(caminho_curriculo,
-                        as_attachment=True,
-                        download_name=nome_download,
-                        mimetype="application/pdf")
-
-
-
-# Função para enviar e-mail (compatibilidade)
-def enviar_email(destinatario, assunto, corpo):
-    return notification_system.enviar_email(destinatario, assunto, corpo)
-
 
 
 @candidaturas_bp.route("/api/score-detalhes/<int:candidato_id>/<int:vaga_id>")
@@ -1324,3 +1338,51 @@ def gerar_dicas_personalizadas(vagas_favoritas, candidato_data):
         })
 
     return dicas
+
+@candidaturas_bp.route("/baixar_curriculo/<int:candidato_id>")
+def baixar_curriculo(candidato_id):
+    if "empresa_id" not in session:
+        flash("Você precisa estar logado como empresa para baixar currículos.", "error")
+        return redirect(url_for("auth.login_empresa"))
+
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        cursor.execute("SELECT caminho_curriculo, nome FROM candidatos WHERE id = %s", (candidato_id,))
+        candidato = cursor.fetchone()
+
+        if candidato and candidato["caminho_curriculo"]:
+            caminho_curriculo = candidato["caminho_curriculo"]
+            nome_candidato = candidato["nome"]
+
+            # Se o caminho for uma URL (ex: Cloudinary), redirecionar
+            if caminho_curriculo.startswith(("http://", "https://")):
+                return redirect(caminho_curriculo)
+            else:
+                # Se for um caminho local, tentar enviar o arquivo
+                base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+                caminho_completo_local = os.path.join(base_dir, 'uploads', 'curriculos', os.path.basename(caminho_curriculo))
+
+                if os.path.exists(caminho_completo_local):
+                    return send_file(
+                        caminho_completo_local,
+                        as_attachment=True,
+                        download_name=f"curriculo_{nome_candidato}.pdf",
+                        mimetype="application/pdf"
+                    )
+                else:
+                    flash("Currículo não encontrado no servidor local.", "error")
+                    return redirect(request.referrer or url_for("dashboard_empresa.dashboard_empresa"))
+        else:
+            flash("Este candidato não possui um currículo cadastrado.", "error")
+            return redirect(request.referrer or url_for("dashboard_empresa.dashboard_empresa"))
+
+    except Exception as e:
+        print(f"Erro ao baixar currículo: {e}")
+        flash("Ocorreu um erro ao tentar baixar o currículo.", "error")
+        return redirect(request.referrer or url_for("dashboard_empresa.dashboard_empresa"))
+    finally:
+        if conn.is_connected():
+            cursor.close()
+            conn.close()
